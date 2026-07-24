@@ -333,13 +333,23 @@ function FirmendatenTab({
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 500_000) {
-      toast.error("Bitte Logo unter 500 KB hochladen.");
+    if (file.size > 2_000_000) {
+      toast.error("Bitte Logo unter 2 MB hochladen.");
+      e.target.value = "";
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => set("logoUrl", String(reader.result));
+    reader.onload = () => {
+      const result = String(reader.result ?? "");
+      if (!result.startsWith("data:image/")) {
+        toast.error("Datei konnte nicht als Bild gelesen werden.");
+        return;
+      }
+      set("logoUrl", result);
+    };
+    reader.onerror = () => toast.error("Logo konnte nicht gelesen werden.");
     reader.readAsDataURL(file);
+    e.target.value = "";
   };
 
   return (
@@ -361,7 +371,7 @@ function FirmendatenTab({
             {form.logoUrl && (
               <button
                 type="button"
-                onClick={() => set("logoUrl", undefined)}
+                onClick={() => set("logoUrl", null as unknown as Firmendaten["logoUrl"])}
                 className="text-xs text-destructive hover:underline"
               >
                 Logo entfernen
