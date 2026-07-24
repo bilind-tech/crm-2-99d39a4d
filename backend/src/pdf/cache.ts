@@ -43,6 +43,7 @@ export function computeHash(parts: {
     positionen: beleg.positionen.map((p) => ({
       b: p.beschreibung, m: p.menge, e: p.einheit, ep: p.einzelpreisNetto,
       st: p.steuersatz, r: p.rabatt, mo: p.modus, pp: p.pauschalpreisNetto,
+      al: p.abrechnungsartLabel ?? null,
     })),
     rechnungsdatum: (beleg as ApiRechnung).rechnungsdatum,
     faelligkeitsdatum: (beleg as ApiRechnung).faelligkeitsdatum,
