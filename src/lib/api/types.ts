@@ -509,7 +509,7 @@ export interface Firmendaten {
   bankName?: string;
   iban?: string;
   bic?: string;
-  logoUrl?: string;
+  logoUrl?: string | null;
   standardSteuersatz: number;
   standardZahlungszielTage: number;
 }
