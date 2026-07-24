@@ -827,6 +827,41 @@ export const useUpdateFirmendaten = () => {
   });
 };
 
+/** Absolute URL zum Firmen-Logo (mit Cache-Bust). Frontend nutzt das als `<img src>`. */
+export function firmaLogoUrl(logoUpdatedAt?: string | null): string {
+  const base = getBackendUrl();
+  const bust = logoUpdatedAt ? `?v=${encodeURIComponent(logoUpdatedAt)}` : `?v=${Date.now()}`;
+  return `${base}/einstellungen/firma/logo${bust}`;
+}
+
+export const useUploadFirmaLogo = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => {
+      const fd = new FormData();
+      fd.append("file", file, file.name);
+      return postWithProgress<Firmendaten>("/einstellungen/firma/logo", fd);
+    },
+    onSuccess: (saved) => {
+      qc.setQueryData(qk.einstellungen.firma, saved);
+      qc.invalidateQueries({ queryKey: qk.einstellungen.firma });
+      qc.invalidateQueries({ queryKey: ["pdf"] });
+    },
+  });
+};
+
+export const useDeleteFirmaLogo = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.delete<Firmendaten>("/einstellungen/firma/logo"),
+    onSuccess: (saved) => {
+      if (saved) qc.setQueryData(qk.einstellungen.firma, saved);
+      qc.invalidateQueries({ queryKey: qk.einstellungen.firma });
+      qc.invalidateQueries({ queryKey: ["pdf"] });
+    },
+  });
+};
+
 export const useSmtp = () =>
   useQuery({
     queryKey: qk.einstellungen.smtp,
