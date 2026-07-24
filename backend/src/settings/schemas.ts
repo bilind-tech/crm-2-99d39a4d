@@ -30,8 +30,10 @@ export const FirmaSchema = z.object({
   bankName: optStr.default(""),
   iban: optStr.default(""),
   bic: optStr.default(""),
-  // Data-URL (data:image/...) bis ~700 KB. Größeres Logo -> Upload-Endpoint nutzen.
-  logoUrl: z.string().trim().max(750_000).optional().nullable().default(""),
+  // Data-URL (data:image/...) bis ~3 MB. Reicht bequem für gängige Marken-PNGs
+  // (auch ~2 MB Original → base64 ~2,7 MB). Kleiner Wert vorher hat große
+  // Logos beim PATCH still zu einem 422 gemacht.
+  logoUrl: z.string().trim().max(3_000_000).optional().nullable().default(""),
   standardSteuersatz: cNum(0, 100, 19),
   standardZahlungszielTage: cInt(0, 365, 14),
 });
