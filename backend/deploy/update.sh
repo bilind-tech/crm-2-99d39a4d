@@ -18,6 +18,7 @@ BUILD_ROOT="${MCC_BUILD_ROOT:-/var/tmp}"
 BUILD_DIR="$BUILD_ROOT/mcc-build-$$"
 NPM_CACHE_DIR="$BUILD_DIR/.npm-cache"
 SERVICE="mycleancenter"
+SELF_PATH="/opt/mycleancenter/update.sh"
 
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -51,9 +52,39 @@ require_build_space() {
 cleanup_stale_build_dirs
 require_build_space
 
+# Alte, potenziell beschädigte gemeinsame npm-Caches aus früheren Script-
+# Versionen komplett entfernen (heute nutzen wir einen frischen Cache pro Lauf).
+rm -rf /var/tmp/mcc-npm-cache 2>/dev/null || true
+
 echo "==> 1/6  Klone $REPO ($BRANCH) nach $BUILD_DIR"
 rm -rf "$BUILD_DIR"
 git clone --depth 1 --branch "$BRANCH" "$REPO" "$BUILD_DIR"
+
+# ─── Self-Update ────────────────────────────────────────────────────────────
+# Wenn die im Repo mitgelieferte update.sh sich vom laufenden Script
+# unterscheidet, installieren wir sie und starten den Update-Lauf mit der
+# neuen Fassung neu. So hält sich das Update-Script künftig selbst aktuell —
+# ohne manuelles sed/curl auf dem Pi.
+NEW_SELF="$BUILD_DIR/backend/deploy/update.sh"
+if [[ -f "$NEW_SELF" ]] && ! cmp -s "$NEW_SELF" "$SELF_PATH" 2>/dev/null; then
+  echo "==> Self-Update: neue update.sh gefunden — installiere und starte neu"
+  sudo install -m 0755 "$NEW_SELF" "$SELF_PATH"
+  cleanup
+  exec sudo "$SELF_PATH" "$@"
+fi
+
+# Robuster npm-ci-Wrapper: bei kaputtem Cache (ENOENT/EINTEGRITY) einmal
+# Cache leeren und wiederholen. Nutzt den pro-Lauf-Cache aus $npm_config_cache.
+npm_ci_safe() {
+  if npm ci --prefer-online --no-audit --no-fund "$@"; then
+    return 0
+  fi
+  echo "!! npm ci fehlgeschlagen — leere Cache und wiederhole einmal."
+  rm -rf "${npm_config_cache:-$NPM_CACHE_DIR}"
+  mkdir -p "${npm_config_cache:-$NPM_CACHE_DIR}"
+  npm cache verify >/dev/null 2>&1 || true
+  npm ci --prefer-online --no-audit --no-fund "$@"
+}
 
 echo "==> 2/6  Frontend bauen (SPA)"
 cd "$BUILD_DIR"
@@ -68,7 +99,7 @@ export npm_config_fetch_retry_mintimeout=20000
 export npm_config_fetch_retry_maxtimeout=120000
 export npm_config_ignore_scripts=false
 # workerd-Postinstall überspringen (Binary nicht nötig für SPA-Build, frisst Platz/Zeit).
-WORKERD_SKIP_INSTALL=1 npm ci --prefer-online --no-audit --no-fund --ignore-scripts
+WORKERD_SKIP_INSTALL=1 npm_ci_safe --ignore-scripts
 # Native Module für die Tools, die wir wirklich brauchen, nachträglich bauen (esbuild).
 npm rebuild esbuild --no-audit --no-fund || true
 npm run build:spa
@@ -78,7 +109,7 @@ rm -rf "$BUILD_DIR/node_modules"
 
 echo "==> 3/6  Backend bauen"
 cd "$BUILD_DIR/backend"
-npm ci --prefer-online --no-audit --no-fund
+npm_ci_safe
 npm run build
 
 echo "==> 4/6  Service stoppen"
