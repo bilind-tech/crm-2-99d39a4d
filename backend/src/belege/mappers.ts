@@ -33,6 +33,7 @@ export interface DbPosition {
   modus: string;
   pauschalpreis_netto_ct: number | null;
   ausfuehrung: string | null;
+  abrechnungsart_label: string | null;
 }
 
 export interface ApiPosition {
@@ -46,6 +47,7 @@ export interface ApiPosition {
   modus: "einzel" | "pauschal" | "stunden";
   pauschalpreisNetto?: number;
   ausfuehrung?: string;
+  abrechnungsartLabel?: string;
 }
 
 export function positionRowToApi(r: DbPosition): ApiPosition {
@@ -60,6 +62,7 @@ export function positionRowToApi(r: DbPosition): ApiPosition {
     modus: (r.modus === "pauschal" ? "pauschal" : r.modus === "stunden" ? "stunden" : "einzel"),
     pauschalpreisNetto: r.pauschalpreis_netto_ct == null ? undefined : ctToEuro(r.pauschalpreis_netto_ct),
     ausfuehrung: r.ausfuehrung ?? undefined,
+    abrechnungsartLabel: r.abrechnungsart_label ?? undefined,
   };
 }
 
