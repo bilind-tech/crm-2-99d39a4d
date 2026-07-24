@@ -15,6 +15,7 @@ export interface PositionInput {
   modus?: "einzel" | "pauschal" | "stunden";
   pauschalpreisNetto?: number;
   ausfuehrung?: string;
+  abrechnungsartLabel?: string;
 }
 
 const ALLOWED_EINHEITEN = ["stk", "h", "m2", "pauschal", "tag", "monat"];
@@ -36,14 +37,15 @@ export function replacePositionen(
     `INSERT INTO ${table} (
        id, ${fkCol}, sort, beschreibung, menge, einheit,
        einzelpreis_netto_ct, steuersatz, rabatt, modus,
-       pauschalpreis_netto_ct, ausfuehrung
+       pauschalpreis_netto_ct, ausfuehrung, abrechnungsart_label
      ) VALUES (
        @id, @fk, @sort, @beschreibung, @menge, @einheit,
        @einzelpreis_netto_ct, @steuersatz, @rabatt, @modus,
-       @pauschalpreis_netto_ct, @ausfuehrung
+       @pauschalpreis_netto_ct, @ausfuehrung, @abrechnungsart_label
      )`,
   );
   positionen.forEach((p, i) => {
+    const labelRaw = typeof p.abrechnungsartLabel === "string" ? p.abrechnungsartLabel.trim() : "";
     ins.run({
       id: p.id ?? crypto.randomUUID(),
       fk: belegId,
@@ -59,13 +61,15 @@ export function replacePositionen(
       // ausfuehrung: deprecated — Frontend setzt das Feld nicht mehr.
       // Bestandsspalte bleibt erhalten (Bestandsdaten), neue Inserts immer null.
       ausfuehrung: null,
+      abrechnungsart_label: labelRaw ? labelRaw : null,
     });
   });
 }
 
 const POS_COLS = `
   id, sort, beschreibung, menge, einheit, einzelpreis_netto_ct,
-  steuersatz, rabatt, modus, pauschalpreis_netto_ct, ausfuehrung
+  steuersatz, rabatt, modus, pauschalpreis_netto_ct, ausfuehrung,
+  abrechnungsart_label
 `;
 
 export function listPositionen(

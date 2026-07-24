@@ -291,7 +291,12 @@ function PositionRowEditor({
         <div className="flex items-center gap-2">
           <p className="text-xs font-semibold text-foreground">Position #{idx + 1}</p>
           <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
-            {pos.modus ?? "einzel"}
+            {(pos.abrechnungsartLabel && pos.abrechnungsartLabel.trim()) ||
+              (pos.modus === "stunden"
+                ? "Stundensatz"
+                : pos.modus === "einzel"
+                  ? "Einzelposition"
+                  : "Pauschal")}
           </span>
         </div>
         {rowActions && (

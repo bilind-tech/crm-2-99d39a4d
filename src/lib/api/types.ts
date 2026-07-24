@@ -129,6 +129,8 @@ export interface Position {
   pauschalpreisNetto?: number;
   /** @deprecated Wird nicht mehr vom Frontend gesetzt. Kommt nur noch aus Bestandsdaten. */
   ausfuehrung?: string;
+  /** Frei editierbares Label für die Spalte „Abrechnungsart" (überschreibt System-Default). */
+  abrechnungsartLabel?: string;
 }
 
 export type AngebotStatus = "entwurf" | "versendet" | "angenommen" | "abgelehnt" | "abgelaufen";
