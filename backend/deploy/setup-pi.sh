@@ -34,7 +34,7 @@
 set -euo pipefail
 
 # ---- Defaults ---------------------------------------------------------------
-CRM_REPO="${CRM_REPO:-https://github.com/bilind-tech/crm-2-84181b18.git}"
+CRM_REPO="${CRM_REPO:-https://github.com/bilind-tech/crm-2-99d39a4d.git}"
 ZETTEL_REPO="https://github.com/bilind-tech/timekeeper-hub.git"
 BRANCH="main"
 SSD_DEV=""
