@@ -371,7 +371,7 @@ function FirmendatenTab({
             {form.logoUrl && (
               <button
                 type="button"
-                onClick={() => set("logoUrl", null as unknown as Firmendaten["logoUrl"])}
+                onClick={() => set("logoUrl", null)}
                 className="text-xs text-destructive hover:underline"
               >
                 Logo entfernen
