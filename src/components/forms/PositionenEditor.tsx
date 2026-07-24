@@ -183,6 +183,14 @@ function PositionCard({ index, position: p, onChange, onRemove }: CardProps) {
               if (m === "stunden") patch.einheit = "h";
               else if (m === "pauschal") patch.einheit = "pauschal";
               else patch.einheit = "stk";
+              // Beim Modus-Wechsel Label auf aktuellen Default des neuen Modus setzen —
+              // außer der User hat gerade explizit einen abweichenden Text eingegeben,
+              // der weder Default des alten noch des neuen Modus ist.
+              const oldDefault = getAbrechnungsartDefault(p.modus);
+              const currentTrim = (p.abrechnungsartLabel ?? "").trim();
+              if (!currentTrim || currentTrim === oldDefault) {
+                patch.abrechnungsartLabel = getAbrechnungsartDefault(m);
+              }
               onChange(patch);
             }}
           />
@@ -195,6 +203,22 @@ function PositionCard({ index, position: p, onChange, onRemove }: CardProps) {
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
+      </div>
+
+      <div className="mb-3">
+        <label className="mb-1 block text-[11px] font-medium text-muted-foreground">
+          Abrechnungsart (Spalten-Text)
+        </label>
+        <Input
+          value={p.abrechnungsartLabel}
+          placeholder={SYSTEM_DEFAULTS[p.modus]}
+          onChange={(e) => {
+            const value = e.target.value;
+            onChange({ abrechnungsartLabel: value });
+            setAbrechnungsartDefault(p.modus, value);
+          }}
+          className="h-9 text-sm"
+        />
       </div>
 
       {istPauschal ? (
