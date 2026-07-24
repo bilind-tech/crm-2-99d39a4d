@@ -13,6 +13,11 @@ import type { Position, Einheit, PositionModus } from "@/lib/api/types";
 import { LeistungsBeschreibung } from "./LeistungsBeschreibung";
 import { cn } from "@/lib/utils";
 import { createClientId } from "@/lib/clientId";
+import {
+  getAbrechnungsartDefault,
+  setAbrechnungsartDefault,
+  SYSTEM_DEFAULTS,
+} from "@/lib/belege/abrechnungsartDefaults";
 
 export interface PositionDraft {
   id: string;
@@ -24,6 +29,7 @@ export interface PositionDraft {
   pauschalpreisNetto: number;
   steuersatz: number;
   rabatt: number;
+  abrechnungsartLabel: string;
 }
 
 interface Props {
@@ -52,6 +58,7 @@ export function emptyPosition(steuersatz = 19, modus: PositionModus = "pauschal"
     pauschalpreisNetto: 0,
     steuersatz,
     rabatt: 0,
+    abrechnungsartLabel: getAbrechnungsartDefault(modus),
   };
 }
 
