@@ -284,6 +284,8 @@ function stundenText(p: Position): string {
   return `${menge} Std.`;
 }
 function abrechnungsartText(p: Position): string {
+  const custom = typeof p.abrechnungsartLabel === "string" ? p.abrechnungsartLabel.trim() : "";
+  if (custom) return custom;
   if (p.modus === "stunden") return "Stundensatz";
   if (p.modus === "einzel") return "Einzelposition";
   return "Pauschal";
