@@ -1,63 +1,61 @@
 ## Ziel
 
-Firmenlogo speichert & zeigt sich zuverlässig oben rechts auf **Angeboten, Rechnungen und Protokollen** — auf dem Pi (Backend-PDF) genauso wie in der Vorschau. Kein „Logo verschwindet beim Speichern" mehr, keine Zombie-Rückkehr beim Löschen. Nur Frontend + Backend-Quelltext (keine Änderungen an `package.json`/`package-lock.json`/Build-Skripten), damit `mcc-update` unverändert durchläuft.
+Das Firmenlogo erscheint zuverlässig oben rechts auf Rechnungen, Angeboten und Protokollen — auch nach Löschen/Neu-Hochladen, bei großen PNGs und ohne Cache-Probleme. `mcc-update` bleibt unverändert (nur Code, keine Migration, keine Lockfile-Änderung, keine neuen Pakete).
 
-## Diagnose (aus Codelese, nicht geraten)
+## Ursache
 
-1. **„Logo entfernen" + Speichern lässt das Logo wiederkommen.**
-   `src/routes/einstellungen.tsx:364` setzt `logoUrl` auf `undefined`. Der Client schickt PATCH via `api.patch`, `JSON.stringify` strippt `undefined` → das Backend sieht das Feld nicht → `patchArea` merged mit dem alten Wert → Server-Antwort enthält weiterhin das alte Logo → `applyServer` schreibt es zurück ins Formular. Löschen funktioniert nie.
+Das Logo wird aktuell als riesige Base64-Data-URL innerhalb der Firma-Settings-Row (JSON in SQLite) gespeichert. Das ist an mehreren Stellen fragil:
+- Zod-`.max(3_000_000)` auf ein `z.string().trim()` — bei jedem Firma-PATCH läuft `trim()` über die komplette Data-URL. Ein einzelnes ungültiges Zeichen (z. B. Zeilenumbruch mancher Reader) macht die ganze Firma-Persistenz zu einem 422 → gesamter Save schlägt fehl, ohne dass in der UI etwas Sichtbares passiert.
+- Jedes andere Firma-Feld-Save (Telefon, Bank …) muss die komplette Base64 mit-serialisieren.
+- `firma.logoUrl` in DB fällt beim Backup-Restore/Update leichter aus dem Sync als eine echte Datei.
 
-2. **Logo fehlt oben rechts auf Backend-PDF (Pi).**
-   `backend/src/pdf/firma.ts:60` liefert nur dann eine Logo-Data-URL, wenn `firma.logoUrl` mit `data:` beginnt oder eine `branding/logo.png` existiert — sonst `null`, und `backend/src/pdf/layout.ts:94` rendert dann kein Bild. Das Frontend hat einen Fallback (`@/assets/logo.png` in `belegPdf.ts:648`), das Backend nicht. Sobald `firma.logoUrl` im DB-Wert leer/null ist (z. B. weil ein früheres Speichern es geleert hat oder weil die Größe die Schema-Grenze überschritten hat), fehlt es auf allen Pi-generierten PDFs.
+Der Backend-Renderer bevorzugt bereits eine echte Datei im `branding/`-Ordner (`loadLogoDataUrl` Zweig 2). Genau darauf schwenken wir um.
 
-3. **Größen-Falle.**
-   `FirmaSchema.logoUrl` (`backend/src/settings/schemas.ts:34`) limitiert die Data-URL auf 750 000 Zeichen. Große PNGs (das gelieferte MyCleanCenter-Logo z. B.) sprengen das schnell — `patchArea` gibt dann 422 zurück und die alte Datei bleibt „irgendwie" hängen, ohne dass die UI sichtbar meckert.
+## Plan
 
-## Änderungen
+**1) Backend: eigenständiger Logo-Endpoint (Datei-basiert)**
+- Neue Routen in `backend/src/routes/einstellungen.ts` (alle `requireAuth`):
+  - `GET /einstellungen/firma/logo` → liefert `image/png` bzw. `image/jpeg` mit `Cache-Control: no-store`. 404, wenn nicht vorhanden.
+  - `PUT /einstellungen/firma/logo` → nimmt rohen Body (`Content-Type: image/png|jpeg|webp`, bodyLimit 10 MB reicht bereits), validiert Magic Bytes (PNG `89 50 4E 47`, JPEG `FF D8 FF`, WebP `RIFF…WEBP`), schreibt atomar nach `${dataDir}/branding/logo.<ext>` (alte Datei löschen).
+  - `DELETE /einstellungen/firma/logo` → entfernt Datei.
+- Beim Schreiben/Löschen: `firma.logoUpdatedAt = new Date().toISOString()` in Settings persistieren (kleiner ISO-String, kein Base64).
+- `FirmaSchema.logoUrl` bleibt bestehen (Rückwärtskompatibilität für Bestandsdaten), wird aber vom neuen UI-Flow nicht mehr befüllt. Beim ersten PUT wird ein vorhandenes altes `logoUrl` in eine Datei extrahiert und der String im Setting geleert.
 
-### 1. Löschen im Frontend eindeutig machen
-`src/routes/einstellungen.tsx`
-- Button „Logo entfernen" setzt `logoUrl` auf `null` statt `undefined`, damit der Wert im PATCH-Body landet.
-- Beim Speichern: kurz vor `onSave` alle explizit gelöschten Felder (`logoUrl === undefined`) in `null` konvertieren, damit das Backend die Absicht sieht.
+**2) Backend: PDF-Renderer + Cache**
+- `loadLogoDataUrl()` bleibt wie es ist (Datei-Fallback ist schon da) — funktioniert unverändert.
+- `logoFingerprint()` bleibt (SHA-256 über Data-URL). Damit invalidiert der bestehende PDF-Cache automatisch, sobald sich die Logo-Datei ändert. Kein separater Invalidierungspfad nötig.
 
-### 2. Backend akzeptiert null als „löschen"
-`backend/src/settings/schemas.ts`
-- `logoUrl` bleibt `nullable`, aber Max-Länge auf **3 000 000** anheben, damit übliche Marken-PNGs (bis ~2 MB Data-URL) sicher passen.
+**3) Frontend: Upload-Flow umbauen (`src/routes/einstellungen.tsx`)**
+- `handleLogo`: statt `FileReader` → direkt `PUT /einstellungen/firma/logo` mit `body: file`, `Content-Type: file.type`. Bei 2xx → lokalen `logoUrl`-State auf `` `/einstellungen/firma/logo?v=${Date.now()}` `` setzen (bricht Browser-Cache).
+- „Logo entfernen": `DELETE /einstellungen/firma/logo`, `logoUrl` auf `null`.
+- Preview-`<img>` zeigt entweder den frischen URL-mit-Timestamp oder — beim ersten Laden — `/einstellungen/firma/logo?v={logoUpdatedAt}` aus dem Firma-GET. Kein Base64 im DOM/State mehr.
+- Wichtige Konsequenz: Der „Speichern"-Button für Firmendaten trägt das Logo NICHT mehr im Body — Save/Delete des Logos passieren sofort beim Klick auf Upload/Entfernen. UI-Text („wird gespeichert") entsprechend anpassen.
+- Fehler (unsupported type / zu groß) landen als `toast.error` mit Server-Message.
 
-`backend/src/routes/einstellungen.ts` (`firmaFromWire` bzw. `patchArea`-Aufruf für „firma")
-- Wenn `logoUrl === null` explizit im Body ankommt, wird der gespeicherte Wert wirklich auf `""` (leer) gesetzt, statt gemergt.
+**4) Typen (`src/lib/api/types.ts`)**
+- `Firmendaten.logoUrl` bleibt `string | null | undefined` — enthält jetzt eine relative URL statt Base64. Keine Breaking Change für Konsumenten (PDF-Editor-Panels lesen weiterhin `firma.logoUrl`).
+- Zusätzlich `logoUpdatedAt?: string | null` für Cache-Busting.
 
-### 3. Backend-PDF bekommt einen zuverlässigen Logo-Weg
-`backend/src/pdf/firma.ts`
-- `loadLogoDataUrl()` bleibt bevorzugt bei `firma.logoUrl` (data-URL).
-- Zusätzlicher Fallback: eingebettete Default-Datei `backend/src/pdf/assets/default-logo.png` (das vom Nutzer gelieferte MyCleanCenter-Logo) → so ist selbst bei leerem Setting **immer** ein Bild oben rechts sichtbar; wird durch jedes gespeicherte Firmen-Logo überschrieben.
-- Logo-Datei kommt aus `/mnt/user-uploads/MYCLEANCENTER_GmbH-2.png` via `lovable-assets` (nicht binär ins Repo committen, sondern als `.asset.json`-Pointer + zur Buildzeit einmal eingelesen). Kein Einfluss auf `package.json`.
+**5) PDF-Editor Panels**
+- `LogoFirmaPanel` und `StammdatenPanel` nutzen `firma.logoUrl` weiterhin als `<img src=...>` — funktioniert 1:1, weil der neue Wert eine gültige URL ist.
+- `logoOverride` (Beleg-lokal) bleibt Base64/Data-URL, weil es kurzlebig pro-Beleg ist und den globalen Endpoint nicht braucht.
 
-### 4. Client-Upload robuster
-`src/routes/einstellungen.tsx`
-- Datei-Limit von 500 KB auf **2 MB** anheben, mit klarer Fehlermeldung falls größer.
-- Nach erfolgreichem Upload sofort einen Health-Check der Data-URL (`startsWith("data:image/")`), sonst Toast + Reset.
+**6) Update-/Deploy-Safety**
+- Keine neuen Dependencies, kein `package.json`/`package-lock.json`/Migration-Change → `mcc-update` läuft ohne `npm ci`-Kollision.
+- Der `branding/`-Ordner wird zur Not `mkdir -p` beim ersten PUT angelegt (600er Rechte, konsistent mit Backups).
+- Bestehende Installationen mit Base64-in-JSON: erster PUT migriert die Bytes in eine Datei; alte Base64 wird beim gleichen PATCH geleert. Kein manueller Migrationsschritt für den Nutzer.
 
-### 5. Sicherstellen, dass das PDF neu gerendert wird
-- Frontend-Signatur `pdfDependencySignature` bleibt (nutzt `logoUrl.length`).
-- Backend `computeHash` (`backend/src/pdf/cache.ts`) nutzt bereits `logoFingerprint(logoDataUrl)` — bleibt unverändert, greift dank Fallback jetzt auch bei leerem Setting korrekt.
-
-### 6. Deployment-Sicherheit
-- **Keine** Änderungen an `package.json`, `package-lock.json`, `bun.lock`, `vite.config.ts`, `scripts/*` oder `backend/deploy/update.sh`.
-- Nur `.ts`-/`.tsx`-Dateien + eine einzige neue Asset-Pointer-Datei (`src/assets/default-logo.png.asset.json` bzw. `backend/src/pdf/assets/default-logo.png.asset.json`).
-- Das nächste `mcc-update` zieht nur den geänderten Quelltext; `npm ci` läuft unverändert.
-
-## Testschritte nach dem Update
-
-1. Einstellungen → Firmendaten → Logo hochladen (mitgeliefertes MyCleanCenter-PNG) → Speichern → neue Rechnung anlegen → Logo oben rechts sichtbar.
-2. Einstellungen → „Logo entfernen" → Speichern → Rechnungs-PDF zeigt das eingebaute Default-Logo (kein weißer Fleck), Einstellungen zeigen „kein Logo".
-3. Erneut Logo hochladen → Speichern → Logo wieder oben rechts.
+**7) Verifikation nach Deploy**
+- Auf dem Pi: `curl -sI https://mycleancenter-pi.local/einstellungen/firma/logo` (mit Cookie) → erwartet `image/png` + `200`.
+- Rechnung öffnen → PDF wird neu gerendert (Fingerprint hat sich geändert), Logo steht oben rechts.
+- Backend-Log grepen auf `settings.firma.logo` (Audit-Events der neuen Routen).
 
 ## Betroffene Dateien
 
-- `src/routes/einstellungen.tsx`
-- `src/hooks/useApi.ts` (nur falls `null`-Serialisierung im PATCH-Body Anpassung braucht)
-- `backend/src/settings/schemas.ts`
-- `backend/src/routes/einstellungen.ts`
-- `backend/src/pdf/firma.ts`
-- neu: `backend/src/pdf/assets/default-logo.png.asset.json` (Asset-Pointer)
+- `backend/src/routes/einstellungen.ts` — 3 neue Routen, Migration alter Base64 → Datei.
+- `backend/src/settings/schemas.ts` — `FirmaSchema.logoUpdatedAt` ergänzen, `logoUrl` bleibt.
+- `backend/src/pdf/firma.ts` — unverändert (Datei-Fallback greift).
+- `src/routes/einstellungen.tsx` — Upload/Delete direkt gegen neuen Endpoint, State entkoppelt vom Base64.
+- `src/lib/api/types.ts` — optionales `logoUpdatedAt`.
+
+Explizit **nicht** angefasst: `package.json`, `package-lock.json`, `backend/deploy/update.sh`, Migrationsverzeichnis, PDF-Cache-Logik.

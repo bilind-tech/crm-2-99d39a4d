@@ -34,6 +34,9 @@ export const FirmaSchema = z.object({
   // (auch ~2 MB Original → base64 ~2,7 MB). Kleiner Wert vorher hat große
   // Logos beim PATCH still zu einem 422 gemacht.
   logoUrl: z.string().trim().max(3_000_000).optional().nullable().default(""),
+  // ISO-Zeitstempel der letzten Logo-Änderung. Wird vom Logo-Upload gesetzt und
+  // dient dem Frontend als Cache-Bust für `<img src=/einstellungen/firma/logo?v=…>`.
+  logoUpdatedAt: z.string().trim().max(64).optional().nullable().default(""),
   standardSteuersatz: cNum(0, 100, 19),
   standardZahlungszielTage: cInt(0, 365, 14),
 });

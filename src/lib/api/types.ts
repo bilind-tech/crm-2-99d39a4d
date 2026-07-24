@@ -510,6 +510,10 @@ export interface Firmendaten {
   iban?: string;
   bic?: string;
   logoUrl?: string | null;
+  /** True, wenn ein Logo auf dem Backend hinterlegt ist (Datei oder legacy Base64). */
+  hasLogo?: boolean;
+  /** ISO-Zeit der letzten Logo-Änderung — als Cache-Bust für `<img src=…>`. */
+  logoUpdatedAt?: string | null;
   standardSteuersatz: number;
   standardZahlungszielTage: number;
 }

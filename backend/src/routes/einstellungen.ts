@@ -20,6 +20,71 @@ import { resetTransport } from "../email/transport.js";
 import { resetImapClient } from "../email/imap-archive.js";
 import { flachZuUi, uiPatchZuFlach } from "../mahnung/settings-adapter.js";
 import { MahnungSchema } from "../settings/schemas.js";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import path from "node:path";
+import { brandingDir } from "../pdf/firma.js";
+
+const LOGO_MAX_BYTES = 3 * 1024 * 1024; // 3 MB roh — reicht für gängige Marken-PNGs
+const LOGO_MIME_TO_EXT: Record<string, "png" | "jpg" | "webp"> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/webp": "webp",
+};
+
+function ensureBrandingDir(): string {
+  const d = brandingDir();
+  if (!existsSync(d)) mkdirSync(d, { recursive: true, mode: 0o700 });
+  return d;
+}
+
+/** Sucht die aktuell gespeicherte Logo-Datei (png/jpg/jpeg/webp) oder null. */
+function findLogoFile(): { path: string; mime: string } | null {
+  const d = brandingDir();
+  if (!existsSync(d)) return null;
+  const candidates: Array<{ ext: string; mime: string }> = [
+    { ext: "png", mime: "image/png" },
+    { ext: "jpg", mime: "image/jpeg" },
+    { ext: "jpeg", mime: "image/jpeg" },
+    { ext: "webp", mime: "image/webp" },
+  ];
+  for (const c of candidates) {
+    const p = path.join(d, `logo.${c.ext}`);
+    if (existsSync(p)) return { path: p, mime: c.mime };
+  }
+  return null;
+}
+
+function deleteAllLogoFiles(): void {
+  const d = brandingDir();
+  if (!existsSync(d)) return;
+  for (const f of readdirSync(d)) {
+    if (/^logo\.(png|jpe?g|webp)$/i.test(f)) {
+      try { unlinkSync(path.join(d, f)); } catch { /* ignore */ }
+    }
+  }
+}
+
+function writeLogoAtomic(ext: "png" | "jpg" | "webp", data: Buffer): void {
+  const d = ensureBrandingDir();
+  const tmp = path.join(d, `.logo.${ext}.tmp`);
+  writeFileSync(tmp, data, { mode: 0o600 });
+  // Erst alte Varianten entfernen, dann neue atomar reinbewegen.
+  deleteAllLogoFiles();
+  renameSync(tmp, path.join(d, `logo.${ext}`));
+}
+
+/** Detektiert MIME anhand der Magic Bytes — verhindert manipulierte Content-Type-Header. */
+function detectImageMime(buf: Buffer): string | null {
+  if (buf.length < 12) return null;
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
+  if (
+    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
+    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
+  ) return "image/webp";
+  return null;
+}
 
 function loadArea(name: keyof typeof AREAS): unknown {
   const a = AREAS[name];
@@ -98,12 +163,27 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
     if (typeof name === "string" && name.trim() === "MyCleanCenter GmbH") {
       name = "My Clean Center GmbH";
     }
+    // Logo-URL: bevorzugt die aktuelle Datei im branding/-Ordner (mit Cache-Bust),
+    // fällt auf einen ggf. noch vorhandenen legacy Base64-Wert zurück.
+    const file = findLogoFile();
+    const storedLogo = typeof b.logoUrl === "string" ? b.logoUrl : "";
+    const updatedAt = typeof b.logoUpdatedAt === "string" ? b.logoUpdatedAt : "";
+    let logoUrl: string | null = null;
+    if (file) {
+      const bust = updatedAt ? encodeURIComponent(updatedAt) : String(Date.now());
+      logoUrl = `/einstellungen/firma/logo?v=${bust}`;
+    } else if (storedLogo) {
+      logoUrl = storedLogo;
+    }
     return {
       ...b,
       name,
       // UI-Aliasse zusätzlich zu den internen Feldern:
       firmenname: name,
       webseite: b.web,
+      logoUrl,
+      hasLogo: !!file || (typeof storedLogo === "string" && storedLogo.startsWith("data:")),
+      logoUpdatedAt: updatedAt || null,
     };
   }
   function firmaFromWire(input: Record<string, unknown>): Record<string, unknown> {
@@ -112,6 +192,15 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
     if (i.webseite !== undefined && i.web === undefined) i.web = i.webseite;
     delete i.firmenname;
     delete i.webseite;
+    // hasLogo/logoUrl (URL-Form) werden serverseitig aus der Datei abgeleitet
+    // und dürfen NIE vom Formular zurückgeschrieben werden. Sonst würde ein
+    // simpler „Telefon speichern"-PATCH das Logo-Setting mit einer URL
+    // überschreiben, was das PDF-Rendering (das eine data:-URL erwartet)
+    // still kaputtmacht. Der Upload-Endpoint pflegt logoUrl/logoUpdatedAt
+    // exklusiv.
+    delete i.hasLogo;
+    delete i.logoUrl;
+    delete i.logoUpdatedAt;
     return i;
   }
 
@@ -129,6 +218,110 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
     audit({ userId: req.user?.id, action: "settings.firma.patch", ip: req.ip });
     emit("einstellung:geaendert", { key: "firma", userId: req.user?.id ?? null });
     return firmaToWire(r.value as Record<string, unknown>);
+  });
+
+  // ---------------- Firma-Logo (eigene Datei, entkoppelt vom Settings-JSON) ----------------
+  // Warum eigener Endpoint: die alte Lösung (Base64-Data-URL in FirmaSchema.logoUrl)
+  // hat bei großen PNGs still zu 422-Fehlern im Firma-PATCH geführt und blähte jeden
+  // Settings-Roundtrip auf. Datei-Persistenz umgeht Schema-Größen komplett und wird
+  // vom PDF-Renderer bereits als Fallback genutzt.
+
+  app.get("/einstellungen/firma/logo", async (_req, reply) => {
+    const file = findLogoFile();
+    if (!file) {
+      // Legacy-Fallback: Falls noch ein Base64-Wert in den Settings liegt,
+      // aber noch keine Datei existiert, streamen wir die Bytes einmalig aus.
+      const cur = getSetting<{ logoUrl?: string }>("firma");
+      const dataUrl = cur?.logoUrl;
+      if (typeof dataUrl === "string" && dataUrl.startsWith("data:image/")) {
+        const match = /^data:(image\/[a-z+]+);base64,(.+)$/i.exec(dataUrl);
+        if (match) {
+          const mime = match[1];
+          const buf = Buffer.from(match[2], "base64");
+          return reply
+            .header("Content-Type", mime)
+            .header("Cache-Control", "no-store")
+            .send(buf);
+        }
+      }
+      reply.status(404);
+      return { error: "no-logo" };
+    }
+    const buf = readFileSync(file.path);
+    return reply
+      .header("Content-Type", file.mime)
+      .header("Cache-Control", "no-store")
+      .send(buf);
+  });
+
+  app.post("/einstellungen/firma/logo", async (req, reply) => {
+    if (!req.isMultipart()) {
+      reply.status(400);
+      return { error: "multipart-required" };
+    }
+    const parts = (req as unknown as { parts: () => AsyncIterable<unknown> }).parts();
+    let buf: Buffer | null = null;
+    let declaredMime = "application/octet-stream";
+    let truncated = false;
+    for await (const partRaw of parts) {
+      const part = partRaw as {
+        type: "file" | "field";
+        fieldname: string;
+        mimetype?: string;
+        file?: NodeJS.ReadableStream & { truncated: boolean };
+      };
+      if (part.type === "file" && part.file) {
+        const chunks: Buffer[] = [];
+        let total = 0;
+        for await (const chunk of part.file) {
+          const b = chunk as Buffer;
+          total += b.length;
+          if (total > LOGO_MAX_BYTES) {
+            truncated = true;
+          } else {
+            chunks.push(b);
+          }
+        }
+        buf = Buffer.concat(chunks);
+        declaredMime = part.mimetype ?? declaredMime;
+        if (part.file.truncated) truncated = true;
+      }
+    }
+    if (!buf) {
+      reply.status(400);
+      return { error: "no-file" };
+    }
+    if (truncated) {
+      reply.status(413);
+      return { error: "file-too-large", maxBytes: LOGO_MAX_BYTES };
+    }
+    const detected = detectImageMime(buf) ?? declaredMime;
+    const ext = LOGO_MIME_TO_EXT[detected];
+    if (!ext) {
+      reply.status(415);
+      return { error: "mime-not-allowed", mime: detected };
+    }
+    writeLogoAtomic(ext, buf);
+    // Zeitstempel + Legacy-Base64 leeren, damit firmaToWire konsistent bleibt.
+    patchArea("firma", { logoUrl: "", logoUpdatedAt: new Date().toISOString() });
+    audit({
+      userId: req.user?.id,
+      action: "settings.firma.logo.set",
+      detail: { mime: detected, bytes: buf.length },
+      ip: req.ip,
+    });
+    emit("einstellung:geaendert", { key: "firma", userId: req.user?.id ?? null });
+    const base = loadArea("firma") as Record<string, unknown>;
+    return firmaToWire(base);
+  });
+
+  app.delete("/einstellungen/firma/logo", async (req) => {
+    deleteAllLogoFiles();
+    patchArea("firma", { logoUrl: "", logoUpdatedAt: new Date().toISOString() });
+    audit({ userId: req.user?.id, action: "settings.firma.logo.clear", ip: req.ip });
+    emit("einstellung:geaendert", { key: "firma", userId: req.user?.id ?? null });
+    const base = loadArea("firma") as Record<string, unknown>;
+    return firmaToWire(base);
   });
 
   // -------- Mahnung — flach intern, nested für UI --------

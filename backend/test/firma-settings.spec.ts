@@ -92,7 +92,6 @@ describe("Firmendaten-Roundtrip (UI-Felder bleiben nach Speichern erhalten)", ()
       bankName: "Sparkasse",
       iban: "DE89370400440532013000",
       bic: "COBADEFFXXX",
-      logoUrl: "data:image/png;base64,iVBORw0KGgo=",
       standardSteuersatz: 7,
       standardZahlungszielTage: 30,
     };
@@ -114,6 +113,11 @@ describe("Firmendaten-Roundtrip (UI-Felder bleiben nach Speichern erhalten)", ()
     for (const [k, v] of Object.entries(payload)) {
       expect(j[k], `Feld '${k}' wurde nicht persistiert`).toBe(v);
     }
+    // Logo wird bewusst NICHT über den Firma-PATCH persistiert — der Upload
+    // läuft über den dedizierten Endpoint POST /einstellungen/firma/logo.
+    // Ohne hochgeladenes Logo ist `logoUrl` in der Antwort `null`.
+    expect(j.logoUrl).toBeNull();
+    expect(j.hasLogo).toBe(false);
     // Interne Schreibweise muss parallel verfügbar bleiben (PDF nutzt 'name'/'web').
     expect(j.name).toBe(payload.firmenname);
     expect(j.web).toBe(payload.webseite);
@@ -137,7 +141,7 @@ describe("Firmendaten-Roundtrip (UI-Felder bleiben nach Speichern erhalten)", ()
 
     expect(after.telefon).toBe("+49 999 0000");
     expect(after.firmenname).toBe(before.firmenname);
-    expect(after.logoUrl).toBe(before.logoUrl);
+    expect(after.logoUrl).toBe(before.logoUrl); // beide null — kein Logo hinterlegt
     expect(after.standardSteuersatz).toBe(before.standardSteuersatz);
   });
 
