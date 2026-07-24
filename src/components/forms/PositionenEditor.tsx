@@ -439,14 +439,16 @@ export function toApiPositionen(draft: PositionDraft[]): Position[] {
     rabatt: p.rabatt,
     modus: p.modus,
     pauschalpreisNetto: p.modus === "pauschal" ? p.pauschalpreisNetto : undefined,
+    abrechnungsartLabel: p.abrechnungsartLabel.trim() ? p.abrechnungsartLabel.trim() : undefined,
   }));
 }
 
 /** Lädt eine API-Position zurück in einen Draft (für „Bearbeiten"-Flows). */
 export function fromApiPosition(p: Position): PositionDraft {
+  const modus: PositionModus = p.modus ?? "einzel";
   return {
     id: p.id,
-    modus: p.modus ?? "einzel",
+    modus,
     beschreibung: p.beschreibung,
     menge: p.menge,
     einheit: p.einheit,
@@ -454,5 +456,6 @@ export function fromApiPosition(p: Position): PositionDraft {
     pauschalpreisNetto: p.pauschalpreisNetto ?? 0,
     steuersatz: p.steuersatz,
     rabatt: p.rabatt,
+    abrechnungsartLabel: p.abrechnungsartLabel ?? getAbrechnungsartDefault(modus),
   };
 }
