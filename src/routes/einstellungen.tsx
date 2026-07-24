@@ -32,7 +32,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useFirmendaten, useUpdateFirmendaten } from "@/hooks/useApi";
+import {
+  useFirmendaten,
+  useUpdateFirmendaten,
+  useUploadFirmaLogo,
+  useDeleteFirmaLogo,
+  firmaLogoUrl,
+} from "@/hooks/useApi";
+import { errorToMessage } from "@/lib/api/piClient";
 import { PageHeader } from "@/components/layout/PageHeader";
 import {
   EmailVorlagenTab,
@@ -325,58 +332,111 @@ function FirmendatenTab({
 }) {
   const [form, setForm] = useState<Firmendaten>(initial);
   useEffect(() => setForm(initial), [initial]);
-  const dirty = JSON.stringify(form) !== JSON.stringify(initial);
+  // Logo-Felder werden über eigene Endpoints gepflegt und dürfen den Dirty-Check
+  // nicht triggern (sonst wirkt „Speichern" nach jedem Upload angeblich nötig).
+  const stripLogo = (f: Firmendaten): Partial<Firmendaten> => {
+    const { logoUrl: _u, hasLogo: _h, logoUpdatedAt: _t, ...rest } = f;
+    return rest;
+  };
+  const dirty = JSON.stringify(stripLogo(form)) !== JSON.stringify(stripLogo(initial));
+
+  const uploadLogo = useUploadFirmaLogo();
+  const deleteLogo = useDeleteFirmaLogo();
 
   const set = <K extends keyof Firmendaten>(k: K, v: Firmendaten[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
 
   const handleLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    if (file.size > 2_000_000) {
-      toast.error("Bitte Logo unter 2 MB hochladen.");
-      e.target.value = "";
+    if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+      toast.error("Nur PNG, JPG oder WebP.");
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = String(reader.result ?? "");
-      if (!result.startsWith("data:image/")) {
-        toast.error("Datei konnte nicht als Bild gelesen werden.");
-        return;
-      }
-      set("logoUrl", result);
-    };
-    reader.onerror = () => toast.error("Logo konnte nicht gelesen werden.");
-    reader.readAsDataURL(file);
-    e.target.value = "";
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Bitte Logo unter 3 MB hochladen.");
+      return;
+    }
+    uploadLogo.mutate(file, {
+      onSuccess: (saved) => {
+        setForm((f) => ({
+          ...f,
+          logoUrl: saved.logoUrl ?? null,
+          hasLogo: saved.hasLogo ?? true,
+          logoUpdatedAt: saved.logoUpdatedAt ?? new Date().toISOString(),
+        }));
+        toast.success("Logo gespeichert");
+      },
+      onError: (err) => toast.error(errorToMessage(err, "Logo-Upload fehlgeschlagen")),
+    });
   };
+
+  const handleLogoRemove = (): void => {
+    deleteLogo.mutate(undefined, {
+      onSuccess: (saved) => {
+        setForm((f) => ({
+          ...f,
+          logoUrl: null,
+          hasLogo: saved?.hasLogo ?? false,
+          logoUpdatedAt: saved?.logoUpdatedAt ?? new Date().toISOString(),
+        }));
+        toast.success("Logo entfernt");
+      },
+      onError: (err) => toast.error(errorToMessage(err, "Entfernen fehlgeschlagen")),
+    });
+  };
+
+  // Preview: bevorzugt eine live Backend-URL mit Cache-Bust (frische Uploads),
+  // fällt auf einen legacy Base64-Wert zurück.
+  const logoPreview =
+    form.hasLogo
+      ? firmaLogoUrl(form.logoUpdatedAt ?? undefined)
+      : form.logoUrl && form.logoUrl.startsWith("data:")
+        ? form.logoUrl
+        : null;
+  const busy = uploadLogo.isPending || deleteLogo.isPending;
 
   return (
     <div className="space-y-5 pb-24">
       <Section title="Logo" description="Erscheint auf Belegen und im Header.">
         <div className="flex items-center gap-4">
           <div className="grid h-20 w-20 place-content-center overflow-hidden rounded-lg border border-border bg-muted">
-            {form.logoUrl ? (
-              <img src={form.logoUrl} alt="Logo" className="h-full w-full object-contain" />
+            {logoPreview ? (
+              <img src={logoPreview} alt="Logo" className="h-full w-full object-contain" />
             ) : (
               <span className="text-xs text-muted-foreground">kein Logo</span>
             )}
           </div>
           <div className="flex flex-col gap-2">
-            <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm hover:bg-muted">
-              <input type="file" accept="image/*" className="hidden" onChange={handleLogo} />
-              Logo hochladen
+            <label
+              className={cn(
+                "inline-flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background px-3 py-1.5 text-sm hover:bg-muted",
+                busy && "pointer-events-none opacity-60",
+              )}
+            >
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="hidden"
+                onChange={handleLogo}
+                disabled={busy}
+              />
+              {uploadLogo.isPending ? "Lade hoch…" : "Logo hochladen"}
             </label>
-            {form.logoUrl && (
+            {logoPreview && (
               <button
                 type="button"
-                onClick={() => set("logoUrl", null)}
-                className="text-xs text-destructive hover:underline"
+                onClick={handleLogoRemove}
+                disabled={busy}
+                className="text-xs text-destructive hover:underline disabled:opacity-50"
               >
-                Logo entfernen
+                {deleteLogo.isPending ? "Entferne…" : "Logo entfernen"}
               </button>
             )}
+            <p className="text-[11px] text-muted-foreground">
+              PNG, JPG oder WebP · max. 3 MB · wird sofort gespeichert.
+            </p>
           </div>
         </div>
       </Section>
