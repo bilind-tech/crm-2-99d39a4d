@@ -85,8 +85,8 @@ function header(f: FirmaForPdf, logoDataUrl: string | null) {
   const logoNode = logoDataUrl
     ? {
         image: logoDataUrl,
-        fit: [220, 95],
-        absolutePosition: { x: 320, y: 24 },
+        fit: [260, 110],
+        absolutePosition: { x: 335, y: 22 },
       }
     : null;
   return {

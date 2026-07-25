@@ -139,8 +139,8 @@ function header(firma: Firmendaten | undefined, logo: string | null, logoSichtba
   const logoNode = logo && logoSichtbar
     ? {
         image: logo,
-        fit: [220, 95],
-        absolutePosition: { x: 320, y: 24 },
+        fit: [260, 110],
+        absolutePosition: { x: 335, y: 22 },
       }
     : null;
   return {
