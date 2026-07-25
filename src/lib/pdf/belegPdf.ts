@@ -20,6 +20,7 @@ import { A4, createHotspotTracker, type RuntimeHotspot } from "./hotspotTracker"
 // Aufgabe. Hier vermeidet der LRU rein clientseitig wiederholtes pdfmake-
 // Rendern, wenn dieselbe Beleg-Version mehrfach geöffnet wird.
 const PDF_LRU_MAX = 50;
+const PDF_RENDER_VERSION = "2026-07-25-logo-absolute-v3";
 const pdfLru = new Map<string, { blob: Blob; hotspots: RuntimeHotspot[] }>();
 
 const VOLATILE_PDF_KEYS = new Set([
@@ -30,7 +31,7 @@ const VOLATILE_PDF_KEYS = new Set([
   "geaendertAm",
 ]);
 function semanticPdfKey(parts: unknown[]): string {
-  return JSON.stringify(parts, (k, v) => (VOLATILE_PDF_KEYS.has(k) ? undefined : v));
+  return `${PDF_RENDER_VERSION}:${JSON.stringify(parts, (k, v) => (VOLATILE_PDF_KEYS.has(k) ? undefined : v))}`;
 }
 function lruGet(key: string): { blob: Blob; hotspots: RuntimeHotspot[] } | null {
   const v = pdfLru.get(key);
@@ -224,24 +225,34 @@ function anrede(k: Kunde, ap?: Ansprechpartner) {
 // ───────── Header / Footer ─────────────────────────────────────────────────
 
 function header(firma: Firmendaten, logo: string | null) {
+  const logoNode = logo
+    ? {
+        image: logo,
+        fit: [220, 95],
+        absolutePosition: { x: 320, y: 24 },
+      }
+    : null;
   return {
     margin: [55, 30, 55, 0] as [number, number, number, number],
-    columns: [
+    stack: [
+      ...(logoNode ? [logoNode] : []),
       {
-        width: "*",
-        stack: [
+        columns: [
           {
-            text: absenderzeile(firma),
-            fontSize: 8,
-            color: COLOR_TEXT,
-            decoration: "underline",
-            margin: [0, 50, 0, 0],
+            width: "*",
+            stack: [
+              {
+                text: absenderzeile(firma),
+                fontSize: 8,
+                color: COLOR_TEXT,
+                decoration: "underline",
+                margin: [0, 50, 0, 0],
+              },
+            ],
           },
+          { width: 270, text: "" },
         ],
       },
-      logo
-        ? { width: 270, image: logo, fit: [270, 120], alignment: "right" }
-        : { width: 270, text: "" },
     ],
   };
 }

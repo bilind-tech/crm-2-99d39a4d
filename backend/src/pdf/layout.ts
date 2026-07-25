@@ -82,18 +82,28 @@ function absenderzeile(f: FirmaForPdf): string {
 }
 
 function header(f: FirmaForPdf, logoDataUrl: string | null) {
+  const logoNode = logoDataUrl
+    ? {
+        image: logoDataUrl,
+        fit: [220, 95],
+        absolutePosition: { x: 320, y: 24 },
+      }
+    : null;
   return {
     margin: [55, 30, 55, 0] as [number, number, number, number],
-    columns: [
+    stack: [
+      ...(logoNode ? [logoNode] : []),
       {
-        width: "*",
-        stack: [
-          { text: absenderzeile(f), fontSize: 7, color: COLOR_TEXT, decoration: "underline", margin: [0, 50, 0, 0], noWrap: true },
+        columns: [
+          {
+            width: "*",
+            stack: [
+              { text: absenderzeile(f), fontSize: 7, color: COLOR_TEXT, decoration: "underline", margin: [0, 50, 0, 0], noWrap: true },
+            ],
+          },
+          { width: 270, text: "" },
         ],
       },
-      logoDataUrl
-        ? { width: 270, image: logoDataUrl, fit: [270, 120], alignment: "right" }
-        : { width: 270, text: "" },
     ],
   };
 }

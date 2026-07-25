@@ -136,24 +136,34 @@ function absenderzeile(f?: Firmendaten): string {
 }
 
 function header(firma: Firmendaten | undefined, logo: string | null, logoSichtbar = true) {
+  const logoNode = logo && logoSichtbar
+    ? {
+        image: logo,
+        fit: [220, 95],
+        absolutePosition: { x: 320, y: 24 },
+      }
+    : null;
   return {
     margin: [55, 30, 55, 0] as [number, number, number, number],
-    columns: [
+    stack: [
+      ...(logoNode ? [logoNode] : []),
       {
-        width: "*",
-        stack: [
+        columns: [
           {
-            text: absenderzeile(firma),
-            fontSize: 8,
-            color: COLOR_TEXT,
-            decoration: "underline",
-            margin: [0, 50, 0, 0],
+            width: "*",
+            stack: [
+              {
+                text: absenderzeile(firma),
+                fontSize: 8,
+                color: COLOR_TEXT,
+                decoration: "underline",
+                margin: [0, 50, 0, 0],
+              },
+            ],
           },
+          { width: 270, text: "" },
         ],
       },
-      logo && logoSichtbar
-        ? { width: 270, image: logo, fit: [270, 120], alignment: "right" }
-        : { width: 270, text: "" },
     ],
   };
 }
