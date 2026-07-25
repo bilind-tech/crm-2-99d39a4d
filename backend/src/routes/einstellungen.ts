@@ -266,9 +266,10 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
     }
     const dataUrlMime = dataUrl ? /^data:([^;]+);base64,/.exec(dataUrl)?.[1] ?? null : null;
     const legacyLogo = typeof base.logoUrl === "string" ? base.logoUrl : "";
+    const expectedLogo = !!file || legacyLogo.startsWith("data:image/");
 
     return {
-      ok: !!dataUrl,
+      ok: expectedLogo ? !!dataUrl && !dataUrlError && !fileReadError : true,
       generatedAt: new Date().toISOString(),
       dataDir: config.dataDir,
       brandingDir: branding,
@@ -282,6 +283,7 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
         wire: firmaToWire(base),
       },
       pdfLoader: {
+        expectedLogo,
         foundDataUrl: !!dataUrl,
         mime: dataUrlMime,
         length: dataUrl?.length ?? 0,

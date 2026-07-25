@@ -541,6 +541,7 @@ export interface FirmaLogoDebugInfo {
     wire: Partial<Firmendaten>;
   };
   pdfLoader: {
+    expectedLogo?: boolean;
     foundDataUrl: boolean;
     mime: string | null;
     length: number;

@@ -26,6 +26,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -345,6 +354,7 @@ function FirmendatenTab({
   const uploadLogo = useUploadFirmaLogo();
   const deleteLogo = useDeleteFirmaLogo();
   const logoDebug = useFirmaLogoDebug();
+  const [logoDebugText, setLogoDebugText] = useState("");
 
   const set = <K extends keyof Firmendaten>(k: K, v: Firmendaten[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -394,9 +404,17 @@ function FirmendatenTab({
     logoDebug.mutate(undefined, {
       onSuccess: (info) => {
         const text = JSON.stringify(info, null, 2);
+        const showManualCopy = () => {
+          setLogoDebugText(text);
+          toast.message("Logo-Debug geöffnet — bitte Text manuell kopieren");
+        };
+        if (!navigator.clipboard || !window.isSecureContext) {
+          showManualCopy();
+          return;
+        }
         void navigator.clipboard.writeText(text).then(
           () => toast.success("Logo-Debug kopiert"),
-          () => toast.error("Kopieren fehlgeschlagen"),
+          showManualCopy,
         );
       },
       onError: (err) => toast.error(errorToMessage(err, "Logo-Debug fehlgeschlagen")),
@@ -415,6 +433,39 @@ function FirmendatenTab({
 
   return (
     <div className="space-y-5 pb-24">
+      <Dialog open={logoDebugText.length > 0} onOpenChange={(open) => !open && setLogoDebugText("")}>
+        <DialogContent className="max-w-2xl bg-background">
+          <DialogHeader>
+            <DialogTitle>Logo-Debug</DialogTitle>
+            <DialogDescription>
+              Falls automatisches Kopieren blockiert wurde, markiere diesen Text und kopiere ihn hier in den Chat.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            readOnly
+            value={logoDebugText}
+            rows={14}
+            className="font-mono text-xs"
+            onFocus={(e) => e.currentTarget.select()}
+          />
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                if (!navigator.clipboard || !window.isSecureContext) return;
+                void navigator.clipboard.writeText(logoDebugText).then(
+                  () => toast.success("Logo-Debug kopiert"),
+                  () => toast.error("Bitte manuell markieren und kopieren"),
+                );
+              }}
+            >
+              Kopieren
+            </Button>
+            <Button type="button" onClick={() => setLogoDebugText("")}>Schließen</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <Section title="Logo" description="Erscheint auf Belegen und im Header.">
         <div className="flex items-center gap-4">
           <div className="grid h-20 w-20 place-content-center overflow-hidden rounded-lg border border-border bg-muted">

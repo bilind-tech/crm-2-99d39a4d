@@ -35,7 +35,7 @@ export async function fetchBackendPdf(
   cacheBust?: string,
 ): Promise<BackendPdfResult | null> {
   if (!isBackendUrlExplicit()) return null;
-  const base = getBackendUrl();
+  const base = getBackendUrl().replace(/\/$/, "");
   const route = art === "angebot" ? "angebote" : "rechnungen";
   const url = new URL(`${base}/${route}/${encodeURIComponent(id)}/pdf`);
   if (cacheBust) url.searchParams.set("v", cacheBust);

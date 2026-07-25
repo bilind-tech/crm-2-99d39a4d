@@ -102,23 +102,17 @@ async function logoSourceToDataUrl(source: string): Promise<string | null> {
   const trimmed = source.trim();
   if (!trimmed) return null;
   if (trimmed.startsWith("data:image/")) return trimmed;
-  try {
-    const base = getBackendUrl().replace(/\/$/, "");
-    const url = trimmed.startsWith("/") ? `${base}${trimmed}` : trimmed;
-    const res = await fetch(url, { credentials: "include", cache: "no-store" });
-    if (!res.ok) {
-      throw new Error(`Logo konnte nicht geladen werden: HTTP ${res.status} (${url})`);
-    }
-    const blob = await res.blob();
-    if (!blob.type.startsWith("image/")) {
-      throw new Error(`Logo-Antwort ist kein Bild: ${blob.type || "unbekannt"}`);
-    }
-    return await blobToDataUrl(blob);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn("[pdf-logo] Firmenlogo konnte nicht in die PDF übernommen werden", e);
-    return null;
+  const base = getBackendUrl().replace(/\/$/, "");
+  const url = trimmed.startsWith("/") ? `${base}${trimmed}` : trimmed;
+  const res = await fetch(url, { credentials: "include", cache: "no-store" });
+  if (!res.ok) {
+    throw new Error(`Logo konnte nicht geladen werden: HTTP ${res.status} (${url})`);
   }
+  const blob = await res.blob();
+  if (!blob.type.startsWith("image/")) {
+    throw new Error(`Logo-Antwort ist kein Bild: ${blob.type || "unbekannt"}`);
+  }
+  return await blobToDataUrl(blob);
 }
 
 async function logoDataUrl(): Promise<string | null> {
@@ -675,9 +669,12 @@ async function resolveLogo(firma: Firmendaten, override: string | null): Promise
   if (firma.logoUrl && firma.logoUrl.trim()) {
     const fromFirma = await logoSourceToDataUrl(firma.logoUrl);
     if (fromFirma) return fromFirma;
-    if (firma.hasLogo) {
-      throw new Error("Firmenlogo ist gespeichert, konnte aber für die PDF nicht geladen werden. Bitte Einstellungen → Firmendaten → Logo-Debug kopieren.");
-    }
+  }
+  if (firma.hasLogo) {
+    const directUrl = `/einstellungen/firma/logo?v=${encodeURIComponent(firma.logoUpdatedAt ?? String(Date.now()))}`;
+    const directLogo = await logoSourceToDataUrl(directUrl);
+    if (directLogo) return directLogo;
+    throw new Error("Firmenlogo ist gespeichert, konnte aber für die PDF nicht geladen werden. Bitte Einstellungen → Firmendaten → Logo-Debug kopieren.");
   }
   return await logoDataUrl();
 }
