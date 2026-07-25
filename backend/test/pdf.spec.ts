@@ -1,6 +1,6 @@
 // Smoke-Test für Step 5: PDF-Rendering + Cache.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { mkdtempSync, rmSync, mkdirSync, existsSync, readdirSync } from "node:fs";
+import { mkdtempSync, rmSync, mkdirSync, existsSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -17,8 +17,14 @@ const { createAngebot, updateAngebot } = await import("../src/belege/angebote-re
 const { createRechnung } = await import("../src/belege/rechnungen-repo.js");
 const { renderAngebotPdf, renderRechnungPdf } = await import("../src/pdf/belegPdf.server.js");
 const { wirePdfCacheInvalidation } = await import("../src/pdf/wireup.js");
+const { brandingDir, loadLogoDataUrl } = await import("../src/pdf/firma.js");
 
 function ensureDir(p: string) { if (!existsSync(p)) mkdirSync(p, { recursive: true, mode: 0o700 }); }
+
+const tinyPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+  "base64",
+);
 
 beforeAll(() => {
   ensureMasterKey(config.keyPath);
@@ -89,6 +95,26 @@ describe("PDF-Rendering", () => {
     const out = await renderRechnungPdf(r.id);
     expect(out!.buffer.subarray(0, 5).toString()).toBe("%PDF-");
     expect(out!.dateiname).toContain(r.nummer);
+  });
+
+  it("Rechnung: nutzt gespeichertes Firmenlogo und ändert Cache-Hash bei Logo-Wechsel", async () => {
+    const k = createKunde({ typ: "firma", firmenname: "Logo GmbH", kuerzel: "LOG" });
+    const r = createRechnung({ kundeId: k.id, titel: "Logo-Test",
+      positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19 }] });
+
+    const dir = brandingDir();
+    ensureDir(dir);
+    writeFileSync(path.join(dir, "logo.png"), tinyPng);
+    const loaded = loadLogoDataUrl();
+    expect(loaded).toMatch(/^data:image\/png;base64,/);
+
+    const withLogo = await renderRechnungPdf(r.id);
+    expect(withLogo!.buffer.subarray(0, 5).toString()).toBe("%PDF-");
+
+    writeFileSync(path.join(dir, "logo.png"), Buffer.concat([tinyPng, Buffer.from("changed") ]));
+    const changedLogo = await renderRechnungPdf(r.id);
+    expect(changedLogo!.hash).not.toBe(withLogo!.hash);
+    expect(changedLogo!.fromCache).toBe(false);
   });
 
   it("Unbekannte ID liefert null", async () => {

@@ -20,6 +20,7 @@ const { default: Fastify } = await import("fastify");
 const cookie = (await import("@fastify/cookie")).default;
 const helmet = (await import("@fastify/helmet")).default;
 const rateLimit = (await import("@fastify/rate-limit")).default;
+const multipart = (await import("@fastify/multipart")).default;
 const { openDatabase, closeDatabase } = await import("../src/db/index.js");
 const { ensureMasterKey } = await import("../src/crypto/masterkey.js");
 const { config } = await import("../src/config.js");
@@ -38,11 +39,30 @@ async function buildApp() {
   const a = Fastify({ logger: false, trustProxy: true });
   await a.register(helmet, { contentSecurityPolicy: false });
   await a.register(cookie);
+  await a.register(multipart, { limits: { fileSize: 3 * 1024 * 1024, files: 1 } });
   await a.register(rateLimit, { max: 1000, timeWindow: "1 minute" });
   await a.register(authRoutes);
   await a.register(einstellungenRoutes);
   return a;
 }
+
+function multipartPayload(filename: string, contentType: string, body: Buffer): { payload: Buffer; contentType: string } {
+  const boundary = `----mcc-test-${Math.random().toString(36).slice(2)}`;
+  const head = Buffer.from(
+    `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`,
+  );
+  const tail = Buffer.from(`\r\n--${boundary}--\r\n`);
+  return {
+    payload: Buffer.concat([head, body, tail]),
+    contentType: `multipart/form-data; boundary=${boundary}`,
+  };
+}
+
+const tinyPng = Buffer.from(
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=",
+  "base64",
+);
+const tinyWebpHeader = Buffer.from("52494646100000005745425056503820", "hex");
 
 async function setupAndLogin(): Promise<string> {
   const tokFile = path.join(config.dataDir, "keys", "setup.token");
@@ -155,5 +175,28 @@ describe("Firmendaten-Roundtrip (UI-Felder bleiben nach Speichern erhalten)", ()
     const j = patch.json();
     expect(j.firmenname).toBe("Backend-Name GmbH");
     expect(j.webseite).toBe("https://intern.de");
+  });
+
+  it("Logo-Upload speichert PNG als Datei und lehnt WebP für PDF-Sicherheit ab", async () => {
+    const png = multipartPayload("logo.png", "image/png", tinyPng);
+    const upload = await app.inject({
+      method: "POST", url: "/einstellungen/firma/logo",
+      headers: { cookie: cookieHeader, "content-type": png.contentType },
+      payload: png.payload,
+    });
+    expect(upload.statusCode).toBe(200);
+    const saved = upload.json();
+    expect(saved.hasLogo).toBe(true);
+    expect(saved.logoUrl).toMatch(/^\/einstellungen\/firma\/logo\?v=/);
+    expect(existsSync(path.join(config.dataDir, "branding", "logo.png"))).toBe(true);
+
+    const webp = multipartPayload("logo.webp", "image/webp", tinyWebpHeader);
+    const rejected = await app.inject({
+      method: "POST", url: "/einstellungen/firma/logo",
+      headers: { cookie: cookieHeader, "content-type": webp.contentType },
+      payload: webp.payload,
+    });
+    expect(rejected.statusCode).toBe(415);
+    expect(rejected.json().message).toContain("PNG oder JPG");
   });
 });
