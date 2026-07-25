@@ -19,6 +19,7 @@ import type {
   EmailSignatur,
   EmailVersand,
   EmailVorlage,
+  FirmaLogoDebugInfo,
   Firmendaten,
   GithubInstallResult,
   GithubUpdateStatus,
@@ -70,6 +71,7 @@ export const qk = {
     backup: ["einstellungen", "backup"] as const,
     backupHistorie: ["einstellungen", "backup", "historie"] as const,
     googleDrive: ["einstellungen", "googleDrive"] as const,
+    firmaLogoDebug: ["einstellungen", "firma", "logo", "debug"] as const,
     sitzungen: ["einstellungen", "sitzungen"] as const,
 
     positionsvorlagen: ["einstellungen", "positionsvorlagen"] as const,
@@ -861,6 +863,11 @@ export const useDeleteFirmaLogo = () => {
     },
   });
 };
+
+export const useFirmaLogoDebug = () =>
+  useMutation({
+    mutationFn: () => api.get<FirmaLogoDebugInfo>("/einstellungen/firma/logo/debug"),
+  });
 
 export const useSmtp = () =>
   useQuery({
