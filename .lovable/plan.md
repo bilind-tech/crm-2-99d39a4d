@@ -1,30 +1,41 @@
-## Plan: Logo endgültig robust in Rechnungen/Angeboten/Protokollen anzeigen
+## Ziel
+Das Firmenlogo soll auf Rechnungen und Angeboten zuverlässig oben rechts erscheinen. Zusätzlich bauen wir eine klare Debug-Anzeige ein, damit du direkt sehen/kopieren kannst, wo es hängt: Upload, gespeicherte Datei, PDF-Renderer oder Cache.
 
-Ich werde die Logo-Strecke so umbauen, dass nicht mehr mehrere unterschiedliche Wege gegeneinander arbeiten. Ziel: Wenn in den Einstellungen ein Logo vorhanden ist, wird exakt dieses Logo in der Rechnung oben rechts eingebettet — nicht nur als UI-Preview angezeigt.
+## Plan
+1. **Debug-Endpunkt im Backend ergänzen**
+   - Neuer geschützter Endpunkt z. B. `GET /einstellungen/firma/logo/debug`.
+   - Liefert kopierbare Diagnose-Daten:
+     - ob Logo-Datei existiert
+     - Pfad/Dateiname im Datenverzeichnis, MIME, Bytes, Änderungszeit
+     - ob `loadLogoDataUrl()` wirklich eine PDF-taugliche Data-URL findet
+     - Hash/Fingerprint fürs PDF
+     - Anzahl alter PDF-Cache-Dateien
+     - aktuelle `logoUpdatedAt`/`hasLogo`-Werte aus den Firmendaten
 
-### 1. PDF-Logo-Quelle vereinheitlichen
-- Eine zentrale Backend-Funktion lädt das Firmenlogo aus dem Datenordner und gibt immer eine PDF-taugliche Data-URL zurück.
-- Dabei werden PNG und JPG/JPEG unterstützt.
-- WebP wird für PDF nicht mehr still akzeptiert, weil PDF-Renderer damit je nach Umgebung leer bleiben können. Falls WebP hochgeladen wird, bekommt der Nutzer eine klare Fehlermeldung statt einer leeren Rechnung.
+2. **Debug-Button in Einstellungen → Firmendaten → Logo einbauen**
+   - Kleiner Button „Logo-Debug kopieren“ neben Upload/Entfernen.
+   - Kopiert die Diagnose als JSON in die Zwischenablage.
+   - So kannst du mir beim nächsten Mal exakt schicken, warum es nicht angezeigt wird.
 
-### 2. Backend-Lücke schließen
-Aktuell bestätigt der Code eine Schwachstelle: Der Upload akzeptiert auch `logo.webp`, aber der PDF-Renderer sucht nur `logo.png`, `logo.jpg`, `logo.jpeg`. Das kann zu „Logo ist in Einstellungen da, aber PDF zeigt nichts“ führen. Das wird bereinigt.
+3. **PDF-Logo-Rendering härten**
+   - Backend-Renderer validiert vor dem Rendern, ob das Logo lesbar und als PNG/JPG für pdfmake verwendbar ist.
+   - Wenn eine Logo-Datei existiert, wird sie eindeutig in den PDF-Hash aufgenommen und alte PDF-Caches werden beim Upload/Löschen entfernt.
+   - Falls das Logo nicht eingebettet werden kann, soll der Debug-Endpunkt den Fehler sichtbar machen statt stillschweigend ohne Logo zu rendern.
 
-### 3. Frontend-Fallback reparieren
-Falls die App statt Backend-PDF einmal den Browser-PDF-Generator nutzt, darf sie nicht einfach die relative URL `/einstellungen/firma/logo?...` direkt an pdfmake geben. Ich werde diese URL vorher zu einer echten Data-URL umwandeln. Dadurch funktioniert auch der Fallback zuverlässig.
+4. **Wahrscheinlichen aktuellen Fehler abfangen**
+   - Die Preview kann aktuell auf ein altes/fallback-PDF zurückfallen, wenn Backend-PDF oder Logo-Laden scheitert. Ich werde das so ändern, dass der Grund sichtbar wird und nicht unbemerkt eine PDF ohne Logo angezeigt wird.
+   - Für Beleg-PDFs wird kein generisches Asset-Logo als Ersatz verwendet, wenn eigentlich ein hochgeladenes Firmenlogo erwartet wird. Dadurch sieht man sofort, ob die gespeicherte Datei wirklich genutzt wird.
 
-### 4. Cache zuverlässig brechen
-- Beim Logo-Upload und Löschen werden PDF-Caches sauber invalidiert.
-- Die PDF-Signatur nutzt `logoUpdatedAt` statt nur die Länge der Logo-URL, damit ein neu hochgeladenes Logo sicher als neue PDF-Version erkannt wird.
-- Optional wird nach Logo-Upload serverseitig der bestehende PDF-Cache geleert, damit alte Rechnungs-PDFs nicht weiter aus dem Cache kommen.
+5. **Tests erweitern**
+   - Test: Logo-Upload speichert Datei und Debug meldet `hasFile: true`.
+   - Test: gerenderte Rechnung mit Logo hat einen anderen Hash als ohne Logo.
+   - Test: Regenerieren/Upload invalidiert den PDF-Cache.
+   - Keine neuen npm-Pakete, keine Lockfile-Änderung, keine riskanten Update-Script-Änderungen.
 
-### 5. Sichtbare Kontrolle in den Einstellungen
-- In den Firmendaten soll nach Upload klar sichtbar sein: „Logo gespeichert“.
-- Wenn das Format ungeeignet ist, erscheint eine verständliche Fehlermeldung: bitte PNG oder JPG verwenden.
+## Ergebnis für dich
+Nach dem Update kannst du:
+1. Logo hochladen.
+2. Rechnung öffnen.
+3. Wenn es immer noch fehlt: in Einstellungen den Debug-Button drücken und mir die kopierten Daten schicken.
 
-### 6. Tests/Absicherung
-- Backend-Test ergänzen: Logo hochladen → Rechnungs-PDF rendern → PDF ist gültig und Cache reagiert auf Logo-Änderung.
-- Kein neues npm-Paket, kein Lockfile-Risiko, keine Migration. Damit bleibt `mcc-update` stabil wie beim letzten Mal.
-
-### Ergebnis
-Nach dem Update lädst du das Logo einmal als PNG oder JPG in Einstellungen → Firmendaten hoch. Danach wird es in neu geöffneten/neu gerenderten Rechnungen oben rechts zuverlässig eingebettet.
+Damit wissen wir dann nicht mehr „vielleicht“, sondern exakt, ob das Problem beim Speichern, Laden, Rendern oder Cache liegt.

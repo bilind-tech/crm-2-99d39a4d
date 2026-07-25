@@ -518,6 +518,41 @@ export interface Firmendaten {
   standardZahlungszielTage: number;
 }
 
+export interface FirmaLogoDebugInfo {
+  ok: boolean;
+  generatedAt: ISODateTime;
+  dataDir: string;
+  brandingDir: string;
+  brandingFiles: string[];
+  file: {
+    exists: boolean;
+    fileName?: string;
+    path?: string;
+    expectedMime?: string;
+    detectedMime?: string | null;
+    bytes?: number;
+    modifiedAt?: ISODateTime;
+  };
+  fileReadError: string | null;
+  settings: {
+    hasLegacyLogoValue: boolean;
+    legacyLogoLooksLikeDataUrl: boolean;
+    logoUpdatedAt: string | null;
+    wire: Partial<Firmendaten>;
+  };
+  pdfLoader: {
+    foundDataUrl: boolean;
+    mime: string | null;
+    length: number;
+    fingerprint: string | null;
+    error: string | null;
+  };
+  pdfCache: {
+    angebote: number;
+    rechnungen: number;
+  };
+}
+
 export interface SmtpEinstellungen {
   server: string;
   port: number;

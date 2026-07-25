@@ -21,6 +21,7 @@ import {
   Clock,
   FileSpreadsheet,
   Upload,
+  Copy,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +38,7 @@ import {
   useUpdateFirmendaten,
   useUploadFirmaLogo,
   useDeleteFirmaLogo,
+  useFirmaLogoDebug,
   firmaLogoUrl,
 } from "@/hooks/useApi";
 import { errorToMessage } from "@/lib/api/piClient";
@@ -342,6 +344,7 @@ function FirmendatenTab({
 
   const uploadLogo = useUploadFirmaLogo();
   const deleteLogo = useDeleteFirmaLogo();
+  const logoDebug = useFirmaLogoDebug();
 
   const set = <K extends keyof Firmendaten>(k: K, v: Firmendaten[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -384,6 +387,19 @@ function FirmendatenTab({
         toast.success("Logo entfernt");
       },
       onError: (err) => toast.error(errorToMessage(err, "Entfernen fehlgeschlagen")),
+    });
+  };
+
+  const handleLogoDebug = (): void => {
+    logoDebug.mutate(undefined, {
+      onSuccess: (info) => {
+        const text = JSON.stringify(info, null, 2);
+        void navigator.clipboard.writeText(text).then(
+          () => toast.success("Logo-Debug kopiert"),
+          () => toast.error("Kopieren fehlgeschlagen"),
+        );
+      },
+      onError: (err) => toast.error(errorToMessage(err, "Logo-Debug fehlgeschlagen")),
     });
   };
 
@@ -434,6 +450,17 @@ function FirmendatenTab({
                 {deleteLogo.isPending ? "Entferne…" : "Logo entfernen"}
               </button>
             )}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleLogoDebug}
+              disabled={logoDebug.isPending}
+              className="h-8 justify-start gap-2 px-2 text-xs"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              {logoDebug.isPending ? "Prüfe…" : "Logo-Debug kopieren"}
+            </Button>
             <p className="text-[11px] text-muted-foreground">
               PNG oder JPG · max. 3 MB · wird sofort gespeichert.
             </p>
