@@ -20,10 +20,12 @@ import { resetTransport } from "../email/transport.js";
 import { resetImapClient } from "../email/imap-archive.js";
 import { flachZuUi, uiPatchZuFlach } from "../mahnung/settings-adapter.js";
 import { MahnungSchema } from "../settings/schemas.js";
-import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { brandingDir } from "../pdf/firma.js";
+import { config } from "../config.js";
+import { brandingDir, loadLogoDataUrl } from "../pdf/firma.js";
 import { invalidateAllPdfCaches } from "../pdf/belegPdf.server.js";
+import { logoFingerprint } from "../pdf/cache.js";
 
 const LOGO_MAX_BYTES = 3 * 1024 * 1024; // 3 MB roh — reicht für gängige Marken-PNGs
 const LOGO_MIME_TO_EXT: Record<string, "png" | "jpg"> = {
@@ -79,6 +81,12 @@ function detectImageMime(buf: Buffer): string | null {
   if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
   return null;
+}
+
+function countPdfCacheFiles(art: "angebot" | "rechnung"): number {
+  const dir = path.join(config.dataDir, "pdf-cache", art);
+  if (!existsSync(dir)) return 0;
+  return readdirSync(dir).filter((f) => f.endsWith(".pdf")).length;
 }
 
 function loadArea(name: keyof typeof AREAS): unknown {
@@ -220,6 +228,72 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
   // hat bei großen PNGs still zu 422-Fehlern im Firma-PATCH geführt und blähte jeden
   // Settings-Roundtrip auf. Datei-Persistenz umgeht Schema-Größen komplett und wird
   // vom PDF-Renderer bereits als Fallback genutzt.
+
+  app.get("/einstellungen/firma/logo/debug", async () => {
+    const base = loadArea("firma") as Record<string, unknown>;
+    const file = findLogoFile();
+    const branding = brandingDir();
+    const brandingFiles = existsSync(branding)
+      ? readdirSync(branding).filter((f) => /^logo\./i.test(f)).sort()
+      : [];
+
+    let fileInfo: Record<string, unknown> | null = null;
+    let fileReadError: string | null = null;
+    if (file) {
+      try {
+        const buf = readFileSync(file.path);
+        const st = statSync(file.path);
+        fileInfo = {
+          exists: true,
+          fileName: path.basename(file.path),
+          path: file.path,
+          expectedMime: file.mime,
+          detectedMime: detectImageMime(buf),
+          bytes: buf.length,
+          modifiedAt: st.mtime.toISOString(),
+        };
+      } catch (e) {
+        fileReadError = e instanceof Error ? e.message : String(e);
+      }
+    }
+
+    let dataUrl: string | null = null;
+    let dataUrlError: string | null = null;
+    try {
+      dataUrl = loadLogoDataUrl();
+    } catch (e) {
+      dataUrlError = e instanceof Error ? e.message : String(e);
+    }
+    const dataUrlMime = dataUrl ? /^data:([^;]+);base64,/.exec(dataUrl)?.[1] ?? null : null;
+    const legacyLogo = typeof base.logoUrl === "string" ? base.logoUrl : "";
+
+    return {
+      ok: !!dataUrl,
+      generatedAt: new Date().toISOString(),
+      dataDir: config.dataDir,
+      brandingDir: branding,
+      brandingFiles,
+      file: fileInfo ?? { exists: false },
+      fileReadError,
+      settings: {
+        hasLegacyLogoValue: legacyLogo.length > 0,
+        legacyLogoLooksLikeDataUrl: legacyLogo.startsWith("data:image/"),
+        logoUpdatedAt: typeof base.logoUpdatedAt === "string" ? base.logoUpdatedAt : null,
+        wire: firmaToWire(base),
+      },
+      pdfLoader: {
+        foundDataUrl: !!dataUrl,
+        mime: dataUrlMime,
+        length: dataUrl?.length ?? 0,
+        fingerprint: logoFingerprint(dataUrl),
+        error: dataUrlError,
+      },
+      pdfCache: {
+        angebote: countPdfCacheFiles("angebot"),
+        rechnungen: countPdfCacheFiles("rechnung"),
+      },
+    };
+  });
 
   app.get("/einstellungen/firma/logo", async (_req, reply) => {
     const file = findLogoFile();
