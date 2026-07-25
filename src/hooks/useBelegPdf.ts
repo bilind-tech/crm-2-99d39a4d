@@ -22,6 +22,7 @@ import type { Angebot, Rechnung, Kunde, Firmendaten, Ansprechpartner, Objekt } f
 type Status = "idle" | "loading" | "ready" | "error";
 
 const PDF_TIMEOUT_MS = 20_000;
+const PDF_RENDER_VERSION = "2026-07-25-logo-absolute-v3";
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -54,6 +55,7 @@ function pdfDependencySignature(
 ): string {
   if (!beleg) return "noop";
   return [
+    PDF_RENDER_VERSION,
     beleg.id,
     beleg.geaendertAm,
     beleg.objektId ?? "kein-objekt",

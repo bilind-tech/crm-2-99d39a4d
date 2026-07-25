@@ -12,6 +12,10 @@ import type { FirmaForPdf } from "./types.js";
 
 export type BelegArt = "angebot" | "rechnung";
 
+// Wird bewusst in den Cache-Hash aufgenommen: Layout-/Renderer-Fixes müssen
+// alte, formal gleich signierte PDFs zuverlässig verdrängen.
+const PDF_RENDER_CACHE_VERSION = "2026-07-25-logo-absolute-v3";
+
 function ensureDir(p: string): void {
   if (!existsSync(p)) mkdirSync(p, { recursive: true, mode: 0o700 });
 }
@@ -32,6 +36,7 @@ export function computeHash(parts: {
 }): string {
   const { beleg, kunde, firma, ansprechpartner, objekt, logoFingerprint } = parts;
   const payload = {
+    renderVersion: PDF_RENDER_CACHE_VERSION,
     nummer: beleg.nummer,
     geaendertAm: beleg.geaendertAm,
     titel: beleg.titel,
