@@ -52,13 +52,16 @@ async function logoSourceToDataUrl(source: string): Promise<string | null> {
   if (!trimmed) return null;
   if (trimmed.startsWith("data:image/")) return trimmed;
   try {
-    const url = trimmed.startsWith("/") ? `${getBackendUrl()}${trimmed}` : trimmed;
+    const base = getBackendUrl().replace(/\/$/, "");
+    const url = trimmed.startsWith("/") ? `${base}${trimmed}` : trimmed;
     const res = await fetch(url, { credentials: "include", cache: "no-store" });
-    if (!res.ok) return null;
+    if (!res.ok) throw new Error(`Logo konnte nicht geladen werden: HTTP ${res.status} (${url})`);
     const blob = await res.blob();
-    if (!blob.type.startsWith("image/")) return null;
+    if (!blob.type.startsWith("image/")) throw new Error(`Logo-Antwort ist kein Bild: ${blob.type || "unbekannt"}`);
     return await blobToDataUrl(blob);
-  } catch {
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn("[protokoll-logo] Firmenlogo konnte nicht in die PDF übernommen werden", e);
     return null;
   }
 }
@@ -91,6 +94,7 @@ async function resolveLogo(firma?: Firmendaten): Promise<string | null> {
   if (providedLogo) {
     const dataUrl = await logoSourceToDataUrl(providedLogo);
     if (dataUrl) return dataUrl;
+    if (firma?.hasLogo) return null;
   }
   const settingsLogo = await fetchSettingsLogo();
   if (settingsLogo) return settingsLogo;
