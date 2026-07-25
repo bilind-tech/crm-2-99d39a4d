@@ -51,19 +51,13 @@ async function logoSourceToDataUrl(source: string): Promise<string | null> {
   const trimmed = source.trim();
   if (!trimmed) return null;
   if (trimmed.startsWith("data:image/")) return trimmed;
-  try {
-    const base = getBackendUrl().replace(/\/$/, "");
-    const url = trimmed.startsWith("/") ? `${base}${trimmed}` : trimmed;
-    const res = await fetch(url, { credentials: "include", cache: "no-store" });
-    if (!res.ok) throw new Error(`Logo konnte nicht geladen werden: HTTP ${res.status} (${url})`);
-    const blob = await res.blob();
-    if (!blob.type.startsWith("image/")) throw new Error(`Logo-Antwort ist kein Bild: ${blob.type || "unbekannt"}`);
-    return await blobToDataUrl(blob);
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn("[protokoll-logo] Firmenlogo konnte nicht in die PDF übernommen werden", e);
-    return null;
-  }
+  const base = getBackendUrl().replace(/\/$/, "");
+  const url = trimmed.startsWith("/") ? `${base}${trimmed}` : trimmed;
+  const res = await fetch(url, { credentials: "include", cache: "no-store" });
+  if (!res.ok) throw new Error(`Logo konnte nicht geladen werden: HTTP ${res.status} (${url})`);
+  const blob = await res.blob();
+  if (!blob.type.startsWith("image/")) throw new Error(`Logo-Antwort ist kein Bild: ${blob.type || "unbekannt"}`);
+  return await blobToDataUrl(blob);
 }
 
 async function fetchBundledLogo(): Promise<string | null> {
@@ -78,13 +72,13 @@ async function fetchBundledLogo(): Promise<string | null> {
 }
 
 async function fetchSettingsLogo(): Promise<string | null> {
-  try {
-    const firma = await api.get<Firmendaten>("/einstellungen/firma");
-    const logo = firma.logoUrl?.trim();
-    return logo ? await logoSourceToDataUrl(logo) : null;
-  } catch {
-    return null;
+  const firma = await api.get<Firmendaten>("/einstellungen/firma");
+  const logo = firma.logoUrl?.trim();
+  if (logo) return await logoSourceToDataUrl(logo);
+  if (firma.hasLogo) {
+    return await logoSourceToDataUrl(`/einstellungen/firma/logo?v=${encodeURIComponent(firma.logoUpdatedAt ?? String(Date.now()))}`);
   }
+  return null;
 }
 
 // Wie in belegPdf.ts: eingestellte Logo-URLs werden vor pdfmake in echte
@@ -94,7 +88,11 @@ async function resolveLogo(firma?: Firmendaten): Promise<string | null> {
   if (providedLogo) {
     const dataUrl = await logoSourceToDataUrl(providedLogo);
     if (dataUrl) return dataUrl;
-    if (firma?.hasLogo) return null;
+  }
+  if (firma?.hasLogo) {
+    const directLogo = await logoSourceToDataUrl(`/einstellungen/firma/logo?v=${encodeURIComponent(firma.logoUpdatedAt ?? String(Date.now()))}`);
+    if (directLogo) return directLogo;
+    throw new Error("Firmenlogo ist gespeichert, konnte aber für das Protokoll-PDF nicht geladen werden. Bitte Einstellungen → Firmendaten → Logo-Debug kopieren.");
   }
   const settingsLogo = await fetchSettingsLogo();
   if (settingsLogo) return settingsLogo;
