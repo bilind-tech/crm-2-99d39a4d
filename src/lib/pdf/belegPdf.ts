@@ -12,6 +12,7 @@ import type {
   Objekt,
 } from "@/lib/api/types";
 import logoUrl from "@/assets/logo.png";
+import { getBackendUrl } from "@/lib/api/backendUrl";
 import { A4, createHotspotTracker, type RuntimeHotspot } from "./hotspotTracker";
 
 // ───────── Mock-LRU-Cache (nur Lovable-Preview) ────────────────────────────
@@ -88,16 +89,36 @@ async function getPdfMake(): Promise<AnyPdfMake> {
   return pm;
 }
 
+async function blobToDataUrl(blob: Blob): Promise<string> {
+  return await new Promise<string>((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result as string);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+
+async function logoSourceToDataUrl(source: string): Promise<string | null> {
+  const trimmed = source.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("data:image/")) return trimmed;
+  try {
+    const url = trimmed.startsWith("/") ? `${getBackendUrl()}${trimmed}` : trimmed;
+    const res = await fetch(url, { credentials: "include", cache: "no-store" });
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    if (!blob.type.startsWith("image/")) return null;
+    return await blobToDataUrl(blob);
+  } catch {
+    return null;
+  }
+}
+
 async function logoDataUrl(): Promise<string | null> {
   try {
     const res = await fetch(logoUrl);
     const blob = await res.blob();
-    return await new Promise<string>((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(r.result as string);
-      r.onerror = reject;
-      r.readAsDataURL(blob);
-    });
+    return await blobToDataUrl(blob);
   } catch {
     return null;
   }
@@ -643,8 +664,11 @@ function mergeFirma(firma: Firmendaten, override?: Partial<Firmendaten>): Firmen
 }
 
 async function resolveLogo(firma: Firmendaten, override: string | null): Promise<string | null> {
-  if (override) return override;
-  if (firma.logoUrl && firma.logoUrl.trim()) return firma.logoUrl;
+  if (override) return await logoSourceToDataUrl(override);
+  if (firma.logoUrl && firma.logoUrl.trim()) {
+    const fromFirma = await logoSourceToDataUrl(firma.logoUrl);
+    if (fromFirma) return fromFirma;
+  }
   return await logoDataUrl();
 }
 

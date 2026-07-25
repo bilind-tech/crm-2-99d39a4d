@@ -97,6 +97,19 @@ export function invalidate(art: BelegArt, id: string): void {
   }
 }
 
+/** Entfernt alle gerenderten Beleg-PDFs, z. B. nach Firmenlogo-Wechsel. */
+export function invalidateAll(): void {
+  for (const art of ["angebot", "rechnung"] as const) {
+    const dir = path.join(config.dataDir, "pdf-cache", art);
+    if (!existsSync(dir)) continue;
+    for (const f of readdirSync(dir)) {
+      if (f.endsWith(".pdf")) {
+        try { unlinkSync(path.join(dir, f)); } catch { /* ignore */ }
+      }
+    }
+  }
+}
+
 export function logoFingerprint(dataUrl: string | null): string | null {
   if (!dataUrl) return null;
   return crypto.createHash("sha256").update(dataUrl).digest("hex").slice(0, 12);

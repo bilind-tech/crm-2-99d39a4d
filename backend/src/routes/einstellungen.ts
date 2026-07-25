@@ -23,13 +23,13 @@ import { MahnungSchema } from "../settings/schemas.js";
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { brandingDir } from "../pdf/firma.js";
+import { invalidateAllPdfCaches } from "../pdf/belegPdf.server.js";
 
 const LOGO_MAX_BYTES = 3 * 1024 * 1024; // 3 MB roh — reicht für gängige Marken-PNGs
-const LOGO_MIME_TO_EXT: Record<string, "png" | "jpg" | "webp"> = {
+const LOGO_MIME_TO_EXT: Record<string, "png" | "jpg"> = {
   "image/png": "png",
   "image/jpeg": "jpg",
   "image/jpg": "jpg",
-  "image/webp": "webp",
 };
 
 function ensureBrandingDir(): string {
@@ -38,7 +38,7 @@ function ensureBrandingDir(): string {
   return d;
 }
 
-/** Sucht die aktuell gespeicherte Logo-Datei (png/jpg/jpeg/webp) oder null. */
+/** Sucht die aktuell gespeicherte Logo-Datei (png/jpg/jpeg) oder null. */
 function findLogoFile(): { path: string; mime: string } | null {
   const d = brandingDir();
   if (!existsSync(d)) return null;
@@ -46,7 +46,6 @@ function findLogoFile(): { path: string; mime: string } | null {
     { ext: "png", mime: "image/png" },
     { ext: "jpg", mime: "image/jpeg" },
     { ext: "jpeg", mime: "image/jpeg" },
-    { ext: "webp", mime: "image/webp" },
   ];
   for (const c of candidates) {
     const p = path.join(d, `logo.${c.ext}`);
@@ -65,7 +64,7 @@ function deleteAllLogoFiles(): void {
   }
 }
 
-function writeLogoAtomic(ext: "png" | "jpg" | "webp", data: Buffer): void {
+function writeLogoAtomic(ext: "png" | "jpg", data: Buffer): void {
   const d = ensureBrandingDir();
   const tmp = path.join(d, `.logo.${ext}.tmp`);
   writeFileSync(tmp, data, { mode: 0o600 });
@@ -79,10 +78,6 @@ function detectImageMime(buf: Buffer): string | null {
   if (buf.length < 12) return null;
   if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return "image/png";
   if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return "image/jpeg";
-  if (
-    buf[0] === 0x52 && buf[1] === 0x49 && buf[2] === 0x46 && buf[3] === 0x46 &&
-    buf[8] === 0x57 && buf[9] === 0x45 && buf[10] === 0x42 && buf[11] === 0x50
-  ) return "image/webp";
   return null;
 }
 
@@ -295,15 +290,16 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
       reply.status(413);
       return { error: "file-too-large", maxBytes: LOGO_MAX_BYTES };
     }
-    const detected = detectImageMime(buf) ?? declaredMime;
-    const ext = LOGO_MIME_TO_EXT[detected];
+    const detected = detectImageMime(buf);
+    const ext = detected ? LOGO_MIME_TO_EXT[detected] : undefined;
     if (!ext) {
       reply.status(415);
-      return { error: "mime-not-allowed", mime: detected };
+      return { error: "mime-not-allowed", message: "Bitte PNG oder JPG hochladen.", mime: detected ?? declaredMime };
     }
     writeLogoAtomic(ext, buf);
     // Zeitstempel + Legacy-Base64 leeren, damit firmaToWire konsistent bleibt.
     patchArea("firma", { logoUrl: "", logoUpdatedAt: new Date().toISOString() });
+    invalidateAllPdfCaches();
     audit({
       userId: req.user?.id,
       action: "settings.firma.logo.set",
@@ -318,6 +314,7 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
   app.delete("/einstellungen/firma/logo", async (req) => {
     deleteAllLogoFiles();
     patchArea("firma", { logoUrl: "", logoUpdatedAt: new Date().toISOString() });
+    invalidateAllPdfCaches();
     audit({ userId: req.user?.id, action: "settings.firma.logo.clear", ip: req.ip });
     emit("einstellung:geaendert", { key: "firma", userId: req.user?.id ?? null });
     const base = loadArea("firma") as Record<string, unknown>;

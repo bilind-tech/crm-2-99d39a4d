@@ -5,7 +5,7 @@ import { getRechnung } from "../belege/rechnungen-repo.js";
 import { getKunde, getAnsprechpartner, getObjekt } from "../kunden/repo.js";
 import { angebotDocDef, rechnungDocDef } from "./layout.js";
 import { renderPdf } from "./render.js";
-import { computeHash, invalidate, logoFingerprint, readCached, writeCached, type BelegArt } from "./cache.js";
+import { computeHash, invalidate, invalidateAll, logoFingerprint, readCached, writeCached, type BelegArt } from "./cache.js";
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
 import type { ApiAngebot, ApiRechnung } from "../belege/mappers.js";
 import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.js";
@@ -49,7 +49,7 @@ export interface RenderResult {
 
 export async function renderAngebotPdf(angebotId: string): Promise<RenderResult | null> {
   const a = getAngebot(angebotId);
-  if (!a) throw new Error("Angebot nicht gefunden");
+  if (!a) return null;
   const k = getKunde(a.kundeId);
   if (!k) throw new Error("Kunde zum Angebot nicht gefunden");
   const ap: ApiAnsprechpartner | undefined = a.ansprechpartnerId
@@ -72,7 +72,7 @@ export async function renderAngebotPdf(angebotId: string): Promise<RenderResult 
 
 export async function renderRechnungPdf(rechnungId: string): Promise<RenderResult | null> {
   const r = getRechnung(rechnungId);
-  if (!r) throw new Error("Rechnung nicht gefunden");
+  if (!r) return null;
   const k = getKunde(r.kundeId);
   if (!k) throw new Error("Kunde zur Rechnung nicht gefunden");
   const ap: ApiAnsprechpartner | undefined = r.ansprechpartnerId
@@ -95,4 +95,8 @@ export async function renderRechnungPdf(rechnungId: string): Promise<RenderResul
 
 export function invalidatePdfCache(art: BelegArt, id: string): void {
   invalidate(art, id);
+}
+
+export function invalidateAllPdfCaches(): void {
+  invalidateAll();
 }
