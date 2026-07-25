@@ -5,7 +5,7 @@ import { getRechnung } from "../belege/rechnungen-repo.js";
 import { getKunde, getAnsprechpartner, getObjekt } from "../kunden/repo.js";
 import { angebotDocDef, rechnungDocDef } from "./layout.js";
 import { renderPdf } from "./render.js";
-import { computeHash, invalidate, logoFingerprint, readCached, writeCached, type BelegArt } from "./cache.js";
+import { computeHash, invalidate, invalidateAll, logoFingerprint, readCached, writeCached, type BelegArt } from "./cache.js";
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
 import type { ApiAngebot, ApiRechnung } from "../belege/mappers.js";
 import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.js";
@@ -95,4 +95,8 @@ export async function renderRechnungPdf(rechnungId: string): Promise<RenderResul
 
 export function invalidatePdfCache(art: BelegArt, id: string): void {
   invalidate(art, id);
+}
+
+export function invalidateAllPdfCaches(): void {
+  invalidateAll();
 }

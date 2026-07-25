@@ -56,21 +56,26 @@ export function brandingDir(): string {
   return path.join(config.dataDir, "branding");
 }
 
-/** Liefert das Firmen-Logo als data-URL oder null, wenn keine Datei vorhanden. */
+function logoFileToDataUrl(ext: "png" | "jpg" | "jpeg"): string | null {
+  const p = path.join(brandingDir(), `logo.${ext}`);
+  if (!existsSync(p)) return null;
+  const buf = readFileSync(p);
+  const mime = ext === "png" ? "image/png" : "image/jpeg";
+  return `data:${mime};base64,${buf.toString("base64")}`;
+}
+
+/** Liefert das Firmen-Logo als PDF-taugliche data-URL oder null. */
 export function loadLogoDataUrl(): string | null {
-  // 1) Aus Settings (Frontend → Einstellungen → Firmendaten → Logo hochladen)
-  const f = getSetting<FirmaSettings & { logoUrl?: string }>("firma");
-  if (f?.logoUrl && typeof f.logoUrl === "string" && f.logoUrl.startsWith("data:")) {
-    return f.logoUrl;
-  }
-  // 2) Fallback: Datei im Branding-Ordner
+  // 1) Datei im Branding-Ordner. Das ist seit dem robusten Logo-Upload die
+  // autoritative Quelle und darf nicht von alten Settings-Werten überschrieben werden.
   for (const ext of ["png", "jpg", "jpeg"] as const) {
-    const p = path.join(brandingDir(), `logo.${ext}`);
-    if (existsSync(p)) {
-      const buf = readFileSync(p);
-      const mime = ext === "png" ? "image/png" : "image/jpeg";
-      return `data:${mime};base64,${buf.toString("base64")}`;
-    }
+    const dataUrl = logoFileToDataUrl(ext);
+    if (dataUrl) return dataUrl;
+  }
+  // 2) Legacy-Fallback: sehr alte Installationen hatten noch Base64 im Settings-JSON.
+  const f = getSetting<FirmaSettings & { logoUrl?: string }>("firma");
+  if (f?.logoUrl && typeof f.logoUrl === "string" && f.logoUrl.startsWith("data:image/")) {
+    return f.logoUrl;
   }
   return null;
 }
