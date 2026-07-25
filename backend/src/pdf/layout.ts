@@ -98,7 +98,7 @@ function header(f: FirmaForPdf, logoDataUrl: string | null) {
           {
             width: "*",
             stack: [
-              { text: absenderzeile(f), fontSize: 7, color: COLOR_TEXT, decoration: "underline", margin: [0, 50, 0, 0], noWrap: true },
+              { text: absenderzeile(f), fontSize: 7, color: COLOR_TEXT, decoration: "underline", margin: [0, 70, 0, 0], noWrap: true },
             ],
           },
           { width: 270, text: "" },
@@ -470,7 +470,7 @@ function buildDoc(args: BuildArgs) {
   const signatur = signaturFromFirma(args.firma);
   return {
     pageSize: "A4" as const,
-    pageMargins: [55, 130, 55, 100] as [number, number, number, number],
+    pageMargins: [55, 155, 55, 100] as [number, number, number, number],
     defaultStyle: { font: DEFAULT_FONT, fontSize: 10, color: COLOR_TEXT, lineHeight: 1.25 },
     header: header(args.firma, args.logoDataUrl),
     footer: footer(args.firma),

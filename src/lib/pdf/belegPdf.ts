@@ -20,7 +20,7 @@ import { A4, createHotspotTracker, type RuntimeHotspot } from "./hotspotTracker"
 // Aufgabe. Hier vermeidet der LRU rein clientseitig wiederholtes pdfmake-
 // Rendern, wenn dieselbe Beleg-Version mehrfach geöffnet wird.
 const PDF_LRU_MAX = 50;
-const PDF_RENDER_VERSION = "2026-07-25-logo-absolute-v3";
+const PDF_RENDER_VERSION = "2026-07-25-logo-spacing-v5";
 const pdfLru = new Map<string, { blob: Blob; hotspots: RuntimeHotspot[] }>();
 
 const VOLATILE_PDF_KEYS = new Set([
@@ -246,7 +246,7 @@ function header(firma: Firmendaten, logo: string | null) {
                 fontSize: 8,
                 color: COLOR_TEXT,
                 decoration: "underline",
-                margin: [0, 50, 0, 0],
+                margin: [0, 70, 0, 0],
               },
             ],
           },
@@ -718,7 +718,7 @@ async function buildDoc(
   };
   return {
     pageSize: "A4" as const,
-    pageMargins: [55, 130, 55, 100] as [number, number, number, number],
+    pageMargins: [55, 155, 55, 100] as [number, number, number, number],
     defaultStyle: { font: "Roboto", fontSize: 10, color: COLOR_TEXT, lineHeight: 1.25 },
     header: header(ctx.firma, logo),
     footer: footer(ctx.firma),
