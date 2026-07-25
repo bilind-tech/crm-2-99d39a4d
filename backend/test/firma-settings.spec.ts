@@ -190,6 +190,19 @@ describe("Firmendaten-Roundtrip (UI-Felder bleiben nach Speichern erhalten)", ()
     expect(saved.logoUrl).toMatch(/^\/einstellungen\/firma\/logo\?v=/);
     expect(existsSync(path.join(config.dataDir, "branding", "logo.png"))).toBe(true);
 
+    const debug = await app.inject({
+      method: "GET", url: "/einstellungen/firma/logo/debug",
+      headers: { cookie: cookieHeader },
+    });
+    expect(debug.statusCode).toBe(200);
+    const info = debug.json();
+    expect(info.ok).toBe(true);
+    expect(info.file.exists).toBe(true);
+    expect(info.file.fileName).toBe("logo.png");
+    expect(info.file.detectedMime).toBe("image/png");
+    expect(info.pdfLoader.foundDataUrl).toBe(true);
+    expect(info.pdfLoader.mime).toBe("image/png");
+
     const webp = multipartPayload("logo.webp", "image/webp", tinyWebpHeader);
     const rejected = await app.inject({
       method: "POST", url: "/einstellungen/firma/logo",
