@@ -157,7 +157,7 @@ function header(firma: Firmendaten | undefined, logo: string | null, logoSichtba
                 fontSize: 8,
                 color: COLOR_TEXT,
                 decoration: "underline",
-                margin: [0, 50, 0, 0],
+                margin: [0, 70, 0, 0],
               },
             ],
           },
