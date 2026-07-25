@@ -4,7 +4,7 @@
 // standardZahlungszielTage) wirklich persistiert werden — also nach Neustart
 // bzw. mcc-update nicht mehr verschwinden.
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { existsSync, mkdirSync, mkdtempSync, rmSync, readFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, rmSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -219,5 +219,15 @@ describe("Firmendaten-Roundtrip (UI-Felder bleiben nach Speichern erhalten)", ()
       payload: fake.payload,
     });
     expect(rejectedFake.statusCode).toBe(415);
+
+    writeFileSync(path.join(config.dataDir, "branding", "logo.png"), Buffer.from("kaputtes-logo"));
+    const brokenDebug = await app.inject({
+      method: "GET", url: "/einstellungen/firma/logo/debug",
+      headers: { cookie: cookieHeader },
+    });
+    expect(brokenDebug.statusCode).toBe(200);
+    const brokenInfo = brokenDebug.json();
+    expect(brokenInfo.ok).toBe(false);
+    expect(brokenInfo.pdfLoader.error).toContain("kein gültiges PNG/JPG");
   });
 });
