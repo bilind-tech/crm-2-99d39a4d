@@ -291,7 +291,7 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
       return { error: "file-too-large", maxBytes: LOGO_MAX_BYTES };
     }
     const detected = detectImageMime(buf);
-    const ext = LOGO_MIME_TO_EXT[detected];
+    const ext = detected ? LOGO_MIME_TO_EXT[detected] : undefined;
     if (!ext) {
       reply.status(415);
       return { error: "mime-not-allowed", message: "Bitte PNG oder JPG hochladen.", mime: detected ?? declaredMime };
