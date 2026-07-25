@@ -83,6 +83,8 @@ function pdfDependencySignature(
     firma?.bankName ?? "",
     firma?.iban ?? "",
     firma?.bic ?? "",
+    firma?.hasLogo ? "logo-ja" : "logo-nein",
+    firma?.logoUpdatedAt ?? "",
     firma?.logoUrl ? firma.logoUrl.length.toString() : "",
   ].join("|");
 }

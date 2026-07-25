@@ -350,8 +350,8 @@ function FirmendatenTab({
     const file = e.target.files?.[0];
     e.target.value = "";
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
-      toast.error("Nur PNG, JPG oder WebP.");
+    if (!/^image\/(png|jpe?g)$/i.test(file.type)) {
+      toast.error("Bitte PNG oder JPG hochladen. WebP wird in PDFs nicht zuverlässig eingebettet.");
       return;
     }
     if (file.size > 3 * 1024 * 1024) {
@@ -417,7 +417,7 @@ function FirmendatenTab({
             >
               <input
                 type="file"
-                accept="image/png,image/jpeg,image/webp"
+                accept="image/png,image/jpeg"
                 className="hidden"
                 onChange={handleLogo}
                 disabled={busy}
@@ -435,7 +435,7 @@ function FirmendatenTab({
               </button>
             )}
             <p className="text-[11px] text-muted-foreground">
-              PNG, JPG oder WebP · max. 3 MB · wird sofort gespeichert.
+              PNG oder JPG · max. 3 MB · wird sofort gespeichert.
             </p>
           </div>
         </div>
