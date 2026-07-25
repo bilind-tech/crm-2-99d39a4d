@@ -198,5 +198,13 @@ describe("Firmendaten-Roundtrip (UI-Felder bleiben nach Speichern erhalten)", ()
     });
     expect(rejected.statusCode).toBe(415);
     expect(rejected.json().message).toContain("PNG oder JPG");
+
+    const fake = multipartPayload("logo.png", "image/png", Buffer.from("not-a-real-png"));
+    const rejectedFake = await app.inject({
+      method: "POST", url: "/einstellungen/firma/logo",
+      headers: { cookie: cookieHeader, "content-type": fake.contentType },
+      payload: fake.payload,
+    });
+    expect(rejectedFake.statusCode).toBe(415);
   });
 });

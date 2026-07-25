@@ -290,11 +290,11 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
       reply.status(413);
       return { error: "file-too-large", maxBytes: LOGO_MAX_BYTES };
     }
-    const detected = detectImageMime(buf) ?? declaredMime;
+    const detected = detectImageMime(buf);
     const ext = LOGO_MIME_TO_EXT[detected];
     if (!ext) {
       reply.status(415);
-      return { error: "mime-not-allowed", message: "Bitte PNG oder JPG hochladen.", mime: detected };
+      return { error: "mime-not-allowed", message: "Bitte PNG oder JPG hochladen.", mime: detected ?? declaredMime };
     }
     writeLogoAtomic(ext, buf);
     // Zeitstempel + Legacy-Base64 leeren, damit firmaToWire konsistent bleibt.
