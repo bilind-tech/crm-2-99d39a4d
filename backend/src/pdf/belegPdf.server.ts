@@ -49,7 +49,7 @@ export interface RenderResult {
 
 export async function renderAngebotPdf(angebotId: string): Promise<RenderResult | null> {
   const a = getAngebot(angebotId);
-  if (!a) throw new Error("Angebot nicht gefunden");
+  if (!a) return null;
   const k = getKunde(a.kundeId);
   if (!k) throw new Error("Kunde zum Angebot nicht gefunden");
   const ap: ApiAnsprechpartner | undefined = a.ansprechpartnerId
@@ -72,7 +72,7 @@ export async function renderAngebotPdf(angebotId: string): Promise<RenderResult 
 
 export async function renderRechnungPdf(rechnungId: string): Promise<RenderResult | null> {
   const r = getRechnung(rechnungId);
-  if (!r) throw new Error("Rechnung nicht gefunden");
+  if (!r) return null;
   const k = getKunde(r.kundeId);
   if (!k) throw new Error("Kunde zur Rechnung nicht gefunden");
   const ap: ApiAnsprechpartner | undefined = r.ansprechpartnerId

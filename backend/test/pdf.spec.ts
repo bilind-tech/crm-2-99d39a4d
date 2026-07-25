@@ -54,7 +54,7 @@ describe("PDF-Rendering", () => {
     expect(r).not.toBeNull();
     expect(r!.buffer.length).toBeGreaterThan(500);
     expect(r!.buffer.subarray(0, 5).toString()).toBe("%PDF-");
-    expect(r!.dateiname).toContain(a.nummer);
+    expect(r!.dateiname).toContain(a.nummer.replace(/\//g, "-"));
     expect(r!.dateiname).toContain("Acme");
     expect(r!.fromCache).toBe(false);
   });
@@ -94,7 +94,7 @@ describe("PDF-Rendering", () => {
       positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19 }] });
     const out = await renderRechnungPdf(r.id);
     expect(out!.buffer.subarray(0, 5).toString()).toBe("%PDF-");
-    expect(out!.dateiname).toContain(r.nummer);
+    expect(out!.dateiname).toContain(r.nummer.replace(/\//g, "-"));
   });
 
   it("Rechnung: nutzt gespeichertes Firmenlogo und ändert Cache-Hash bei Logo-Wechsel", async () => {
