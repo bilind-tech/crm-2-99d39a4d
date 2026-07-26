@@ -214,28 +214,8 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
 
   const body: unknown[][] = [headerRow];
   positionen.forEach((p) => {
-    if (p.modus === "pauschal") {
-      const zeilen = beschreibungZeilen(p.beschreibung || "Pauschal");
-      zeilen.forEach((line, index) => {
-        const row: unknown[] = [
-          {
-            text: line,
-            fontSize: 10,
-            bold: index === 0 && !line.startsWith("•") && !line.startsWith("-") && !line.startsWith("*"),
-            margin: [0, 0, 0, 0],
-          },
-        ];
-        if (showStunden) row.push({ text: "", fontSize: 10, alignment: "center" });
-        row.push(
-          { text: index === 0 ? abrechnungsartText(p) : "", fontSize: 10, alignment: "center" },
-          { text: index === 0 ? eur(summe(p)) : "", fontSize: 10, alignment: "right" },
-        );
-        body.push(row);
-      });
-      return;
-    }
-
-    const row: unknown[] = [{ stack: [beschreibungBlock(p.beschreibung || "")] }];
+    const fallback = p.modus === "pauschal" ? "Pauschal" : "";
+    const row: unknown[] = [{ stack: [beschreibungBlock(p.beschreibung || fallback)] }];
     if (showStunden) row.push({ text: stundenText(p), fontSize: 10, alignment: "center" });
     row.push(
       { text: abrechnungsartText(p), fontSize: 10, alignment: "center" },
