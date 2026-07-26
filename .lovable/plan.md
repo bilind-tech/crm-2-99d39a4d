@@ -1,20 +1,21 @@
-Das Logo sitzt oben rechts mit `fit: [260, 110]` an `y: 22`, reicht also bis ca. `y: 132`. Der Content-Bereich beginnt aktuell schon bei `pageMargins` Top = 130 (Belege) bzw. entsprechend bei den Protokollen, dadurch stößt die Empfängeradresse / der Absenderstrich direkt an das Logo.
+## Problem
+Pauschal-Positionen erzeugen aktuell pro Zeile der Leistungsbeschreibung eine eigene Tabellenzeile. Dadurch zieht pdfmake zwischen jeder Textzeile eine horizontale Trennlinie — sichtbar als „Extra-Striche" mitten in einem einzelnen Pauschalblock, besonders bei Leerzeilen oder Bullet-Listen.
 
-Änderung: Oberen Seitenrand erhöhen, damit spürbar Luft zwischen Logo und dem darunterliegenden Block entsteht.
+Ursache: In beiden PDF-Renderern (Frontend + Backend) wird für `modus === "pauschal"` per `beschreibungZeilen(...).forEach(...)` je Zeile ein eigenes `body.push(row)` gemacht. Die Nicht-Pauschal-Positionen nutzen dagegen bereits `beschreibungBlock(...)` in einem `stack` innerhalb **einer** Zelle — genau das, was wir wollen.
 
-**Konkret anzupassen:**
+## Fix
+Pauschal genauso rendern wie die anderen Modi: eine einzige Tabellenzeile pro Position mit `beschreibungBlock(...)` als Stack in der ersten Spalte. Bold-Titel-Verhalten bleibt über `beschreibungBlock` erhalten (die Funktion setzt die erste nicht-leere Zeile bereits fett, sofern kein Bullet). Abrechnungsart und Preis erscheinen wie gewohnt genau einmal rechts.
 
-1. `backend/src/pdf/layout.ts`
-   - `pageMargins: [55, 130, 55, 100]` → `pageMargins: [55, 155, 55, 100]`
-   - Absenderzeile-Margin `margin: [0, 50, 0, 0]` → `margin: [0, 70, 0, 0]` (damit der unterstrichene Absender ebenfalls unter dem Logo bleibt und nicht ins Logo rutscht)
+Betroffene Stellen (identische Logik, doppelt gepflegt):
+- `src/lib/pdf/belegPdf.ts` — Zeilen ~401-422 (Pauschal-Zweig entfernen, in den Standard-Zweig zusammenführen; `id: pos:${p.id}` bleibt an der Zelle)
+- `backend/src/pdf/layout.ts` — Zeilen ~217-236 (analog)
 
-2. `src/lib/pdf/belegPdf.ts` (Client-Fallback) — identische Werte spiegeln
+Keine Änderungen an Tabellen-Layout, Widths, Summenzeilen, Hotspots-IDs oder API-Typen. Positions-Reihenfolge und Border-Layout unverändert — es entfällt nur die pro-Textzeile-Aufsplittung, und damit auch die ungewollten horizontalen Linien innerhalb eines Pauschalblocks.
 
-3. `src/lib/pdf/werkzeugePdf.ts` (Übergabe-/Schlüsselprotokolle) — analog `pageMargins` Top erhöhen und Absenderzeile-Margin nachziehen, damit alle drei Dokumenttypen konsistent bleiben
+## Update-Sicherheit
+- Nur zwei TS-Dateien werden angepasst, keine Migrations, keine Package-Änderungen, keine Lockfile-Änderungen → `mcc-update` läuft unverändert durch.
+- PDF-Cache-Version (`PDF_RENDER_CACHE_VERSION` in `backend/src/pdf/cache.ts` und `src/hooks/useBelegPdf.ts`) wird auf einen neuen Wert (`2026-07-26-pauschal-single-row-v5`) gehoben, damit alte gecachte PDFs mit den alten Trennlinien nach dem Update nicht wiederverwendet werden.
 
-4. `backend/src/pdf/cache.ts` und `src/hooks/useBelegPdf.ts`
-   - `PDF_RENDER_CACHE_VERSION` hochzählen auf `2026-07-25-logo-spacing-v5`, damit vorhandene PDFs neu gerendert werden und die neue Abstände sofort sichtbar sind
-
-**Nicht geändert:** Logo-Größe und -Position bleiben (`fit: [260, 110]`, `x: 335, y: 22`) — nur der Content darunter rückt weiter nach unten.
-
-Falls der Abstand nach dem Update noch nicht perfekt ist (zu viel/zu wenig), können wir mit einem Screenshot die 155 pt in einem zweiten Schritt feinjustieren.
+## Verifikation
+- Backend-Tests: `bunx vitest run backend/test/pdf.spec.ts` — muss weiter grün sein (nur Cache-Version + Row-Aufbau ändert sich, PDF-Bytes ändern sich, aber Assertions prüfen `%PDF-`, Dateiname, Cache-Verhalten — nicht das interne Zeilen-Schema).
+- Frontend-Typecheck via automatischer Build.

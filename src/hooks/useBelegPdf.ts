@@ -22,7 +22,7 @@ import type { Angebot, Rechnung, Kunde, Firmendaten, Ansprechpartner, Objekt } f
 type Status = "idle" | "loading" | "ready" | "error";
 
 const PDF_TIMEOUT_MS = 20_000;
-const PDF_RENDER_VERSION = "2026-07-25-logo-spacing-v5";
+const PDF_RENDER_VERSION = "2026-07-26-pauschal-single-row-v6";
 
 function withTimeout<T>(p: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {

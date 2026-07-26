@@ -14,7 +14,7 @@ export type BelegArt = "angebot" | "rechnung";
 
 // Wird bewusst in den Cache-Hash aufgenommen: Layout-/Renderer-Fixes müssen
 // alte, formal gleich signierte PDFs zuverlässig verdrängen.
-const PDF_RENDER_CACHE_VERSION = "2026-07-25-logo-spacing-v5";
+const PDF_RENDER_CACHE_VERSION = "2026-07-26-pauschal-single-row-v6";
 
 function ensureDir(p: string): void {
   if (!existsSync(p)) mkdirSync(p, { recursive: true, mode: 0o700 });
