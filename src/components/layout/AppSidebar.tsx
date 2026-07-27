@@ -34,7 +34,6 @@ import logo from "@/assets/logo.png";
 import { useAuth } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PiStatusIndikator } from "@/components/layout/PiStatusIndikator";
-import { useStundenzettelUrl } from "@/lib/stundenzettel/config";
 
 type NavItem = {
   title: string;
@@ -43,7 +42,6 @@ type NavItem = {
   exact?: boolean;
   badge?: number;
   badgeTone?: "danger" | "warning" | "primary";
-  external?: boolean;
 };
 
 export function AppSidebar() {
@@ -51,7 +49,6 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const path = useRouterState({ select: (r) => r.location.pathname });
   const { lock } = useAuth();
-  const { url: stundenzettelUrl } = useStundenzettelUrl();
   const closeOnMobile = () => {
     if (isMobile) setOpenMobile(false);
   };
@@ -65,7 +62,7 @@ export function AppSidebar() {
     { title: "Rechnungen", url: "/rechnungen", icon: Receipt },
     { title: "Dokumente", url: "/dokumente", icon: FolderClosed },
     { title: "Steuern", url: "/steuern", icon: Calculator },
-    { title: "Stundenzettel", url: "/stundenzettel", icon: Clock, external: true },
+    { title: "Stundenzettel", url: "/stundenzettel", icon: Clock },
     { title: "Sonstiges", url: "/werkzeuge", icon: Wrench },
   ];
   // Einstellungen wird unten als einklappbare Gruppe gerendert
