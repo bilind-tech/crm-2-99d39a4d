@@ -10,7 +10,7 @@ import { getAngebot } from "../belege/angebote-repo.js";
 let wired = false;
 
 const SENSIBLE_SETTINGS_KEYS = new Set([
-  "smtp", "googleDrive", "backup", "sicherheit", "auth", "stundenzettel",
+  "smtp", "googleDrive", "backup", "sicherheit", "auth",
 ]);
 
 function belegLabel(art: "angebot" | "rechnung", id: string): { titel: string; route: string } {

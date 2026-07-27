@@ -151,26 +151,6 @@ export const SteuerSchema = z.object({
   ruecklageProzent: cNum(0, 100, 35),
 });
 
-export const StundenzettelSchema = z.object({
-  externeUrl: z
-    .string()
-    .trim()
-    .max(500)
-    .default("")
-    .refine(
-      (v) => {
-        if (!v) return true;
-        try {
-          const u = new URL(v);
-          return u.protocol === "http:" || u.protocol === "https:";
-        } catch {
-          return false;
-        }
-      },
-      { message: "Muss eine gültige http:// oder https:// URL sein" },
-    ),
-});
-
 // GitHub als Update-Quelle (One-Click-Update aus dem Pi heraus).
 // PAT wird separat als verschlüsseltes Secret unter SENSITIVE_KEYS.githubToken gespeichert.
 export const GithubUpdateSchema = z.object({
@@ -209,7 +189,6 @@ export const AREAS: Record<string, Area> = {
   mahnung: { key: "mahnung", schema: MahnungSchema, encrypted: false },
   dauerauftrag: { key: "dauerauftrag", schema: DauerauftragSchema, encrypted: false },
   steuer: { key: "steuer", schema: SteuerSchema, encrypted: false },
-  stundenzettel: { key: "stundenzettel", schema: StundenzettelSchema, encrypted: false },
 };
 
 // Sensible Einzel-Keys (separat verschlüsselt gespeichert)

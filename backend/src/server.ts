@@ -31,11 +31,11 @@ import { mahnungRoutes } from "./routes/mahnung.js";
 import { startMahnScheduler } from "./mahnung/cron.js";
 import { driveRoutes } from "./routes/drive.js";
 import { emailRoutes } from "./routes/email.js";
-import { externRoutes } from "./routes/extern.js";
 import { datenbankRoutes } from "./routes/datenbank.js";
 import { testdatenResetRoutes } from "./routes/testdaten-reset.js";
 import { dauerauftragRoutes } from "./routes/dauerauftrag.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
+import { stundenzettelRoutes } from "./routes/stundenzettel.js";
 import { seedOrUpdateDefaultVorlagen } from "./email/templates.js";
 import { startDriveWorker } from "./drive/upload-worker.js";
 import { wireDriveAutoEnqueue } from "./drive/auto-enqueue.js";
@@ -256,11 +256,12 @@ async function main(): Promise<void> {
   await app.register(mahnungRoutes);
   await app.register(driveRoutes);
   await app.register(emailRoutes);
-  await app.register(externRoutes);
+  // externRoutes wurde in Phase 1 entfernt (natives Stundenzettel-Modul).
   await app.register(datenbankRoutes);
   await app.register(testdatenResetRoutes);
   await app.register(dauerauftragRoutes);
   await app.register(dashboardRoutes);
+  await app.register(stundenzettelRoutes);
 
   // Frontend-Statics — nur wenn FRONTEND_DIR existiert (Prod / Pi-Bundle).
   // Im Dev läuft das Frontend separat über Vite, daher hier kein Fehler.
@@ -310,7 +311,9 @@ async function main(): Promise<void> {
       url.startsWith("/protokolle") ||
       url.startsWith("/mahnung") ||
       url.startsWith("/dashboard") ||
-      url.startsWith("/extern");
+      url.startsWith("/mitarbeiter") ||
+      url.startsWith("/feiertage") ||
+      url.startsWith("/stundenzettel");
 
     app.setNotFoundHandler(async (req, reply) => {
       const url = req.raw.url ?? "/";

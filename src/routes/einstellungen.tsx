@@ -67,7 +67,6 @@ import { SystemUpdateTab } from "@/components/einstellungen/SystemUpdateTab";
 import { SicherheitTab } from "@/components/einstellungen/SicherheitTab";
 import { VerlaufTab } from "@/components/einstellungen/VerlaufTab";
 import { SteuerTab } from "@/components/einstellungen/SteuerTab";
-import { StundenzettelTab } from "@/components/einstellungen/StundenzettelTab";
 import { BackendVerbindungTab } from "@/components/einstellungen/BackendVerbindungTab";
 import { ExportTab } from "@/components/einstellungen/ExportTab";
 import { ImportTab } from "@/components/einstellungen/ImportTab";
@@ -86,7 +85,6 @@ type TabId =
   | "dauerauftrag"
   | "vorlagen"
   | "steuern"
-  | "stundenzettel"
   | "export"
   | "drive"
   | "backup"
@@ -108,8 +106,6 @@ const tabs: { id: TabId; label: string; icon: typeof Building2; gruppe: string }
   { id: "dauerauftrag", label: "Daueraufträge", icon: Repeat, gruppe: "Belege" },
   { id: "steuern", label: "Steuern", icon: Calculator, gruppe: "Belege" },
   { id: "export", label: "Excel-Export", icon: FileSpreadsheet, gruppe: "Belege" },
-
-  { id: "stundenzettel", label: "Stundenzettel", icon: Clock, gruppe: "Externe Apps" },
 
   { id: "drive", label: "Google Drive", icon: Cloud, gruppe: "System" },
   { id: "backend", label: "Backend-Verbindung", icon: Server, gruppe: "System" },
@@ -280,7 +276,6 @@ function Page() {
           {tab === "dauerauftrag" && <DauerauftragTab />}
           {tab === "vorlagen" && <VorlagenTab />}
           {tab === "steuern" && <SteuerTab />}
-          {tab === "stundenzettel" && <StundenzettelTab />}
           {tab === "export" && <ExportTab />}
           {tab === "import" && <ImportTab />}
           {tab === "drive" && <GoogleDriveTab />}
