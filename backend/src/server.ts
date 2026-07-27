@@ -309,7 +309,9 @@ async function main(): Promise<void> {
       url.startsWith("/protokolle") ||
       url.startsWith("/mahnung") ||
       url.startsWith("/dashboard") ||
-      url.startsWith("/extern");
+      url.startsWith("/mitarbeiter") ||
+      url.startsWith("/feiertage") ||
+      url.startsWith("/stundenzettel");
 
     app.setNotFoundHandler(async (req, reply) => {
       const url = req.raw.url ?? "/";
