@@ -276,7 +276,6 @@ function Page() {
           {tab === "dauerauftrag" && <DauerauftragTab />}
           {tab === "vorlagen" && <VorlagenTab />}
           {tab === "steuern" && <SteuerTab />}
-          {tab === "stundenzettel" && <StundenzettelTab />}
           {tab === "export" && <ExportTab />}
           {tab === "import" && <ImportTab />}
           {tab === "drive" && <GoogleDriveTab />}
