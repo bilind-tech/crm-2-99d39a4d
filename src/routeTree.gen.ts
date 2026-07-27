@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WerkzeugeRouteImport } from './routes/werkzeuge'
+import { Route as StundenzettelRouteImport } from './routes/stundenzettel'
 import { Route as SteuernRouteImport } from './routes/steuern'
 import { Route as RechnungenRouteImport } from './routes/rechnungen'
 import { Route as ProtokolleRouteImport } from './routes/protokolle'
@@ -41,6 +42,11 @@ import { Route as AngeboteIdBearbeitenRouteImport } from './routes/angebote.$id.
 const WerkzeugeRoute = WerkzeugeRouteImport.update({
   id: '/werkzeuge',
   path: '/werkzeuge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StundenzettelRoute = StundenzettelRouteImport.update({
+  id: '/stundenzettel',
+  path: '/stundenzettel',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SteuernRoute = SteuernRouteImport.update({
@@ -192,6 +198,7 @@ export interface FileRoutesByFullPath {
   '/protokolle': typeof ProtokolleRouteWithChildren
   '/rechnungen': typeof RechnungenRouteWithChildren
   '/steuern': typeof SteuernRoute
+  '/stundenzettel': typeof StundenzettelRoute
   '/werkzeuge': typeof WerkzeugeRouteWithChildren
   '/angebote/$id': typeof AngeboteIdRouteWithChildren
   '/angebote/neu': typeof AngeboteNeuRoute
@@ -222,6 +229,7 @@ export interface FileRoutesByTo {
   '/protokolle': typeof ProtokolleRouteWithChildren
   '/rechnungen': typeof RechnungenRouteWithChildren
   '/steuern': typeof SteuernRoute
+  '/stundenzettel': typeof StundenzettelRoute
   '/angebote/$id': typeof AngeboteIdRouteWithChildren
   '/angebote/neu': typeof AngeboteNeuRoute
   '/einstellungen/datenbank': typeof EinstellungenDatenbankRoute
@@ -252,6 +260,7 @@ export interface FileRoutesById {
   '/protokolle': typeof ProtokolleRouteWithChildren
   '/rechnungen': typeof RechnungenRouteWithChildren
   '/steuern': typeof SteuernRoute
+  '/stundenzettel': typeof StundenzettelRoute
   '/werkzeuge': typeof WerkzeugeRouteWithChildren
   '/angebote/$id': typeof AngeboteIdRouteWithChildren
   '/angebote/neu': typeof AngeboteNeuRoute
@@ -284,6 +293,7 @@ export interface FileRouteTypes {
     | '/protokolle'
     | '/rechnungen'
     | '/steuern'
+    | '/stundenzettel'
     | '/werkzeuge'
     | '/angebote/$id'
     | '/angebote/neu'
@@ -314,6 +324,7 @@ export interface FileRouteTypes {
     | '/protokolle'
     | '/rechnungen'
     | '/steuern'
+    | '/stundenzettel'
     | '/angebote/$id'
     | '/angebote/neu'
     | '/einstellungen/datenbank'
@@ -343,6 +354,7 @@ export interface FileRouteTypes {
     | '/protokolle'
     | '/rechnungen'
     | '/steuern'
+    | '/stundenzettel'
     | '/werkzeuge'
     | '/angebote/$id'
     | '/angebote/neu'
@@ -374,6 +386,7 @@ export interface RootRouteChildren {
   ProtokolleRoute: typeof ProtokolleRouteWithChildren
   RechnungenRoute: typeof RechnungenRouteWithChildren
   SteuernRoute: typeof SteuernRoute
+  StundenzettelRoute: typeof StundenzettelRoute
   WerkzeugeRoute: typeof WerkzeugeRouteWithChildren
   MUploadSessionRoute: typeof MUploadSessionRoute
 }
@@ -385,6 +398,13 @@ declare module '@tanstack/react-router' {
       path: '/werkzeuge'
       fullPath: '/werkzeuge'
       preLoaderRoute: typeof WerkzeugeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stundenzettel': {
+      id: '/stundenzettel'
+      path: '/stundenzettel'
+      fullPath: '/stundenzettel'
+      preLoaderRoute: typeof StundenzettelRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/steuern': {
@@ -720,6 +740,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProtokolleRoute: ProtokolleRouteWithChildren,
   RechnungenRoute: RechnungenRouteWithChildren,
   SteuernRoute: SteuernRoute,
+  StundenzettelRoute: StundenzettelRoute,
   WerkzeugeRoute: WerkzeugeRouteWithChildren,
   MUploadSessionRoute: MUploadSessionRoute,
 }
