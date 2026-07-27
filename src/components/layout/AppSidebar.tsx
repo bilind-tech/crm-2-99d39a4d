@@ -94,10 +94,8 @@ export function AppSidebar() {
       <SidebarGroupContent>
         <SidebarMenu>
           {items.map((item) => {
-            const active = item.external ? false : isActive(item.url, item.exact);
+            const active = isActive(item.url, item.exact);
             const showBadge = !!item.badge && item.badge > 0;
-            const externalHref =
-              item.external && stundenzettelUrl ? stundenzettelUrl : null;
             return (
               <SidebarMenuItem key={item.url}>
                 <SidebarMenuButton
@@ -110,25 +108,6 @@ export function AppSidebar() {
                       : "transition-colors duration-150 hover:bg-sidebar-accent/60"
                   }
                 >
-                  {item.external && externalHref ? (
-                    <a
-                      href={externalHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={closeOnMobile}
-                      className="flex items-center gap-2.5"
-                    >
-                      <span className="relative flex h-4 w-4 items-center justify-center">
-                        <item.icon className="h-4 w-4" />
-                      </span>
-                      {!collapsed && (
-                        <>
-                          <span className="flex-1">{item.title}</span>
-                          <ExternalLink className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
-                        </>
-                      )}
-                    </a>
-                  ) : (
                   <Link
                     to={item.url}
                     preload="intent"
@@ -155,9 +134,6 @@ export function AppSidebar() {
                     {!collapsed && (
                       <>
                         <span className="flex-1">{item.title}</span>
-                        {item.external && (
-                          <ExternalLink className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
-                        )}
                         {showBadge && (
                           <span
                             className={cn(
