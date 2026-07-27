@@ -35,6 +35,7 @@ import { datenbankRoutes } from "./routes/datenbank.js";
 import { testdatenResetRoutes } from "./routes/testdaten-reset.js";
 import { dauerauftragRoutes } from "./routes/dauerauftrag.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
+import { stundenzettelRoutes } from "./routes/stundenzettel.js";
 import { seedOrUpdateDefaultVorlagen } from "./email/templates.js";
 import { startDriveWorker } from "./drive/upload-worker.js";
 import { wireDriveAutoEnqueue } from "./drive/auto-enqueue.js";
@@ -260,6 +261,7 @@ async function main(): Promise<void> {
   await app.register(testdatenResetRoutes);
   await app.register(dauerauftragRoutes);
   await app.register(dashboardRoutes);
+  await app.register(stundenzettelRoutes);
 
   // Frontend-Statics — nur wenn FRONTEND_DIR existiert (Prod / Pi-Bundle).
   // Im Dev läuft das Frontend separat über Vite, daher hier kein Fehler.
