@@ -139,7 +139,6 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
     // "mahnung" wird unten mit eigenem Mapper bedient
     "dauerauftrag",
     "steuer",
-    "stundenzettel",
   ];
   for (const a of simpleAreas) {
     app.get(`/einstellungen/${a}`, async () => loadArea(a));
