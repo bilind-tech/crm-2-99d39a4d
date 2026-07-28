@@ -371,6 +371,7 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
             </Button>
           </div>
         </DialogFooter>
+        {confirmDialog}
       </DialogContent>
     </Dialog>
   );
