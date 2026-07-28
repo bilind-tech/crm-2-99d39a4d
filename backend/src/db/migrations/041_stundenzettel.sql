@@ -37,4 +37,4 @@ CREATE INDEX IF NOT EXISTS ix_stz_zettel_zeitraum ON stz_stundenzettel(jahr, mon
 -- Alt-Setting "stundenzettel" (externe iframe-URL) abräumen — wird in Phase 1
 -- durch das native Modul ersetzt. Verpackt in ein IIFE, damit fehlende Zeilen
 -- keine Fehler werfen.
-DELETE FROM settings WHERE key = 'stundenzettel';
+DELETE FROM setting WHERE key = 'stundenzettel';
