@@ -29,6 +29,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { MitarbeiterDialog } from "@/components/stundenzettel/MitarbeiterDialog";
 import { StundenzettelTabelle } from "@/components/stundenzettel/StundenzettelTabelle";
+import { StundenzettelPdfAktionen } from "@/components/stundenzettel/StundenzettelPdfAktionen";
 import {
   useCreateCustomFeiertag,
   useDeleteCustomFeiertag,
@@ -201,12 +202,15 @@ function Page() {
                         </AccordionTrigger>
                         <AccordionContent className="pb-4">
                           {z ? (
-                            <StundenzettelTabelle
-                              zettel={z}
-                              name={m.name}
-                              jahr={jahr}
-                              monat={monat}
-                            />
+                            <div className="space-y-3">
+                              {z.id ? <StundenzettelPdfAktionen zettelId={z.id} /> : null}
+                              <StundenzettelTabelle
+                                zettel={z}
+                                name={m.name}
+                                jahr={jahr}
+                                monat={monat}
+                              />
+                            </div>
                           ) : (
                             <Button
                               size="sm"
