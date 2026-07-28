@@ -14,6 +14,7 @@ import {
   UserRound,
   Wand2,
 } from "lucide-react";
+import { FolderInput, Download } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PrimaryAction } from "@/components/layout/PrimaryAction";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,8 @@ import {
   useMitarbeiter,
   useZettelMonat,
 } from "@/hooks/useStundenzettel";
+import { useArchivieren } from "@/hooks/useStundenzettel";
+import { fetchStundenzettelPdf } from "@/lib/stundenzettel/pdf";
 import { useConfirm } from "@/hooks/useConfirm";
 import type { Mitarbeiter } from "@/lib/stundenzettel/types";
 
@@ -71,6 +74,8 @@ function Page() {
   const { data: feiertage, isLoading: ftLoading } = useFeiertage(jahr);
   const { data: zettel = [], isLoading: zLoading } = useZettelMonat(jahr, monat);
   const generieren = useGenerieren();
+  const archivieren = useArchivieren();
+  const [bulk, setBulk] = useState<{ modus: "archiv" | "download"; done: number; total: number } | null>(null);
 
   const zettelByMitarbeiter = useMemo(
     () => new Map(zettel.map((z) => [z.mitarbeiterId, z])),
@@ -91,6 +96,43 @@ function Page() {
     const d = new Date(jahr, monat - 1 + delta, 1);
     setJahr(d.getFullYear());
     setMonat(d.getMonth() + 1);
+  }
+
+  /** Alle Zettel des Monats sequentiell ablegen bzw. herunterladen. */
+  async function handleBulk(modus: "archiv" | "download") {
+    const liste = zettel.filter((z) => z.id);
+    if (liste.length === 0) {
+      toast.error("Für diesen Monat gibt es noch keine Stundenzettel.");
+      return;
+    }
+    setBulk({ modus, done: 0, total: liste.length });
+    let fehler = 0;
+    for (let i = 0; i < liste.length; i++) {
+      const z = liste[i];
+      try {
+        if (modus === "archiv") {
+          await archivieren.mutateAsync(z.id!);
+        } else {
+          const { blob, dateiname } = await fetchStundenzettelPdf(z.id!);
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = dateiname;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          setTimeout(() => URL.revokeObjectURL(url), 60_000);
+        }
+      } catch {
+        fehler++;
+      }
+      setBulk({ modus, done: i + 1, total: liste.length });
+    }
+    setBulk(null);
+    if (fehler > 0) toast.error(`${fehler} von ${liste.length} fehlgeschlagen`);
+    else if (modus === "archiv")
+      toast.success(`${liste.length} Stundenzettel unter Dokumente → Stundenzettel abgelegt`);
+    else toast.success(`${liste.length} PDFs heruntergeladen`);
   }
 
   const activeCount = mitarbeiter.filter((m) => m.aktiv).length;
@@ -170,6 +212,37 @@ function Page() {
               <span className="text-xs text-muted-foreground">
                 Vorhandene Zettel dieses Monats werden dabei überschrieben.
               </span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleBulk("archiv")}
+                disabled={bulk !== null || zettel.length === 0}
+              >
+                {bulk?.modus === "archiv" ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <FolderInput className="mr-1.5 h-4 w-4" />
+                )}
+                Alle in Dokumente ablegen
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => handleBulk("download")}
+                disabled={bulk !== null || zettel.length === 0}
+              >
+                {bulk?.modus === "download" ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Download className="mr-1.5 h-4 w-4" />
+                )}
+                Alle als PDF
+              </Button>
+              {bulk && (
+                <span className="text-xs text-muted-foreground">
+                  {bulk.done} / {bulk.total}
+                </span>
+              )}
             </div>
 
             {zLoading || mitLoading ? (

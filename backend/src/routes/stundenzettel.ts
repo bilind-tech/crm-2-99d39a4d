@@ -21,6 +21,7 @@ import { emit } from "../events/bus.js";
 import { getFeiertageFuerJahr } from "../stundenzettel/feiertage.js";
 import { generiereStundenzettel } from "../stundenzettel/generieren.js";
 import { renderStundenzettelPdf } from "../pdf/stundenzettelPdf.js";
+import { archiviereStundenzettel } from "../stundenzettel/archiv.js";
 import {
   createCustomFeiertag,
   createMitarbeiter,
@@ -170,6 +171,11 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
         tage: z.tage,
         gesamtStunden: z.gesamtStunden,
       });
+      try {
+        await archiviereStundenzettel(saved.id!);
+      } catch (e) {
+        req.log.error({ err: e }, "stundenzettel-archiv-failed");
+      }
       ergebnis.push({ mitarbeiterId: id, ok: true, id: saved.id! });
     }
     audit({ userId: req.user?.id ?? null, action: "stundenzettel.generieren", detail: { jahr, monat, count: ids.length } });
@@ -207,7 +213,26 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
       gesamtStunden: gesamt,
     });
     audit({ userId: req.user?.id ?? null, action: "stundenzettel.tage.patch", detail: { id, count: p.data.tage.length } });
+    try {
+      await archiviereStundenzettel(saved.id!);
+    } catch (e) {
+      req.log.error({ err: e }, "stundenzettel-archiv-failed");
+    }
     return saved;
+  });
+
+  // Stundenzettel-PDF in die Dokumentenablage schreiben (Ordner Stundenzettel/{YYYY}/{MM}).
+  app.post("/stundenzettel/:id/archivieren", async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    try {
+      const r = await archiviereStundenzettel(id);
+      if (!r) return reply.status(404).send({ error: "not-found" });
+      audit({ userId: req.user?.id ?? null, action: "stundenzettel.archiviert", detail: { id, dokumentId: r.dokumentId } });
+      return r;
+    } catch (e) {
+      req.log.error({ err: e }, "stundenzettel-archiv-failed");
+      return reply.status(500).send({ error: "archiv-failed", message: (e as Error).message });
+    }
   });
 
   app.delete("/stundenzettel/:id", async (req, reply) => {

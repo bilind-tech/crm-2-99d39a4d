@@ -2,10 +2,11 @@
 // Das PDF kommt immer frisch vom Backend (Renderer in backend/src/pdf/stundenzettelPdf.ts).
 
 import { useState } from "react";
-import { Download, ExternalLink, Loader2 } from "lucide-react";
+import { Download, ExternalLink, FolderInput, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PrintButton } from "@/components/pdf/PrintButton";
 import { fetchStundenzettelPdf } from "@/lib/stundenzettel/pdf";
+import { useArchivieren } from "@/hooks/useStundenzettel";
 import { toast } from "sonner";
 
 interface Props {
@@ -14,6 +15,20 @@ interface Props {
 
 export function StundenzettelPdfAktionen({ zettelId }: Props) {
   const [busy, setBusy] = useState<"ansehen" | "download" | null>(null);
+  const archivieren = useArchivieren();
+
+  const handleArchiv = async () => {
+    try {
+      const r = await archivieren.mutateAsync(zettelId);
+      toast.success(
+        r.ersetzt
+          ? "In Dokumente aktualisiert (Ordner Stundenzettel)"
+          : "In Dokumente gespeichert (Ordner Stundenzettel)",
+      );
+    } catch (e) {
+      toast.error((e as Error).message);
+    }
+  };
 
   const run = async (mode: "ansehen" | "download") => {
     if (busy) return;
@@ -57,6 +72,14 @@ export function StundenzettelPdfAktionen({ zettelId }: Props) {
           <Download className="mr-1.5 h-4 w-4" />
         )}
         Herunterladen
+      </Button>
+      <Button size="sm" variant="outline" onClick={handleArchiv} disabled={archivieren.isPending}>
+        {archivieren.isPending ? (
+          <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+        ) : (
+          <FolderInput className="mr-1.5 h-4 w-4" />
+        )}
+        In Dokumente ablegen
       </Button>
     </div>
   );
