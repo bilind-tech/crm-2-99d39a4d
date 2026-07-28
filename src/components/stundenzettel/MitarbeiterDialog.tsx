@@ -63,7 +63,7 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
   const create = useCreateMitarbeiter();
   const update = useUpdateMitarbeiter();
   const del = useDeleteMitarbeiter();
-  const confirm = useConfirm();
+  const { confirm, dialog: confirmDialog } = useConfirm();
 
   useEffect(() => {
     if (open) setForm(initialInput(mitarbeiter));
@@ -115,22 +115,25 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
     }
   }
 
-  async function handleDelete() {
+  function handleDelete() {
     if (!mitarbeiter) return;
-    const ok = await confirm({
-      title: "Mitarbeiter löschen?",
-      description: `„${mitarbeiter.name}" und alle zugehörigen Stundenzettel werden gelöscht. Diese Aktion kann nicht rückgängig gemacht werden.`,
-      confirmText: "Löschen",
-      variant: "destructive",
-    });
-    if (!ok) return;
-    try {
-      await del.mutateAsync(mitarbeiter.id);
-      toast.success("Mitarbeiter gelöscht");
-      onOpenChange(false);
-    } catch (e) {
-      toast.error((e as Error).message || "Löschen fehlgeschlagen");
-    }
+    confirm(
+      {
+        title: "Mitarbeiter löschen?",
+        description: `„${mitarbeiter.name}" und alle zugehörigen Stundenzettel werden gelöscht.`,
+        confirmLabel: "Löschen",
+        variant: "destructive",
+      },
+      async () => {
+        try {
+          await del.mutateAsync(mitarbeiter.id);
+          toast.success("Mitarbeiter gelöscht");
+          onOpenChange(false);
+        } catch (e) {
+          toast.error((e as Error).message || "Löschen fehlgeschlagen");
+        }
+      },
+    );
   }
 
   const saving = create.isPending || update.isPending;
