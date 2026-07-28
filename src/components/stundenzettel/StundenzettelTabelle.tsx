@@ -72,8 +72,13 @@ export function StundenzettelTabelle({
         t.pause = value === "" || Number.isNaN(n) ? undefined : Math.max(0, Math.min(600, n));
       } else if (feld === "bemerkung") {
         t.bemerkung = value === "" ? undefined : value.slice(0, 200);
-      } else {
-        (t as Record<string, unknown>)[feld] = value === "" ? undefined : value;
+      } else if (
+        feld === "beginn" ||
+        feld === "ende" ||
+        feld === "beginn2" ||
+        feld === "ende2"
+      ) {
+        t[feld] = value === "" ? undefined : value;
       }
       t.stunden = berechneStunden(t);
       next[idx] = t;
