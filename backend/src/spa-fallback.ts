@@ -20,7 +20,7 @@ function isDocumentNavigation(headers: Record<string, unknown>): boolean {
 
 export function isSpaPageRoute(rawUrl: string): boolean {
   const p = normalizedPath(rawUrl);
-  if (["/kunden", "/angebote", "/rechnungen", "/objekte", "/protokolle", "/dokumente"].includes(p)) {
+  if (["/kunden", "/angebote", "/rechnungen", "/objekte", "/protokolle", "/dokumente", "/stundenzettel"].includes(p)) {
     return true;
   }
   if (["/kunden/neu", "/angebote/neu", "/rechnungen/neu", "/objekte/neu"].includes(p)) {
