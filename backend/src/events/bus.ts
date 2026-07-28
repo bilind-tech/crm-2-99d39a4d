@@ -29,6 +29,7 @@ export type AppEvent =
   | { type: "auth:login";              payload: { userId: string; username: string; ip?: string | null } }
   | { type: "auth:logout";             payload: { userId: string } }
   | { type: "kunde:angelegt";          payload: { id: string; name: string } }
+  | { type: "stundenzettel:mitarbeiter"; payload: { action: "create" | "update" | "delete"; id: string } }
   | { type: "maintenance";             payload: { active: boolean } };
 
 export type AppEventType = AppEvent["type"];
