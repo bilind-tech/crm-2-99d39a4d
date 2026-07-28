@@ -213,6 +213,11 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
       gesamtStunden: gesamt,
     });
     audit({ userId: req.user?.id ?? null, action: "stundenzettel.tage.patch", detail: { id, count: p.data.tage.length } });
+    try {
+      await archiviereStundenzettel(saved.id!);
+    } catch (e) {
+      req.log.error({ err: e }, "stundenzettel-archiv-failed");
+    }
     return saved;
   });
 
