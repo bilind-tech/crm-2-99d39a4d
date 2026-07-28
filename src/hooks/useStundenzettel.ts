@@ -153,3 +153,25 @@ export function useDeleteZettel(jahr: number, monat: number) {
     },
   });
 }
+
+// ---------- Archiv (Dokumente-Ablage) ----------
+
+export interface ArchivErgebnis {
+  dokumentId: string;
+  dateiname: string;
+  ordnerId: string;
+  ersetzt: boolean;
+}
+
+/** Legt das Stundenzettel-PDF unter Dokumente → Stundenzettel/{Jahr}/{Monat} ab. */
+export function useArchivieren() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (zettelId: string) =>
+      api.post<ArchivErgebnis>(`/stundenzettel/${zettelId}/archivieren`, {}),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dokumente"] });
+      qc.invalidateQueries({ queryKey: ["dokument-ordner"] });
+    },
+  });
+}
