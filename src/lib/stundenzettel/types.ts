@@ -94,6 +94,40 @@ export interface FeiertageResponse {
   custom: CustomFeiertag[];
 }
 
+export interface GenerierterTag {
+  datum: string;
+  wochentag: Wochentag;
+  beginn?: string;
+  ende?: string;
+  beginn2?: string;
+  ende2?: string;
+  pause?: number;
+  stunden: number;
+  bemerkung?: string;
+}
+
+export interface Stundenzettel {
+  id: string | null;
+  mitarbeiterId: string;
+  jahr: number;
+  monat: number;
+  tage: GenerierterTag[];
+  gesamtStunden: number;
+  aktualisiertAm: string | null;
+}
+
+export interface GenerierenErgebnis {
+  jahr: number;
+  monat: number;
+  ergebnis: Array<{
+    mitarbeiterId: string;
+    ok: boolean;
+    id?: string;
+    error?: string;
+    skipped?: boolean;
+  }>;
+}
+
 export const DEFAULT_ARBEITSZEIT: ArbeitsZeitConfig = {
   arbeitetAmWochenende: false,
   wpiMuster: "gleich",
