@@ -20,6 +20,7 @@ import { audit } from "../auth/audit.js";
 import { emit } from "../events/bus.js";
 import { getFeiertageFuerJahr } from "../stundenzettel/feiertage.js";
 import { generiereStundenzettel } from "../stundenzettel/generieren.js";
+import { renderStundenzettelPdf } from "../pdf/stundenzettelPdf.js";
 import {
   createCustomFeiertag,
   createMitarbeiter,
@@ -215,5 +216,37 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
     if (!ok) return reply.status(404).send({ error: "not-found" });
     audit({ userId: req.user?.id ?? null, action: "stundenzettel.delete", detail: { id } });
     return { ok: true };
+  });
+
+  // ---------- PDF ----------
+  app.get("/stundenzettel/:id/pdf", async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    let result;
+    try {
+      result = await renderStundenzettelPdf(id);
+    } catch (e) {
+      req.log.error({ err: e }, "stundenzettel-pdf-failed");
+      return reply.status(500).send({
+        error: "pdf-render-failed",
+        message: `PDF konnte nicht erzeugt werden: ${(e as Error).message ?? String(e)}`,
+      });
+    }
+    if (!result) return reply.status(404).send({ error: "not-found" });
+    const etag = `"${result.hash}"`;
+    if (req.headers["if-none-match"] === etag) {
+      return reply.status(304).header("ETag", etag).send();
+    }
+    const safeAscii = result.dateiname.replace(/[^\x20-\x7E]/g, "_").replace(/"/g, "");
+    return reply
+      .status(200)
+      .header("Content-Type", "application/pdf")
+      .header("Content-Length", String(result.buffer.length))
+      .header(
+        "Content-Disposition",
+        `inline; filename="${safeAscii}"; filename*=UTF-8''${encodeURIComponent(result.dateiname)}`,
+      )
+      .header("ETag", etag)
+      .header("Cache-Control", "private, max-age=0, must-revalidate")
+      .send(result.buffer);
   });
 }
