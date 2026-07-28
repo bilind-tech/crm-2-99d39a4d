@@ -6,13 +6,17 @@ import { api } from "@/lib/api/client";
 import type {
   CustomFeiertag,
   FeiertageResponse,
+  GenerierenErgebnis,
+  GenerierterTag,
   Mitarbeiter,
   MitarbeiterInput,
+  Stundenzettel,
 } from "@/lib/stundenzettel/types";
 
 export const qkStz = {
   mitarbeiter: ["stz", "mitarbeiter"] as const,
   feiertage: (jahr: number) => ["stz", "feiertage", jahr] as const,
+  zettel: (jahr: number, monat: number) => ["stz", "zettel", jahr, monat] as const,
 };
 
 // ---------- Mitarbeiter ----------
@@ -85,6 +89,67 @@ export function useDeleteCustomFeiertag() {
     mutationFn: (id: string) => api.delete<{ ok: true }>(`/feiertage/custom/${id}`),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["stz", "feiertage"] });
+    },
+  });
+}
+
+// ---------- Stundenzettel ----------
+
+export function useZettelMonat(jahr: number, monat: number) {
+  return useQuery({
+    queryKey: qkStz.zettel(jahr, monat),
+    queryFn: async () => {
+      const r = await api.get<{ zettel: Stundenzettel[] }>(
+        `/stundenzettel?jahr=${jahr}&monat=${monat}`,
+      );
+      return r.zettel;
+    },
+  });
+}
+
+export function useGenerieren() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: {
+      jahr: number;
+      monat: number;
+      mitarbeiterIds?: string[];
+      ueberschreiben?: boolean;
+    }) => api.post<GenerierenErgebnis>("/stundenzettel/generieren", input),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: qkStz.zettel(vars.jahr, vars.monat) });
+    },
+  });
+}
+
+export function usePatchZettel(jahr: number, monat: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, tage }: { id: string; tage: GenerierterTag[] }) =>
+      api.put<Stundenzettel>(`/stundenzettel/${id}`, {
+        tage: tage.map((t) => ({
+          datum: t.datum,
+          beginn: t.beginn ?? null,
+          ende: t.ende ?? null,
+          beginn2: t.beginn2 ?? null,
+          ende2: t.ende2 ?? null,
+          pause: t.pause ?? null,
+          stunden: t.stunden,
+          bemerkung: t.bemerkung ?? null,
+        })),
+      }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qkStz.zettel(jahr, monat) });
+    },
+  });
+}
+
+export function useDeleteZettel(jahr: number, monat: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ ok: true }>(`/stundenzettel/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qkStz.zettel(jahr, monat) });
     },
   });
 }
