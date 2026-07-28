@@ -56,7 +56,7 @@ export async function archiviereStundenzettel(zettelId: string): Promise<ArchivE
 
   const dok = createDokument({
     titel: pdf.dateiname.replace(/\.pdf$/i, "").replace(/_/g, " "),
-    typ: "pdf",
+    typ: "protokoll",
     ordnerId,
     dateiname: pdf.dateiname,
     mimeType: "application/pdf",
