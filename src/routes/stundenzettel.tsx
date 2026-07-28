@@ -7,9 +7,12 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  FileSpreadsheet,
+  Loader2,
   Plus,
   Trash2,
   UserRound,
+  Wand2,
 } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { PrimaryAction } from "@/components/layout/PrimaryAction";
@@ -25,11 +28,14 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { MitarbeiterDialog } from "@/components/stundenzettel/MitarbeiterDialog";
+import { StundenzettelTabelle } from "@/components/stundenzettel/StundenzettelTabelle";
 import {
   useCreateCustomFeiertag,
   useDeleteCustomFeiertag,
   useFeiertage,
+  useGenerieren,
   useMitarbeiter,
+  useZettelMonat,
 } from "@/hooks/useStundenzettel";
 import { useConfirm } from "@/hooks/useConfirm";
 import type { Mitarbeiter } from "@/lib/stundenzettel/types";
@@ -62,6 +68,23 @@ function Page() {
 
   const { data: mitarbeiter = [], isLoading: mitLoading } = useMitarbeiter();
   const { data: feiertage, isLoading: ftLoading } = useFeiertage(jahr);
+  const { data: zettel = [], isLoading: zLoading } = useZettelMonat(jahr, monat);
+  const generieren = useGenerieren();
+
+  const zettelByMitarbeiter = useMemo(
+    () => new Map(zettel.map((z) => [z.mitarbeiterId, z])),
+    [zettel],
+  );
+
+  async function handleGenerieren(mitarbeiterIds?: string[]) {
+    try {
+      const r = await generieren.mutateAsync({ jahr, monat, mitarbeiterIds });
+      const ok = r.ergebnis.filter((e) => e.ok).length;
+      toast.success(`${ok} Stundenzettel erzeugt`);
+    } catch (e) {
+      toast.error((e as Error).message || "Generieren fehlgeschlagen");
+    }
+  }
 
   function stepMonat(delta: number) {
     const d = new Date(jahr, monat - 1 + delta, 1);
@@ -76,7 +99,7 @@ function Page() {
     <div className="space-y-6 pb-12">
       <PageHeader
         title="Stundenzettel"
-        subtitle="Mitarbeiter und Feiertage pflegen. Monats-Stundenzettel folgen in Kürze."
+        subtitle="Monats-Stundenzettel erzeugen, bearbeiten und Stammdaten pflegen."
         actions={
           <PrimaryAction
             icon={Plus}
@@ -113,6 +136,97 @@ function Page() {
       </div>
 
       <Accordion type="multiple" defaultValue={["mitarbeiter"]} className="space-y-3">
+        {/* --- Monats-Stundenzettel --- */}
+        <AccordionItem
+          value="zettel"
+          className="rounded-xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger className="hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <FileSpreadsheet className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">
+                Stundenzettel {MONATE[monat - 1]} {jahr}
+              </span>
+              <Badge variant="secondary" className="ml-1">
+                {zettel.length} / {activeCount}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="space-y-4 pb-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                size="sm"
+                onClick={() => handleGenerieren()}
+                disabled={generieren.isPending || activeCount === 0}
+              >
+                {generieren.isPending ? (
+                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                ) : (
+                  <Wand2 className="mr-1.5 h-4 w-4" />
+                )}
+                Alle aktiven generieren
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Vorhandene Zettel dieses Monats werden dabei überschrieben.
+              </span>
+            </div>
+
+            {zLoading || mitLoading ? (
+              <p className="py-4 text-sm text-muted-foreground">Lade…</p>
+            ) : mitarbeiter.length === 0 ? (
+              <p className="py-4 text-sm text-muted-foreground">
+                Lege zuerst einen Mitarbeiter an.
+              </p>
+            ) : (
+              <Accordion type="multiple" className="space-y-2">
+                {mitarbeiter
+                  .filter((m) => m.aktiv || zettelByMitarbeiter.has(m.id))
+                  .map((m) => {
+                    const z = zettelByMitarbeiter.get(m.id);
+                    return (
+                      <AccordionItem
+                        key={m.id}
+                        value={m.id}
+                        className="rounded-lg border border-border px-3"
+                      >
+                        <AccordionTrigger className="hover:no-underline">
+                          <div className="flex flex-1 items-center justify-between gap-3 pr-2 text-left">
+                            <span className="text-sm font-medium">{m.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {z
+                                ? `${z.gesamtStunden.toLocaleString("de-DE")} Std.`
+                                : "kein Zettel"}
+                            </span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent className="pb-4">
+                          {z ? (
+                            <StundenzettelTabelle
+                              zettel={z}
+                              name={m.name}
+                              jahr={jahr}
+                              monat={monat}
+                            />
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleGenerieren([m.id])}
+                              disabled={generieren.isPending}
+                            >
+                              <Wand2 className="mr-1.5 h-4 w-4" />
+                              Für {MONATE[monat - 1]} generieren
+                            </Button>
+                          )}
+                        </AccordionContent>
+                      </AccordionItem>
+                    );
+                  })}
+              </Accordion>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+
         {/* --- Mitarbeiter --- */}
         <AccordionItem
           value="mitarbeiter"
