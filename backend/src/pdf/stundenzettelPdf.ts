@@ -4,15 +4,15 @@
 // Summenzeile + Unterschriftenblock am Ende, Seitenzahl unten rechts.
 
 import { createHash } from "node:crypto";
-import { DEFAULT_FONT } from "./printer.js";
+import { STUNDENZETTEL_FONT } from "./printer.js";
 import { renderPdf } from "./render.js";
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
 import { getMitarbeiter, getZettel } from "../stundenzettel/repo.js";
 import type { GenerierterStundenzettel, GenerierterTag } from "../stundenzettel/types.js";
 
 const COLOR_TEXT = "#000000";
-const COLOR_LINE = "#9e9e9e";
-const HEADER_FILL = "#e8e8e8";
+const COLOR_LINE = "#1a1a1a";
+const HEADER_FILL = "#e6e6e6";
 
 const MONATE = [
   "Januar", "Februar", "März", "April", "Mai", "Juni",
@@ -60,9 +60,9 @@ function stundenText(n: number): string {
 }
 
 function tagLabel(t: GenerierterTag): string {
-  const tagNr = Number(t.datum.slice(8, 10));
-  const kurz = WOCHENTAG_KURZ[t.wochentag] ?? "";
-  return `${kurz} ${String(tagNr).padStart(2, "0")}.`;
+  // Vorlage zeigt ausschließlich die Tageszahl.
+  void WOCHENTAG_KURZ;
+  return String(Number(t.datum.slice(8, 10)));
 }
 
 interface Zelle {
@@ -103,34 +103,37 @@ function zeile(t: GenerierterTag): Zelle {
 
 const LEER: Zelle = { tag: "", beginn: "", ende: "", pauseVon: "", pauseBis: "", stunden: "" };
 
-function tabelle(zeilen: Zelle[], summe: number | null) {
-  const th = (text: string) => ({
+function tabelle(zeilen: Zelle[], summe: number | null, rowPad: number) {
+  const th = (
+    text: string,
+    extra: Record<string, unknown> = {},
+  ) => ({
     text,
-    bold: true,
-    fontSize: 9,
+    fontSize: 10,
     alignment: "center" as const,
     fillColor: HEADER_FILL,
-    margin: [0, 4, 0, 4] as [number, number, number, number],
+    margin: [0, 3, 0, 3] as [number, number, number, number],
+    ...extra,
   });
-  const td = (text: string, opts: { bold?: boolean; align?: "left" | "center" } = {}) => ({
+  const td = (text: string) => ({
     text,
-    fontSize: 9,
-    bold: opts.bold ?? false,
-    alignment: opts.align ?? ("center" as const),
-    margin: [2, 3.5, 2, 3.5] as [number, number, number, number],
+    fontSize: 10,
+    alignment: "center" as const,
+    margin: [2, rowPad, 2, rowPad] as [number, number, number, number],
   });
 
   const body: unknown[][] = [
     [
-      th("Tag"),
-      th("Arbeitsbeginn"),
-      th("Arbeitsende"),
-      th("Pause von"),
-      th("Pause bis"),
-      th("Arbeitsstunden"),
+      th("Tag", { rowSpan: 2, margin: [0, 13, 0, 3] }),
+      th("Arbeitsbeginn", { rowSpan: 2, margin: [0, 13, 0, 3] }),
+      th("Arbeitsende", { rowSpan: 2, margin: [0, 13, 0, 3] }),
+      th("Pausenzeiten", { colSpan: 2 }),
+      {},
+      th("Arbeitszeit\nin Stunden", { rowSpan: 2, margin: [0, 8, 0, 3], lineHeight: 1.15 }),
     ],
+    [{}, {}, {}, th("von"), th("bis"), {}],
     ...zeilen.map((z) => [
-      td(z.tag, { bold: true, align: "left" }),
+      td(z.tag),
       td(z.beginn),
       td(z.ende),
       td(z.pauseVon),
@@ -141,36 +144,33 @@ function tabelle(zeilen: Zelle[], summe: number | null) {
 
   if (summe != null) {
     body.push([
+      { text: "", margin: [0, rowPad, 0, rowPad] },
       {
         text: "Summe Arbeitsstunden:",
-        colSpan: 5,
-        bold: true,
-        fontSize: 9.5,
-        alignment: "right",
-        fillColor: HEADER_FILL,
-        margin: [4, 5, 6, 5],
+        colSpan: 4,
+        fontSize: 10,
+        alignment: "left",
+        margin: [4, rowPad, 6, rowPad],
       },
-      {}, {}, {}, {},
+      {}, {}, {},
       {
         text: stundenText(summe) || "0",
-        bold: true,
-        fontSize: 9.5,
+        fontSize: 10,
         alignment: "center",
-        fillColor: HEADER_FILL,
-        margin: [2, 5, 2, 5],
+        margin: [2, rowPad, 2, rowPad],
       },
     ]);
   }
 
   return {
     table: {
-      headerRows: 1,
-      widths: [58, "*", "*", "*", "*", 80],
+      headerRows: 2,
+      widths: [46, "*", "*", "*", "*", 88],
       body,
     },
     layout: {
-      hLineWidth: () => 0.6,
-      vLineWidth: () => 0.6,
+      hLineWidth: () => 1,
+      vLineWidth: () => 1,
       hLineColor: () => COLOR_LINE,
       vLineColor: () => COLOR_LINE,
       paddingLeft: () => 2,
@@ -185,13 +185,13 @@ function unterschriften() {
   const feld = (label: string) => ({
     width: "*",
     stack: [
-      { canvas: [{ type: "line", x1: 0, y1: 0, x2: 190, y2: 0, lineWidth: 0.6, lineColor: COLOR_TEXT }] },
-      { text: label, fontSize: 8.5, margin: [0, 4, 0, 0] },
+      { canvas: [{ type: "line", x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 1, lineColor: COLOR_TEXT }] },
+      { text: label, fontSize: 10, margin: [0, 6, 0, 0] },
     ],
   });
   return {
-    margin: [0, 55, 0, 0] as [number, number, number, number],
-    columns: [feld("Unterschrift Arbeitsnehmer"), { width: 40, text: "" }, feld("Unterschrift Arbeitsgeber")],
+    margin: [0, 26, 0, 0] as [number, number, number, number],
+    columns: [feld("Unterschrift Arbeitsnehmer"), { width: 60, text: "" }, feld("Unterschrift Arbeitsgeber")],
   };
 }
 
@@ -209,31 +209,37 @@ export function stundenzettelDocDef(args: {
   while (seite2.length < 16) seite2.push({ ...LEER });
 
   const kopf = [
-    ...(logoDataUrl
-      ? [{ image: logoDataUrl, fit: [210, 85] as [number, number], alignment: "center" as const, margin: [0, 0, 0, 14] as [number, number, number, number] }]
-      : [{ text: "", margin: [0, 0, 0, 6] as [number, number, number, number] }]),
-    { text: `Stundenzettel von: ${mitarbeiterName}`, fontSize: 12, bold: true, margin: [0, 0, 0, 2] as [number, number, number, number] },
-    { text: `Monat: ${MONATE[zettel.monat - 1]} ${zettel.jahr}`, fontSize: 12, margin: [0, 0, 0, 12] as [number, number, number, number] },
+    { text: `Stundenzettel von: ${mitarbeiterName}`, fontSize: 13, margin: [0, 0, 0, 5] as [number, number, number, number] },
+    { text: `Monat: ${MONATE[zettel.monat - 1]} ${zettel.jahr}`, fontSize: 13, margin: [0, 0, 0, 14] as [number, number, number, number] },
   ];
 
   return {
     pageSize: "A4",
-    pageMargins: [42, 42, 42, 46] as [number, number, number, number],
-    defaultStyle: { font: DEFAULT_FONT, fontSize: 9.5, color: COLOR_TEXT },
+    pageMargins: [50, 150, 50, 50] as [number, number, number, number],
+    defaultStyle: { font: STUNDENZETTEL_FONT, fontSize: 10, color: COLOR_TEXT },
     info: { title: `Stundenzettel ${mitarbeiterName} ${MONATE[zettel.monat - 1]} ${zettel.jahr}` },
+    header: () =>
+      logoDataUrl
+        ? {
+            image: logoDataUrl,
+            fit: [270, 78] as [number, number],
+            alignment: "center" as const,
+            margin: [0, 42, 0, 0] as [number, number, number, number],
+          }
+        : { text: "" },
     content: [
       ...kopf,
-      tabelle(seite1, null),
+      tabelle(seite1, null, 9),
       { text: "", pageBreak: "before" as const },
-      tabelle(seite2, zettel.gesamtStunden),
+      tabelle(seite2, zettel.gesamtStunden, 8),
       unterschriften(),
     ],
     footer: (current: number, total: number) => ({
-      margin: [42, 0, 42, 12] as [number, number, number, number],
-      text: `Seite ${current} von ${total}`,
+      margin: [50, 0, 50, 16] as [number, number, number, number],
+      text: `Seite ${current}${total ? "" : ""}`,
       alignment: "right" as const,
-      fontSize: 7.5,
-      color: "#666666",
+      fontSize: 9,
+      color: "#8a8a8a",
     }),
   };
 }
