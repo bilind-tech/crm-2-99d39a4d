@@ -19,11 +19,12 @@ type AnyPrinter = any;
  */
 function findMadani(): string | null {
   const here = path.dirname(fileURLToPath(import.meta.url));
+  const file = "Madani-Thin.ttf";
   const candidates = [
-    path.join(here, "fonts", "Madani-Thin.otf"),
-    path.join(here, "..", "..", "src", "pdf", "fonts", "Madani-Thin.otf"),
-    path.join(process.cwd(), "src", "pdf", "fonts", "Madani-Thin.otf"),
-    path.join(process.cwd(), "dist", "pdf", "fonts", "Madani-Thin.otf"),
+    path.join(here, "fonts", file),
+    path.join(here, "..", "..", "src", "pdf", "fonts", file),
+    path.join(process.cwd(), "src", "pdf", "fonts", file),
+    path.join(process.cwd(), "dist", "pdf", "fonts", file),
   ];
   for (const c of candidates) if (existsSync(c)) return c;
   return null;
@@ -60,7 +61,7 @@ export function getPrinter(): AnyPrinter {
   // pdfmake hat keine ESM-Exports — via createRequire CommonJS laden.
   const requireCjs = createRequire(import.meta.url);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const PdfPrinter: any = requireCjs(process.env.PDFMAKE_PRINTER || "pdfmake/src/printer.js");
+  const PdfPrinter: any = requireCjs("pdfmake/src/printer.js");
   printerSingleton = new PdfPrinter(FONTS);
   return printerSingleton;
 }
