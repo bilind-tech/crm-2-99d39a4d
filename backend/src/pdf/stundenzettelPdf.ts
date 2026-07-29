@@ -215,7 +215,7 @@ export function stundenzettelDocDef(args: {
 
   return {
     pageSize: "A4",
-    pageMargins: [57, 150, 57, 50] as [number, number, number, number],
+    pageMargins: [57, 142, 57, 45] as [number, number, number, number],
     defaultStyle: { font: STUNDENZETTEL_FONT, fontSize: 10, color: COLOR_TEXT },
     info: { title: `Stundenzettel ${mitarbeiterName} ${MONATE[zettel.monat - 1]} ${zettel.jahr}` },
     header: () =>
@@ -229,9 +229,9 @@ export function stundenzettelDocDef(args: {
         : { text: "" },
     content: [
       ...kopf,
-      tabelle(seite1, null, 8.5),
+      tabelle(seite1, null, 6.8),
       { text: "", pageBreak: "before" as const },
-      tabelle(seite2, zettel.gesamtStunden, 7),
+      tabelle(seite2, zettel.gesamtStunden, 5.5),
       unterschriften(),
     ],
     footer: (current: number, total: number) => ({
