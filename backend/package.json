@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node --enable-source-maps dist/server.js",
-    "build": "tsc -p tsconfig.json && node -e \"const fs=require('fs'),path=require('path');const s=path.join('src','db','migrations'),d=path.join('dist','db','migrations');fs.mkdirSync(d,{recursive:true});for(const f of fs.readdirSync(s))if(f.endsWith('.sql'))fs.copyFileSync(path.join(s,f),path.join(d,f));console.log('Migrations copied:',fs.readdirSync(d).length);\"",
+    "build": "tsc -p tsconfig.json && node -e \"const fs=require('fs'),path=require('path');const s=path.join('src','db','migrations'),d=path.join('dist','db','migrations');fs.mkdirSync(d,{recursive:true});for(const f of fs.readdirSync(s))if(f.endsWith('.sql'))fs.copyFileSync(path.join(s,f),path.join(d,f));console.log('Migrations copied:',fs.readdirSync(d).length);const fs2=path.join('src','pdf','fonts'),fd=path.join('dist','pdf','fonts');if(fs.existsSync(fs2)){fs.mkdirSync(fd,{recursive:true});for(const f of fs.readdirSync(fs2))fs.copyFileSync(path.join(fs2,f),path.join(fd,f));console.log('Fonts copied:',fs.readdirSync(fd).length);}\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
