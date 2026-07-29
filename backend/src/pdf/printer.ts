@@ -60,7 +60,7 @@ export function getPrinter(): AnyPrinter {
   // pdfmake hat keine ESM-Exports — via createRequire CommonJS laden.
   const requireCjs = createRequire(import.meta.url);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const PdfPrinter: any = requireCjs("pdfmake/src/printer.js");
+  const PdfPrinter: any = requireCjs(process.env.PDFMAKE_PRINTER || "pdfmake/src/printer.js");
   printerSingleton = new PdfPrinter(FONTS);
   return printerSingleton;
 }
