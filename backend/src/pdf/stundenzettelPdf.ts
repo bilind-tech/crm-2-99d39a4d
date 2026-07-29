@@ -215,23 +215,23 @@ export function stundenzettelDocDef(args: {
 
   return {
     pageSize: "A4",
-    pageMargins: [50, 150, 50, 50] as [number, number, number, number],
+    pageMargins: [57, 150, 57, 50] as [number, number, number, number],
     defaultStyle: { font: STUNDENZETTEL_FONT, fontSize: 10, color: COLOR_TEXT },
     info: { title: `Stundenzettel ${mitarbeiterName} ${MONATE[zettel.monat - 1]} ${zettel.jahr}` },
     header: () =>
       logoDataUrl
         ? {
             image: logoDataUrl,
-            fit: [270, 78] as [number, number],
+            fit: [320, 72] as [number, number],
             alignment: "center" as const,
-            margin: [0, 42, 0, 0] as [number, number, number, number],
+            margin: [0, 40, 0, 0] as [number, number, number, number],
           }
         : { text: "" },
     content: [
       ...kopf,
-      tabelle(seite1, null, 9),
+      tabelle(seite1, null, 8.5),
       { text: "", pageBreak: "before" as const },
-      tabelle(seite2, zettel.gesamtStunden, 8),
+      tabelle(seite2, zettel.gesamtStunden, 7),
       unterschriften(),
     ],
     footer: (current: number, total: number) => ({
