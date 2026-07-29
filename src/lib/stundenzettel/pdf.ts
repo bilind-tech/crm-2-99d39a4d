@@ -2,7 +2,7 @@
 // Es gibt keinen Browser-Fallback: der Renderer lebt bewusst nur im Backend,
 // damit Druck, Download und späterer Drive-Upload identische Dateien nutzen.
 
-import { getBackendUrl } from "@/lib/api/backendUrl";
+import { getBackendUrl, isLocalPreviewFallbackAllowed } from "@/lib/api/backendUrl";
 
 export interface StundenzettelPdf {
   blob: Blob;
@@ -25,10 +25,20 @@ function parseDateiname(headers: Headers, fallback: string): string {
 
 export async function fetchStundenzettelPdf(zettelId: string): Promise<StundenzettelPdf> {
   const base = getBackendUrl().replace(/\/$/, "");
-  const res = await fetch(`${base}/stundenzettel/${encodeURIComponent(zettelId)}/pdf`, {
-    credentials: "include",
-    cache: "no-store",
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${base}/stundenzettel/${encodeURIComponent(zettelId)}/pdf`, {
+      credentials: "include",
+      cache: "no-store",
+    });
+  } catch (err) {
+    if (isLocalPreviewFallbackAllowed()) {
+      throw new Error(
+        "PDF-Vorschau ist nur mit laufendem Pi-Backend möglich — der Renderer läuft dort. Tabelle und Bearbeitung funktionieren hier trotzdem.",
+      );
+    }
+    throw err instanceof Error ? err : new Error("Backend nicht erreichbar");
+  }
   if (!res.ok) {
     let msg = `HTTP ${res.status}`;
     try {
