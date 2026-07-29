@@ -13,6 +13,7 @@ import type {
   UmsatzPunkt,
 } from "@/lib/api/types";
 import { vorschauBelegnummer } from "@/lib/belegNummer";
+import { stundenzettelPreviewGet, stundenzettelPreviewMutate } from "./localPreviewStundenzettel";
 
 const now = new Date();
 const isoNow = now.toISOString();
@@ -377,6 +378,8 @@ export function localPreviewGet<T>(path: string): T | null {
   if (cleanPath === "/benachrichtigungen") return [] as T;
   if (cleanPath === "/einstellungen/firma") return (readStore().firma ?? previewFirma) as T;
   if (cleanPath === "/einstellungen/nummernkreise") return previewNummernkreise as T;
+  const stz = stundenzettelPreviewGet<T>(cleanPath, params);
+  if (stz !== null) return stz;
   return null;
 }
 
@@ -634,5 +637,5 @@ export function localPreviewMutate<T>(method: string, path: string, body?: unkno
     return next as T;
   }
 
-  return null;
+  return stundenzettelPreviewMutate<T>(method, cleanPath, body);
 }
