@@ -39,6 +39,16 @@ function tagNr(datum: string): string {
   return datum.slice(8, 10);
 }
 
+/** Auswählbare Tages-Status. "" = normaler Arbeitstag. */
+export const TAG_STATUS = [
+  "Krank",
+  "Urlaub",
+  "Feiertag",
+  "Frei",
+  "Unbezahlt",
+  "Schule",
+] as const;
+
 export function StundenzettelTabelle({
   zettel,
   name,
@@ -79,6 +89,30 @@ export function StundenzettelTabelle({
         feld === "ende2"
       ) {
         t[feld] = value === "" ? undefined : value;
+      }
+      t.stunden = berechneStunden(t);
+      next[idx] = t;
+      return next;
+    });
+    setDirty(true);
+  }
+
+  /** Status setzt die Bemerkung und leert bei Abwesenheit alle Zeiten. */
+  function setStatus(idx: number, status: string) {
+    setTage((prev) => {
+      const next = prev.slice();
+      const t = { ...next[idx] } as GenerierterTag;
+      if (status === "") {
+        if (t.bemerkung && (TAG_STATUS as readonly string[]).includes(t.bemerkung)) {
+          t.bemerkung = undefined;
+        }
+      } else {
+        t.bemerkung = status;
+        t.beginn = undefined;
+        t.ende = undefined;
+        t.beginn2 = undefined;
+        t.ende2 = undefined;
+        t.pause = undefined;
       }
       t.stunden = berechneStunden(t);
       next[idx] = t;
@@ -153,6 +187,7 @@ export function StundenzettelTabelle({
               <th className="px-2 py-2 text-left font-medium">Ende 2</th>
               <th className="px-2 py-2 text-left font-medium">Pause</th>
               <th className="px-2 py-2 text-right font-medium">Std.</th>
+              <th className="px-2 py-2 text-left font-medium">Status</th>
               <th className="px-2 py-2 text-left font-medium">Bemerkung</th>
             </tr>
           </thead>
@@ -193,6 +228,25 @@ export function StundenzettelTabelle({
                   </td>
                   <td className="px-2 py-1 text-right text-xs font-medium tabular-nums">
                     {t.stunden || ""}
+                  </td>
+                  <td className="px-1 py-1">
+                    <select
+                      value={
+                        t.bemerkung && (TAG_STATUS as readonly string[]).includes(t.bemerkung)
+                          ? t.bemerkung
+                          : ""
+                      }
+                      onChange={(e) => setStatus(i, e.target.value)}
+                      aria-label="Status"
+                      className="h-8 w-[110px] rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="">Arbeit</option>
+                      {TAG_STATUS.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-1 py-1">
                     <Input
