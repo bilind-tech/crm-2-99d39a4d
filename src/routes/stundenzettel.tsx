@@ -31,6 +31,7 @@ import { toast } from "sonner";
 import { MitarbeiterDialog } from "@/components/stundenzettel/MitarbeiterDialog";
 import { StundenzettelTabelle } from "@/components/stundenzettel/StundenzettelTabelle";
 import { StundenzettelPdfAktionen } from "@/components/stundenzettel/StundenzettelPdfAktionen";
+import { StundenzettelWorkspace } from "@/components/stundenzettel/StundenzettelWorkspace";
 import {
   useCreateCustomFeiertag,
   useDeleteCustomFeiertag,
@@ -75,6 +76,7 @@ function Page() {
   const { data: zettel = [], isLoading: zLoading } = useZettelMonat(jahr, monat);
   const generieren = useGenerieren();
   const archivieren = useArchivieren();
+  const [workspaceOffen, setWorkspaceOffen] = useState(false);
   const [bulk, setBulk] = useState<{ modus: "archiv" | "download"; done: number; total: number } | null>(null);
 
   const zettelByMitarbeiter = useMemo(
@@ -87,6 +89,7 @@ function Page() {
       const r = await generieren.mutateAsync({ jahr, monat, mitarbeiterIds });
       const ok = r.ergebnis.filter((e) => e.ok).length;
       toast.success(`${ok} Stundenzettel erzeugt`);
+      if (ok > 0) setWorkspaceOffen(true);
     } catch (e) {
       toast.error((e as Error).message || "Generieren fehlgeschlagen");
     }
@@ -138,6 +141,19 @@ function Page() {
   const activeCount = mitarbeiter.filter((m) => m.aktiv).length;
   const customFtCount = feiertage?.custom.length ?? 0;
 
+  if (workspaceOffen) {
+    return (
+      <StundenzettelWorkspace
+        jahr={jahr}
+        monat={monat}
+        monatLabel={MONATE[monat - 1]}
+        mitarbeiter={mitarbeiter}
+        zettel={zettel}
+        onClose={() => setWorkspaceOffen(false)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6 pb-12">
       <PageHeader
@@ -178,7 +194,7 @@ function Page() {
         </Button>
       </div>
 
-      <Accordion type="multiple" defaultValue={["mitarbeiter"]} className="space-y-3">
+      <Accordion type="multiple" defaultValue={["zettel"]} className="space-y-3">
         {/* --- Monats-Stundenzettel --- */}
         <AccordionItem
           value="zettel"
@@ -237,6 +253,15 @@ function Page() {
                   <Download className="mr-1.5 h-4 w-4" />
                 )}
                 Alle als PDF
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setWorkspaceOffen(true)}
+                disabled={zettel.length === 0}
+              >
+                <FileSpreadsheet className="mr-1.5 h-4 w-4" />
+                Alle öffnen &amp; bearbeiten
               </Button>
               {bulk && (
                 <span className="text-xs text-muted-foreground">
