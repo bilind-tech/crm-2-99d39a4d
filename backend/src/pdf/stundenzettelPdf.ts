@@ -165,7 +165,7 @@ function tabelle(zeilen: Zelle[], summe: number | null, rowPad: number) {
   return {
     table: {
       headerRows: 2,
-      widths: [46, "*", "*", "*", "*", 88],
+      widths: [42, 108, 94, 75, 77, 85],
       body,
     },
     layout: {
