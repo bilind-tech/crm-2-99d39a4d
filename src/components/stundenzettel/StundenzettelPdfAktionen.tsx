@@ -1,7 +1,7 @@
 // PDF-Aktionsleiste je Monats-Stundenzettel: Ansehen, Drucken, Herunterladen.
 // Das PDF kommt immer frisch vom Backend (Renderer in backend/src/pdf/stundenzettelPdf.ts).
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Download, ExternalLink, FolderInput, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PrintButton } from "@/components/pdf/PrintButton";
@@ -11,9 +11,11 @@ import { toast } from "sonner";
 
 interface Props {
   zettelId: string;
+  /** Zusätzliche Buttons (z. B. „Bearbeiten“) in derselben Leiste. */
+  extra?: ReactNode;
 }
 
-export function StundenzettelPdfAktionen({ zettelId }: Props) {
+export function StundenzettelPdfAktionen({ zettelId, extra }: Props) {
   const [busy, setBusy] = useState<"ansehen" | "download" | null>(null);
   const archivieren = useArchivieren();
 
@@ -81,6 +83,7 @@ export function StundenzettelPdfAktionen({ zettelId }: Props) {
         )}
         In Dokumente ablegen
       </Button>
+      {extra}
     </div>
   );
 }
