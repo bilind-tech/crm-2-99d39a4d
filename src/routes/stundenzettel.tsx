@@ -431,6 +431,52 @@ function initials(name: string): string {
     .join("");
 }
 
+/** Aktionsleiste + Tabelle, die erst per „Bearbeiten“ aufklappt. */
+function ZettelBlock({
+  zettel,
+  name,
+  jahr,
+  monat,
+}: {
+  zettel: import("@/lib/stundenzettel/types").Stundenzettel;
+  name: string;
+  jahr: number;
+  monat: number;
+}) {
+  const [bearbeiten, setBearbeiten] = useState(false);
+  return (
+    <div className="space-y-3">
+      {zettel.id ? (
+        <StundenzettelPdfAktionen
+          zettelId={zettel.id}
+          extra={
+            <Button
+              size="sm"
+              variant={bearbeiten ? "secondary" : "outline"}
+              onClick={() => setBearbeiten((b) => !b)}
+            >
+              <Pencil className="mr-1.5 h-4 w-4" />
+              {bearbeiten ? "Bearbeiten schließen" : "Bearbeiten"}
+            </Button>
+          }
+        />
+      ) : null}
+      {bearbeiten ? (
+        <StundenzettelTabelle zettel={zettel} name={name} jahr={jahr} monat={monat} />
+      ) : null}
+    </div>
+  );
+}
+
+function _unusedInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("");
+}
+
 function beschreibung(m: Mitarbeiter): string {
   const cfg = m.arbeitszeiten;
   const std = `${cfg.standardZeiten.arbeitsbeginn}–${cfg.standardZeiten.arbeitsende}`;
