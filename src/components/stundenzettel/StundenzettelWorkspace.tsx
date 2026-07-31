@@ -9,6 +9,7 @@ import { PdfCanvasViewer } from "@/components/pdf/PdfCanvasViewer";
 import { StundenzettelTabelle } from "./StundenzettelTabelle";
 import { StundenzettelPdfAktionen } from "./StundenzettelPdfAktionen";
 import { fetchStundenzettelPdf } from "@/lib/stundenzettel/pdf";
+import { pruefeZiel } from "@/lib/stundenzettel/ziel";
 import type { Mitarbeiter, Stundenzettel } from "@/lib/stundenzettel/types";
 
 interface Props {
@@ -85,6 +86,14 @@ export function StundenzettelWorkspace({
     [mitarbeiter],
   );
 
+  const zielById = useMemo(
+    () =>
+      new Map(
+        mitarbeiter.map((m) => [m.id, m.arbeitszeiten?.zielStundenProMonat ?? null]),
+      ),
+    [mitarbeiter],
+  );
+
   useEffect(() => {
     if (!aktivId || !zettel.some((z) => z.mitarbeiterId === aktivId)) {
       setAktivId(zettel[0]?.mitarbeiterId ?? null);
@@ -96,6 +105,10 @@ export function StundenzettelWorkspace({
   }, [aktivId]);
 
   const aktiv = zettel.find((z) => z.mitarbeiterId === aktivId) ?? null;
+
+  const pruefung = aktiv
+    ? pruefeZiel(aktiv.tage, zielById.get(aktiv.mitarbeiterId) ?? null)
+    : null;
 
   /** Beim Schließen des Editors die PDF-Vorschau neu laden. */
   function toggleBearbeiten() {
