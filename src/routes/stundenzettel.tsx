@@ -302,15 +302,7 @@ function Page() {
                         </AccordionTrigger>
                         <AccordionContent className="pb-4">
                           {z ? (
-                            <div className="space-y-3">
-                              {z.id ? <StundenzettelPdfAktionen zettelId={z.id} /> : null}
-                              <StundenzettelTabelle
-                                zettel={z}
-                                name={m.name}
-                                jahr={jahr}
-                                monat={monat}
-                              />
-                            </div>
+                            <ZettelBlock zettel={z} name={m.name} jahr={jahr} monat={monat} />
                           ) : (
                             <Button
                               size="sm"
@@ -318,7 +310,7 @@ function Page() {
                               onClick={() => handleGenerieren([m.id])}
                               disabled={generieren.isPending}
                             >
-                              <Wand2 className="mr-1.5 h-4 w-4" />
+                              <CalendarPlus className="mr-1.5 h-4 w-4" />
                               Für {MONATE[monat - 1]} generieren
                             </Button>
                           )}
