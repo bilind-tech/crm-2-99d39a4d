@@ -108,7 +108,11 @@ export function generiereStundenzettel(
 
   let gesamt = tage.reduce((s, t) => s + t.stunden, 0);
   if (cfg.zielStundenProMonat != null && cfg.zielStundenProMonat > 0) {
-    gesamt = wendeZielausgleichAn(tage, cfg.zielStundenProMonat);
+    gesamt = wendeZielausgleichAn(
+      tage,
+      cfg.zielStundenProMonat,
+      `${mitarbeiter.id}-${jahr}-${monat}`,
+    );
   }
 
   return {

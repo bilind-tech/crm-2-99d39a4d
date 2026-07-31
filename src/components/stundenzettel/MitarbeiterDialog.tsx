@@ -41,6 +41,7 @@ import {
   useUpdateMitarbeiter,
 } from "@/hooks/useStundenzettel";
 import { useConfirm } from "@/hooks/useConfirm";
+import { schaetzeMonatsspanne } from "@/lib/stundenzettel/ziel";
 
 interface Props {
   open: boolean;
@@ -138,6 +139,14 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
 
   const saving = create.isPending || update.isPending;
 
+  // Plausibilitäts-Hinweis: passt das Ziel überhaupt zu den Arbeitszeiten?
+  const spanne = schaetzeMonatsspanne(cfg);
+  const ziel = cfg.zielStundenProMonat;
+  const zielHinweis =
+    ziel != null && ziel > 0 && (ziel < spanne.min * 0.6 || ziel > spanne.max * 1.4)
+      ? `Ziel ist mit diesen Arbeitszeiten kaum erreichbar — typisch wären ca. ${spanne.min}–${spanne.max} Std. pro Monat.`
+      : null;
+
   // Anzeigezeilen: bei "gleich" nur Standardzeiten, bei "unterschiedlich" alle
   // aktivierten Wochentage (plus Sa/So wenn Wochenend-Arbeit).
   const sichtbareTage: Wochentag[] =
@@ -220,8 +229,15 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
                 placeholder="z. B. 160"
               />
               <p className="text-[11px] text-muted-foreground">
-                Leer = kein Zielausgleich. Sonst werden generierte Stunden auf den Zielwert ±1h justiert.
+                Leer = kein Zielausgleich. Sonst verteilt das System die Differenz automatisch
+                als ±1 volle Stunde auf einzelne Arbeitstage, bis die Monatssumme exakt dem
+                Ziel entspricht.
               </p>
+              {zielHinweis ? (
+                <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-700 dark:text-amber-400">
+                  {zielHinweis}
+                </p>
+              ) : null}
             </div>
           </div>
 

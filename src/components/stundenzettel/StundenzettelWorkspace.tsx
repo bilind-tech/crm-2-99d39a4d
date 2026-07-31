@@ -9,6 +9,7 @@ import { PdfCanvasViewer } from "@/components/pdf/PdfCanvasViewer";
 import { StundenzettelTabelle } from "./StundenzettelTabelle";
 import { StundenzettelPdfAktionen } from "./StundenzettelPdfAktionen";
 import { fetchStundenzettelPdf } from "@/lib/stundenzettel/pdf";
+import { pruefeZiel } from "@/lib/stundenzettel/ziel";
 import type { Mitarbeiter, Stundenzettel } from "@/lib/stundenzettel/types";
 
 interface Props {
@@ -85,6 +86,14 @@ export function StundenzettelWorkspace({
     [mitarbeiter],
   );
 
+  const zielById = useMemo(
+    () =>
+      new Map(
+        mitarbeiter.map((m) => [m.id, m.arbeitszeiten?.zielStundenProMonat ?? null]),
+      ),
+    [mitarbeiter],
+  );
+
   useEffect(() => {
     if (!aktivId || !zettel.some((z) => z.mitarbeiterId === aktivId)) {
       setAktivId(zettel[0]?.mitarbeiterId ?? null);
@@ -96,6 +105,10 @@ export function StundenzettelWorkspace({
   }, [aktivId]);
 
   const aktiv = zettel.find((z) => z.mitarbeiterId === aktivId) ?? null;
+
+  const pruefung = aktiv
+    ? pruefeZiel(aktiv.tage, zielById.get(aktiv.mitarbeiterId) ?? null)
+    : null;
 
   /** Beim Schließen des Editors die PDF-Vorschau neu laden. */
   function toggleBearbeiten() {
@@ -122,7 +135,9 @@ export function StundenzettelWorkspace({
       <div className="flex min-h-0 flex-1 gap-3">
         {/* Mitarbeiterliste */}
         <aside className="hidden w-56 shrink-0 overflow-y-auto rounded-xl border border-border bg-card p-2 lg:block">
-          {zettel.map((z) => (
+          {zettel.map((z) => {
+            const p = pruefeZiel(z.tage, zielById.get(z.mitarbeiterId) ?? null);
+            return (
             <button
               key={z.mitarbeiterId}
               type="button"
@@ -133,11 +148,22 @@ export function StundenzettelWorkspace({
               )}
             >
               <div className="truncate">{nameById.get(z.mitarbeiterId) ?? "—"}</div>
-              <div className="text-xs text-muted-foreground">
+              <div
+                className={cn(
+                  "text-xs",
+                  p.ziel != null && !p.erfuellt ? "text-destructive" : "text-muted-foreground",
+                )}
+              >
                 {z.gesamtStunden.toLocaleString("de-DE")} Std.
+                {p.ziel != null
+                  ? p.erfuellt
+                    ? " · Ziel ✓"
+                    : ` · Ziel ${p.ziel.toLocaleString("de-DE")} h ✕`
+                  : ""}
               </div>
             </button>
-          ))}
+            );
+          })}
         </aside>
 
         {/* Mobile: Auswahl als Select */}
@@ -186,6 +212,28 @@ export function StundenzettelWorkspace({
                   {aktiv.gesamtStunden.toLocaleString("de-DE")} Std.
                 </span>
               </div>
+
+              {/* Zielstunden-Gegenprüfung */}
+              {pruefung && pruefung.ziel != null ? (
+                pruefung.erfuellt ? (
+                  <p className="text-xs text-muted-foreground">
+                    Ziel {pruefung.ziel.toLocaleString("de-DE")} h · Ist{" "}
+                    {pruefung.ist.toLocaleString("de-DE")} h ✓
+                  </p>
+                ) : (
+                  <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      Zielstunden nicht erreicht: Ist{" "}
+                      {pruefung.ist.toLocaleString("de-DE")} h, Ziel{" "}
+                      {pruefung.ziel.toLocaleString("de-DE")} h (
+                      {pruefung.abweichung > 0 ? "+" : "−"}
+                      {Math.abs(pruefung.abweichung).toLocaleString("de-DE")} h). Bitte Tage
+                      manuell anpassen oder Arbeitszeiten des Mitarbeiters prüfen.
+                    </span>
+                  </div>
+                )
+              ) : null}
 
               {/* Voller Bereich: Tabelle beim Bearbeiten, sonst PDF-Vorschau */}
               {bearbeiten ? (
