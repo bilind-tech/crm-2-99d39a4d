@@ -135,7 +135,9 @@ export function StundenzettelWorkspace({
       <div className="flex min-h-0 flex-1 gap-3">
         {/* Mitarbeiterliste */}
         <aside className="hidden w-56 shrink-0 overflow-y-auto rounded-xl border border-border bg-card p-2 lg:block">
-          {zettel.map((z) => (
+          {zettel.map((z) => {
+            const p = pruefeZiel(z.tage, zielById.get(z.mitarbeiterId) ?? null);
+            return (
             <button
               key={z.mitarbeiterId}
               type="button"
@@ -146,11 +148,22 @@ export function StundenzettelWorkspace({
               )}
             >
               <div className="truncate">{nameById.get(z.mitarbeiterId) ?? "—"}</div>
-              <div className="text-xs text-muted-foreground">
+              <div
+                className={cn(
+                  "text-xs",
+                  p.ziel != null && !p.erfuellt ? "text-destructive" : "text-muted-foreground",
+                )}
+              >
                 {z.gesamtStunden.toLocaleString("de-DE")} Std.
+                {p.ziel != null
+                  ? p.erfuellt
+                    ? " · Ziel ✓"
+                    : ` · Ziel ${p.ziel.toLocaleString("de-DE")} h ✕`
+                  : ""}
               </div>
             </button>
-          ))}
+            );
+          })}
         </aside>
 
         {/* Mobile: Auswahl als Select */}
