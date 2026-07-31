@@ -97,6 +97,14 @@ export function StundenzettelWorkspace({
 
   const aktiv = zettel.find((z) => z.mitarbeiterId === aktivId) ?? null;
 
+  /** Beim Schließen des Editors die PDF-Vorschau neu laden. */
+  function toggleBearbeiten() {
+    setBearbeiten((b) => {
+      if (b) setRefreshKey((k) => k + 1);
+      return !b;
+    });
+  }
+
   return (
     <div className="flex h-[calc(100vh-6rem)] flex-col gap-3 sm:h-[calc(100vh-7rem)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
