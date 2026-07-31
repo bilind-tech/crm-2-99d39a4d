@@ -4,6 +4,9 @@
 // Summenzeile + Unterschriftenblock am Ende, Seitenzahl unten rechts.
 
 import { createHash } from "node:crypto";
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { STUNDENZETTEL_FONT } from "./printer.js";
 import { renderPdf } from "./render.js";
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
@@ -11,6 +14,32 @@ import { getMitarbeiter, getZettel } from "../stundenzettel/repo.js";
 import type { GenerierterStundenzettel, GenerierterTag } from "../stundenzettel/types.js";
 
 const COLOR_TEXT = "#000000";
+
+/**
+ * Fest hinterlegtes Stundenzettel-Logo (`src/pdf/assets/stundenzettel-logo.png`,
+ * wird beim Build nach `dist/pdf/assets/` kopiert). Unabhängig vom
+ * Branding-Logo aus den Einstellungen.
+ */
+let bundledLogoCache: string | null | undefined;
+function loadBundledStundenzettelLogo(): string | null {
+  if (bundledLogoCache !== undefined) return bundledLogoCache;
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const file = "stundenzettel-logo.png";
+  const candidates = [
+    path.join(here, "assets", file),
+    path.join(here, "..", "..", "src", "pdf", "assets", file),
+    path.join(process.cwd(), "src", "pdf", "assets", file),
+    path.join(process.cwd(), "dist", "pdf", "assets", file),
+  ];
+  for (const p of candidates) {
+    if (existsSync(p)) {
+      bundledLogoCache = `data:image/png;base64,${readFileSync(p).toString("base64")}`;
+      return bundledLogoCache;
+    }
+  }
+  bundledLogoCache = null;
+  return null;
+}
 const COLOR_LINE = "#1a1a1a";
 const HEADER_FILL = "#e6e6e6";
 
