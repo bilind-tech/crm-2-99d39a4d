@@ -1,38 +1,40 @@
-## Ziel
+## Problem (bestätigt)
 
-1. Nach dem Generieren füllt die PDF-Vorschau den kompletten freien Bereich.
-2. Alle Buttons (PDF ansehen, Drucken, Herunterladen, In Dokumente ablegen, Bearbeiten, Vorschau aktualisieren) liegen in einer Zeile ganz oben.
-3. „Bearbeiten" öffnet die Tabelle über den ganzen Bildschirm (statt der halben Spalte).
-4. Das neu hochgeladene MYCLEANCENTER-Logo wird im Stundenzettel-PDF oben verwendet.
+`package.json` fordert `@lovable.dev/vite-tanstack-config@2.8.3`, die `package-lock.json` enthält aber noch `2.8.2` (in Zeile 72 und 942 geprüft). `npm ci` bricht deshalb hart ab — und der Retry im Update-Script macht nur den Cache leer, was nichts hilft, weil die Ursache die Lockfile-Diskrepanz ist.
 
-## Umsetzung
+Das passiert bei jedem Plattform-Update der Lovable-Vite-Config erneut. Deshalb braucht es zwei Fixes: den akuten und den dauerhaften.
 
-### Layout (`src/components/stundenzettel/StundenzettelWorkspace.tsx`)
+## Fix 1 — Lockfile synchronisieren (akut)
+
+`npm install --package-lock-only` im Projekt-Root ausführen, sodass die Lockfile auf 2.8.3 zeigt, und mit einem `npm ci --dry-run` verifizieren, dass es sauber durchläuft.
+
+## Fix 2 — Update-Script selbstheilend machen (dauerhaft)
+
+In `backend/deploy/update.sh` wird die Funktion `npm_ci_safe` erweitert:
 
 ```text
-┌──────────────────────────────────────────────┐
-│ Titel + Schließen                            │
-├───────────┬──────────────────────────────────┤
-│ Mit-      │ [Buttons in einer Zeile]         │
-│ arbeiter  ├──────────────────────────────────┤
-│ liste     │                                  │
-│           │   PDF-Vorschau (voller Rest)     │
-│           │                                  │
-└───────────┴──────────────────────────────────┘
+1. npm ci            → normal
+2. bei Fehler:       Cache leeren, npm ci erneut
+3. bei erneutem      npm install --no-audit --no-fund
+   Fehler (EUSAGE):  (löst Lock-Drift automatisch auf)
 ```
 
-- Buttonleiste wird aus der linken Karte herausgezogen und als eigene Zeile über den Inhaltsbereich gelegt.
-- Darunter nur noch die PDF-Vorschau — volle Breite und Höhe (kein `xl:grid-cols-2` mehr, keine Text-Zusammenfassungsspalte).
-- PDF-Vorschau ist auch auf kleineren Breiten sichtbar (bisher `hidden … xl:block`).
-- „Bearbeiten" schaltet nicht mehr eine Spalte um, sondern ersetzt die PDF-Vorschau durch die Tabelle über die volle Fläche (scrollbar); erneuter Klick bzw. „Bearbeiten schließen" geht zurück zur Vorschau. Nach dem Schließen wird die Vorschau automatisch aktualisiert, damit Änderungen sichtbar sind.
+`npm install` respektiert die Version-Ranges aus `package.json` und erzeugt die Lockfile lokal auf dem Pi neu — der Build läuft damit durch, egal ob die Lockfile im Repo einmal hinterherhinkt. Es wird nichts am Daten-Verzeichnis verändert; der Build passiert weiterhin in `/var/tmp/mcc-build-*`.
 
-### Logo im Stundenzettel-PDF
+Zusätzlich wird derselbe Fallback für den Backend-Install-Schritt genutzt (nutzt bereits dieselbe Funktion, gilt also automatisch mit).
 
-- Das hochgeladene Bild wird als feste Datei ins Backend gelegt: `backend/src/pdf/assets/stundenzettel-logo.png`.
-- `backend/src/pdf/stundenzettelPdf.ts` lädt dieses Bild (Base64) als Kopfbild und nutzt es anstelle des Branding-Logos; nur falls die Datei fehlt, greift wie bisher `loadLogoDataUrl()`.
-- Datei wird in `backend/package.json` (files/Distribution) mitverteilt, analog zum Font-Ordner, damit sie beim Pi-Update mitkommt.
-- Cache-Hash im PDF-Renderer berücksichtigt das neue Logo, damit alte gecachte PDFs nicht weiterverwendet werden.
+## Danach auf dem Pi
 
-### Hinweis
+Da `update.sh` sich per Self-Update selbst aus dem Repo aktualisiert, reicht ein einfaches:
 
-Die Rechnungen/Angebote bleiben unverändert beim Branding-Logo aus den Einstellungen — nur der Stundenzettel bekommt das fest hinterlegte Bild.
+```text
+mcc-update
+```
+
+Beim ersten Lauf zieht es die neue `update.sh`, startet sich neu und baut mit der reparierten Lockfile durch.
+
+## Technische Details
+
+- Betroffene Dateien: `package-lock.json` (regeneriert), `backend/deploy/update.sh` (Fallback-Logik in `npm_ci_safe`).
+- Keine Änderung an Backend-Code, Daten oder Migrationen.
+- Verifikation vor Abschluss: `npm ci --dry-run` im Root muss ohne EUSAGE durchlaufen.

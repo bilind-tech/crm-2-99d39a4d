@@ -83,7 +83,16 @@ npm_ci_safe() {
   rm -rf "${npm_config_cache:-$NPM_CACHE_DIR}"
   mkdir -p "${npm_config_cache:-$NPM_CACHE_DIR}"
   npm cache verify >/dev/null 2>&1 || true
-  npm ci --prefer-online --no-audit --no-fund "$@"
+  if npm ci --prefer-online --no-audit --no-fund "$@"; then
+    return 0
+  fi
+  # Letzter Rettungsanker: package-lock.json ist nicht synchron zur package.json
+  # (typisch nach einem Plattform-Update einer Lovable-Abhängigkeit). `npm ci`
+  # bricht dann prinzipiell ab. `npm install` löst die Ranges neu auf und
+  # erzeugt die Lockfile lokal im Build-Verzeichnis neu — das Repo bleibt
+  # unangetastet, Daten sowieso.
+  echo "!! npm ci weiterhin fehlgeschlagen — weiche auf 'npm install' aus (Lockfile-Drift)."
+  npm install --prefer-online --no-audit --no-fund "$@"
 }
 
 echo "==> 2/6  Frontend bauen (SPA)"
