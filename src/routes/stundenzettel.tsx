@@ -30,6 +30,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { MitarbeiterDialog } from "@/components/stundenzettel/MitarbeiterDialog";
+import { MitarbeiterImportDialog } from "@/components/stundenzettel/MitarbeiterImportDialog";
 import { StundenzettelTabelle } from "@/components/stundenzettel/StundenzettelTabelle";
 import { StundenzettelPdfAktionen } from "@/components/stundenzettel/StundenzettelPdfAktionen";
 import { StundenzettelWorkspace } from "@/components/stundenzettel/StundenzettelWorkspace";
@@ -71,6 +72,7 @@ function Page() {
     open: boolean;
     editing: Mitarbeiter | null;
   }>({ open: false, editing: null });
+  const [importOffen, setImportOffen] = useState(false);
 
   const { data: mitarbeiter = [], isLoading: mitLoading } = useMitarbeiter();
   const { data: feiertage, isLoading: ftLoading } = useFeiertage(jahr);
@@ -342,16 +344,25 @@ function Page() {
             ) : mitarbeiter.length === 0 ? (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 Noch keine Mitarbeiter angelegt.
-                <div className="mt-3">
+                <div className="mt-3 flex justify-center gap-2">
                   <Button
                     size="sm"
                     onClick={() => setMitarbeiterDialog({ open: true, editing: null })}
                   >
                     <Plus className="mr-1.5 h-4 w-4" /> Ersten Mitarbeiter anlegen
                   </Button>
+                  <Button size="sm" variant="outline" onClick={() => setImportOffen(true)}>
+                    <FolderInput className="mr-1.5 h-4 w-4" /> Aus JSON importieren
+                  </Button>
                 </div>
               </div>
             ) : (
+              <>
+              <div className="pb-2">
+                <Button size="sm" variant="outline" onClick={() => setImportOffen(true)}>
+                  <FolderInput className="mr-1.5 h-4 w-4" /> Aus JSON importieren
+                </Button>
+              </div>
               <ul className="divide-y divide-border">
                 {mitarbeiter.map((m) => (
                   <li
@@ -386,6 +397,7 @@ function Page() {
                   </li>
                 ))}
               </ul>
+              </>
             )}
           </AccordionContent>
         </AccordionItem>
@@ -416,6 +428,12 @@ function Page() {
           setMitarbeiterDialog((s) => ({ ...s, open: o, editing: o ? s.editing : null }))
         }
         mitarbeiter={mitarbeiterDialog.editing}
+      />
+
+      <MitarbeiterImportDialog
+        open={importOffen}
+        onOpenChange={setImportOffen}
+        vorhandene={mitarbeiter}
       />
     </div>
   );
