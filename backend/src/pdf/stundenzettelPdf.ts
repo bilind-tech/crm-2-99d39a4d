@@ -290,11 +290,18 @@ export async function renderStundenzettelPdf(zettelId: string): Promise<Stundenz
   const m = getMitarbeiter(z.mitarbeiterId);
   const name = m?.name ?? "Unbekannt";
   const firma = loadFirmaForPdf();
-  const logoDataUrl = loadLogoDataUrl();
+  const logoDataUrl = loadBundledStundenzettelLogo() ?? loadLogoDataUrl();
   const docDef = stundenzettelDocDef({ mitarbeiterName: name, zettel: z, logoDataUrl });
   const buffer = await renderPdf(docDef);
   const hash = createHash("sha256")
-    .update(JSON.stringify({ z, name, firma: firma.firmenname, logo: logoDataUrl ? logoDataUrl.length : 0 }))
+    .update(
+      JSON.stringify({
+        z,
+        name,
+        firma: firma.firmenname,
+        logo: logoDataUrl ? `v2:${logoDataUrl.length}` : "none",
+      }),
+    )
     .digest("hex")
     .slice(0, 32);
   const dateiname = `Stundenzettel_${safe(name)}_${MONATE[z.monat - 1]}_${z.jahr}.pdf`;
