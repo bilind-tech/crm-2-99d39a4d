@@ -200,6 +200,28 @@ export function StundenzettelWorkspace({
                 </span>
               </div>
 
+              {/* Zielstunden-Gegenprüfung */}
+              {pruefung && pruefung.ziel != null ? (
+                pruefung.erfuellt ? (
+                  <p className="text-xs text-muted-foreground">
+                    Ziel {pruefung.ziel.toLocaleString("de-DE")} h · Ist{" "}
+                    {pruefung.ist.toLocaleString("de-DE")} h ✓
+                  </p>
+                ) : (
+                  <div className="flex items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                    <span>
+                      Zielstunden nicht erreicht: Ist{" "}
+                      {pruefung.ist.toLocaleString("de-DE")} h, Ziel{" "}
+                      {pruefung.ziel.toLocaleString("de-DE")} h (
+                      {pruefung.abweichung > 0 ? "+" : "−"}
+                      {Math.abs(pruefung.abweichung).toLocaleString("de-DE")} h). Bitte Tage
+                      manuell anpassen oder Arbeitszeiten des Mitarbeiters prüfen.
+                    </span>
+                  </div>
+                )
+              ) : null}
+
               {/* Voller Bereich: Tabelle beim Bearbeiten, sonst PDF-Vorschau */}
               {bearbeiten ? (
                 <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-card p-3">
