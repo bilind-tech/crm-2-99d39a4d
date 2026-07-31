@@ -273,6 +273,10 @@ export function stundenzettelPreviewMutate<T>(method: string, cleanPath: string,
         return { mitarbeiterId: mid, ok: true, id: store.zettel[vorhandenIdx].id ?? undefined, skipped: true };
       }
       const tage = generiereTage(m, jahr, monat, ftMap);
+      const ziel = m.arbeitszeiten?.zielStundenProMonat ?? null;
+      if (ziel != null && ziel > 0) {
+        wendeZielausgleichAn(tage, ziel, `${m.id}-${jahr}-${monat}`);
+      }
       const zettel: Stundenzettel = {
         id: vorhandenIdx >= 0 ? store.zettel[vorhandenIdx].id : `preview-stz-${crypto.randomUUID()}`,
         mitarbeiterId: mid,
