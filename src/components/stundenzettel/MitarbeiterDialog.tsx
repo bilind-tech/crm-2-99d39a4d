@@ -139,6 +139,14 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
 
   const saving = create.isPending || update.isPending;
 
+  // Plausibilitäts-Hinweis: passt das Ziel überhaupt zu den Arbeitszeiten?
+  const spanne = schaetzeMonatsspanne(cfg);
+  const ziel = cfg.zielStundenProMonat;
+  const zielHinweis =
+    ziel != null && ziel > 0 && (ziel < spanne.min * 0.6 || ziel > spanne.max * 1.4)
+      ? `Ziel ist mit diesen Arbeitszeiten kaum erreichbar — typisch wären ca. ${spanne.min}–${spanne.max} Std. pro Monat.`
+      : null;
+
   // Anzeigezeilen: bei "gleich" nur Standardzeiten, bei "unterschiedlich" alle
   // aktivierten Wochentage (plus Sa/So wenn Wochenend-Arbeit).
   const sichtbareTage: Wochentag[] =
