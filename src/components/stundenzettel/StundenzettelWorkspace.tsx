@@ -2,9 +2,10 @@
 // des Monats, links die Mitarbeiterliste, rechts PDF-Vorschau + Editor.
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, RefreshCw, X } from "lucide-react";
+import { AlertCircle, ChevronDown, Pencil, RefreshCw, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { PdfCanvasViewer } from "@/components/pdf/PdfCanvasViewer";
 import { StundenzettelTabelle } from "./StundenzettelTabelle";
 import { StundenzettelPdfAktionen } from "./StundenzettelPdfAktionen";
 import { fetchStundenzettelPdf } from "@/lib/stundenzettel/pdf";
@@ -19,37 +20,52 @@ interface Props {
   onClose: () => void;
 }
 
-/** PDF-Vorschau eines Zettels (Blob -> Object-URL -> iframe). */
+/**
+ * PDF-Vorschau eines Zettels — als Canvas (PDF.js), NICHT als <iframe>.
+ * Eingebettete blob:-Dokumente werden in der Vorschau-Umgebung blockiert
+ * („Dieser Inhalt ist blockiert“), Canvas-Rendering funktioniert immer.
+ */
 function PdfVorschau({ zettelId, refreshKey }: { zettelId: string; refreshKey: number }) {
-  const [url, setUrl] = useState<string | null>(null);
+  const [blob, setBlob] = useState<Blob | null>(null);
+  const [dateiname, setDateiname] = useState("Stundenzettel.pdf");
   const [fehler, setFehler] = useState<string | null>(null);
 
   useEffect(() => {
     let aktiv = true;
-    let objectUrl: string | null = null;
-    setUrl(null);
+    setBlob(null);
     setFehler(null);
     fetchStundenzettelPdf(zettelId)
-      .then(({ blob }) => {
+      .then((r) => {
         if (!aktiv) return;
-        objectUrl = URL.createObjectURL(blob);
-        setUrl(objectUrl);
+        setBlob(r.blob);
+        setDateiname(r.dateiname);
       })
-      .catch((e: Error) => aktiv && setFehler(e.message));
+      .catch((e: Error) => {
+        if (aktiv) setFehler(e.message);
+      });
     return () => {
       aktiv = false;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [zettelId, refreshKey]);
 
-  if (fehler) return <p className="p-4 text-sm text-destructive">{fehler}</p>;
-  if (!url)
+  if (fehler) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-        <Loader2 className="mr-2 h-4 w-4 animate-spin" /> PDF wird erzeugt…
+      <div className="flex h-full flex-col items-center justify-center gap-2 px-6 text-center">
+        <AlertCircle className="h-5 w-5 text-muted-foreground" />
+        <p className="text-sm font-medium">Vorschau nicht verfügbar</p>
+        <p className="max-w-sm text-xs text-muted-foreground">{fehler}</p>
       </div>
     );
-  return <iframe src={`${url}#view=FitH`} title="Stundenzettel-Vorschau" className="h-full w-full" />;
+  }
+
+  return (
+    <PdfCanvasViewer
+      pdfBlob={blob}
+      pdfUrl={null}
+      fileName={dateiname}
+      className="h-full w-full overflow-y-auto bg-muted/30"
+    />
+  );
 }
 
 export function StundenzettelWorkspace({
@@ -62,6 +78,7 @@ export function StundenzettelWorkspace({
 }: Props) {
   const [aktivId, setAktivId] = useState<string | null>(zettel[0]?.mitarbeiterId ?? null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [bearbeiten, setBearbeiten] = useState(false);
 
   const nameById = useMemo(
     () => new Map(mitarbeiter.map((m) => [m.id, m.name])),
@@ -73,6 +90,10 @@ export function StundenzettelWorkspace({
       setAktivId(zettel[0]?.mitarbeiterId ?? null);
     }
   }, [zettel, aktivId]);
+
+  useEffect(() => {
+    setBearbeiten(false);
+  }, [aktivId]);
 
   const aktiv = zettel.find((z) => z.mitarbeiterId === aktivId) ?? null;
 
@@ -130,7 +151,25 @@ export function StundenzettelWorkspace({
             <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-2">
               <div className="min-h-0 overflow-y-auto rounded-xl border border-border bg-card p-3">
                 <div className="mb-2 flex flex-wrap items-center gap-2">
-                  {aktiv.id ? <StundenzettelPdfAktionen zettelId={aktiv.id} /> : null}
+                  {aktiv.id ? (
+                    <StundenzettelPdfAktionen
+                      zettelId={aktiv.id}
+                      extra={
+                        <Button
+                          size="sm"
+                          variant={bearbeiten ? "secondary" : "outline"}
+                          onClick={() => setBearbeiten((b) => !b)}
+                        >
+                          {bearbeiten ? (
+                            <ChevronDown className="mr-1.5 h-4 w-4" />
+                          ) : (
+                            <Pencil className="mr-1.5 h-4 w-4" />
+                          )}
+                          {bearbeiten ? "Bearbeiten schließen" : "Bearbeiten"}
+                        </Button>
+                      }
+                    />
+                  ) : null}
                   <Button
                     size="sm"
                     variant="ghost"
@@ -139,12 +178,20 @@ export function StundenzettelWorkspace({
                     <RefreshCw className="mr-1.5 h-4 w-4" /> Vorschau aktualisieren
                   </Button>
                 </div>
-                <StundenzettelTabelle
-                  zettel={aktiv}
-                  name={nameById.get(aktiv.mitarbeiterId) ?? ""}
-                  jahr={jahr}
-                  monat={monat}
-                />
+                {bearbeiten ? (
+                  <StundenzettelTabelle
+                    zettel={aktiv}
+                    name={nameById.get(aktiv.mitarbeiterId) ?? ""}
+                    jahr={jahr}
+                    monat={monat}
+                  />
+                ) : (
+                  <p className="px-1 py-4 text-sm text-muted-foreground">
+                    {nameById.get(aktiv.mitarbeiterId) ?? "—"} ·{" "}
+                    {aktiv.gesamtStunden.toLocaleString("de-DE")} Std. — auf „Bearbeiten“ klicken,
+                    um Zeiten und Status zu ändern.
+                  </p>
+                )}
               </div>
               <div className="hidden min-h-0 overflow-hidden rounded-xl border border-border bg-muted/30 xl:block">
                 {aktiv.id ? (

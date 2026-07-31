@@ -1,100 +1,35 @@
-# Stundenzettel-Modul im CRM — Umsetzungsplan
+## Ziel
 
-Ziel: Die bisher externe Stundenzettel-App vollständig als natives CRM-Modul nachbauen — **ohne** eigenes Passwort/Port/iframe. Nutzt vorhandene CRM-Auth, das bestehende Backend (Fastify + SQLite auf dem Pi) und den vorhandenen PDF-Renderer-Stack (pdfmake im Backend, Frontend-Preview via pdf.js). PDF muss **1:1** wie die Referenz aussehen.
+Die Stundenzettel-Seite und der Arbeitsbereich nach dem Generieren werden aufgeräumt: keine blockierte PDF-Vorschau mehr, keine sofort ausgeklappte Tabelle, klarere Buttons und Texte.
 
-## Leitprinzipien
+## 1. PDF-Vorschau reparieren („Dieser Inhalt ist blockiert“)
 
-- Keine Zweit-App, kein Iframe, kein Zweit-Passwort — die bestehende Route `/stundenzettel` wird umgebaut.
-- Daten liegen in der bestehenden SQLite unter `/var/lib/mycleancenter/` (Code/Daten-Trennung bleibt).
-- PDF-Generierung serverseitig mit pdfmake (wie Rechnung/Angebot) → deterministisch, druckt aus Backend, landet automatisch in Drive-Ordner `Stundenzettel/{YYYY}/{MM}/`.
-- Berechnungslogik (Ganze-Stunden-Regel, Zielstunden-Ausgleich, Feiertage) lebt in einem gemeinsamen `src/lib/stundenzettel/`-Modul, damit Frontend-Preview und Backend-PDF **exakt dieselben** Ergebnisse liefern.
-- Keine externen `040506`-Direktlogin-URLs, kein "Angemeldet bleiben"-Extra — CRM-Login gilt.
+Die Vorschau in `StundenzettelWorkspace.tsx` rendert das PDF aktuell in einem `<iframe src="blob:…">`. Genau das blockiert der Browser/Host in der Vorschauumgebung.
 
-## Datenmodell (SQLite)
+Lösung: statt iframe den im Projekt bereits vorhandenen Canvas-Viewer (`src/components/pdf/PdfCanvasViewer.tsx`, pdf.js-basiert, wird schon für Rechnungen/Angebote genutzt) verwenden. Das rendert die Seiten direkt ins Canvas — kein eingebettetes Dokument, also kein Blocken. Beide Seiten (1 und 2) scrollbar untereinander.
 
-```text
-mitarbeiter
-  id TEXT PK, name TEXT, aktiv INTEGER, erstelltAm TEXT,
-  arbeitszeiten_json TEXT  -- ArbeitsZeitConfig als JSON
-feiertage_custom
-  id TEXT PK, datum TEXT (YYYY-MM-DD), name TEXT
-stundenzettel
-  id TEXT PK, mitarbeiterId TEXT FK, jahr INTEGER, monat INTEGER,
-  tage_json TEXT, gesamtStunden REAL, aktualisiertAm TEXT,
-  UNIQUE(mitarbeiterId, jahr, monat)
-```
+Fällt das Laden fehl (z. B. kein Pi-Backend in der Lovable-Vorschau), erscheint eine verständliche Meldung plus „PDF ansehen“-Button statt einer leeren Fläche.
 
-NRW-Feiertage werden nicht gespeichert, sondern deterministisch pro Jahr berechnet (Gauß). `feiertage_custom` überlagert.
+## 2. Tabelle erst auf Klick
 
-Manuell im Editor geänderte Tage werden im `stundenzettel.tage_json` fixiert (Snapshot). Neu-Generieren überschreibt nur, wenn User zustimmt.
+Direkt nach dem Generieren sieht man pro Mitarbeiter nur noch:
+- Kopfzeile mit Name + Gesamtstunden
+- die Buttons **PDF ansehen · Drucken · Herunterladen · In Dokumente ablegen**
+- einen neuen Button **Bearbeiten**
 
-## Phasen
+Erst ein Klick auf „Bearbeiten“ klappt die Tabelle mit Tag/Beginn/Ende/Pause/Std./Status/Bemerkung auf (Button wechselt dann zu „Bearbeiten schließen“). Gilt sowohl im Vollbild-Arbeitsbereich als auch in den Mitarbeiter-Akkordeons auf der Hauptseite.
 
-### Phase 1 — Fundament & Daten (Backend + Berechnung)
-1. Alten `/stundenzettel` Iframe-Code + Reverse-Proxy im Backend + Settings-Tab „Stundenzettel-URL" entfernen. Memory-Rules zu iframe-URL aufräumen.
-2. SQLite-Migration für die 3 Tabellen.
-3. Shared-Modul `src/lib/stundenzettel/` (auch vom Backend importiert):
-   - `types.ts` (Mitarbeiter, ArbeitsZeitConfig, GenerierterTag, …)
-   - `feiertage.ts` (NRW-Gauß, `istFeiertag`, `istWochenende`, `getFeiertageFuerJahr`)
-   - `berechnung.ts` (Tagesberechnung in Minuten, Ganze-Stunden-Floor mit Endzeit-Rückrechnung, 2-Block-Regel, Pause-Schwelle)
-   - `zielausgleich.ts` (Wochentag-Priorität Fr→Do→Mi→Di→Mo→Sa→So, ±1h Runden, Grenzen 1–12h/Block, max 2 Runden)
-   - `generieren.ts` (`generiereStundenzettel(mitarbeiter, jahr, monat, feiertage)`)
-4. Fastify-Routen (auth-geschützt):
-   - `GET/POST/PUT/DELETE /mitarbeiter`
-   - `GET/POST/DELETE /feiertage/custom`
-   - `GET /stundenzettel?jahr&monat&mitarbeiterId`
-   - `POST /stundenzettel/generieren` (einzeln + bulk)
-   - `PUT /stundenzettel/:id` (manuelle Tageszeilen-Edits)
-5. Vitest für Berechnung & Zielausgleich (deterministische Snapshot-Tests).
+Im Arbeitsbereich heißt das konkret: rechts die PDF-Vorschau, links Buttons + eingeklappte Tabelle.
 
-### Phase 2 — Mitarbeiter- & Feiertagsverwaltung (UI)
-1. Neue Route `/stundenzettel` mit MonatContext (Vor/Zurück + Kalender-Popover, Standard = aktueller Monat).
-2. Accordion-Sektionen:
-   - **Mitarbeiter**: Liste + „Neu"/„Bearbeiten"-Dialog mit allen Feldern (Name, Aktiv, WE-arbeit, Muster gleich/unterschiedlich, Wochentagszeiten, Block 2, Pause+Schwelle, Zielstunden). Reuse `KundePicker`-Stil.
-   - **Feiertage**: NRW-Liste (readonly, aus `getFeiertageFuerJahr(jahr)`) + eigene Einträge hinzufügen/löschen.
-3. React-Query-Hooks (`useMitarbeiter`, `useFeiertage`) analog zu bestehenden Modulen.
+## 3. Texte und Buttons
 
-### Phase 3 — Stundenzettel-Editor & Massenerstellung
-1. Sub-Route `/stundenzettel/vorschau/$mitarbeiterId`: zeigt generierten Zettel für global gewählten Monat.
-2. `EditableDayRow` (Beginn, Ende, Block 2, Pause von/bis, Stunden readonly, Bemerkung). Autosave via `PUT /stundenzettel/:id` (debounced).
-3. Header: Name, Monat/Jahr, Ist-/Zielstunden, Buttons „Neu generieren", „PDF drucken", „Zurück".
-4. Bulk-Aktion in der Mitarbeiterliste: „Alle Stundenzettel für {Monat} generieren" mit Fortschrittsdialog (sequentiell, mit Fehlerliste).
+- Button „Alle aktiven generieren“ → nur noch **„Generieren“**, mit neuem, passenderem Icon (`Sparkles` ist per Projektregel verboten — stattdessen `CalendarPlus`/`FilePlus2`, klar als „Zettel erzeugen“ lesbar).
+- Hinweis „Vorhandene Zettel dieses Monats werden dabei überschrieben.“ → neu formuliert, freundlicher und kürzer, z. B. *„Bereits erstellte Zettel für diesen Monat werden neu erzeugt.“*
+- Icons der übrigen Aktionen (Ablegen, Alle als PDF, Öffnen) auf einen einheitlichen, ruhigen Satz bringen.
 
-### Phase 4 — PDF-Renderer (pixelgleich zur Referenz)
-1. Neuer pdfmake-Renderer `backend/src/pdf/stundenzettel.ts`:
-   - A4 Portrait, Padding 15/20 mm.
-   - Kopf: zentriertes Firmenlogo (Höhe ~100 px), kein Titel.
-   - Info-Zeilen `Stundenzettel von: …` / `Monat: {Monat} {Jahr}` in 12 pt.
-   - Tabelle mit Spalten Tag (fett) · Arbeitsbeginn · Arbeitsende · Pause von · Pause bis · Arbeitsstunden. Header grau `#e8e8e8`.
-   - Zeilenhöhe fix, Zahlen/Uhrzeiten in Helvetica, Bemerkungen/Text in Madani.
-   - **Tage 1–15 Seite 1, 16–31 Seite 2**; fehlende Tage als leere Zeilen aufgefüllt.
-   - Block 2: zwei Zeilen übereinander in Beginn-/Ende-Zelle.
-   - Feiertag/Krank/Urlaub-Bemerkung → in Arbeitsbeginn-Spalte statt Uhrzeit; keine Uhrzeit-Anzeige, aber Stunden zählen bei Feiertag-an-Arbeitstag.
-   - Wochenende bei Nicht-WE-Mitarbeiter: **leere** Zeile im PDF (kein „Samstag/Sonntag"-Text — abweichend zum Alt-Spec, entspricht Referenz).
-   - Seite 2 Ende: Summenzeile (`colSpan=4` "Summe Arbeitsstunden:" + Zahl).
-   - Unterschriften-Block Seite 2 (Linie + „Unterschrift Arbeitsnehmer" / „…Arbeitsgeber").
-   - Seitenzahl unten rechts grau.
-2. Fonts: Madani Regular als TTF beilegen — **hier bräuchte ich die TTF vom User**. Fallback vorher: Helvetica überall, damit Layout schon steht.
-3. Frontend-Preview: bestehenden `PdfCanvasViewer` wiederverwenden, Datei kommt vom Backend-Endpoint `GET /stundenzettel/:id/pdf`.
-4. QA-Loop mit `pdftoppm` gegen die Referenz-PDF, bis Spaltenbreiten/Zeilenhöhen/Rahmen exakt passen.
+## Technische Details
 
-### Phase 5 — Druck, Bulk-Export, Drive-Sync, Cleanup
-1. „PDF drucken" nutzt bestehende `printBlob`-Pipeline (Desktop + Mobile).
-2. Bulk-Druck-Dialog: alle aktiven Mitarbeiter sequentiell, Fortschritt + Abbruch. Dateinamen `Stundenzettel_{Name}_{Monat}_{Jahr}.pdf`.
-3. Google-Drive-Upload analog Rechnungen: Zielordner `Stundenzettel/{YYYY}/{MM}/`. Auto-Upload bei jedem Generate/Save.
-4. Backup-Skript prüfen (SQLite-Snapshot deckt neue Tabellen automatisch ab).
-5. Memory-Files aktualisieren (`mem://features/stundenzettel.md`), Alt-Iframe-Memory entfernen.
-
-## Was ich noch von dir brauche (später, nicht jetzt)
-
-- **Madani-Regular TTF** — für pixelgleichen PDF-Look. Phase 4 startet mit Helvetica-Fallback, TTF wird eingebunden sobald du sie hochlädst.
-- **Firmenlogo im Stundenzettel-PDF**: dasselbe Logo wie in Rechnungen (bereits im Backend unter `branding/logo.png`) — okay so? Falls du eine eigene Hell-/Dunkel-Variante möchtest, sag Bescheid.
-
-## Abgrenzungen (bewusst weggelassen)
-
-- Kein Zweit-Passwort `040506`, kein URL-Login `/040506`, kein „Angemeldet bleiben" — CRM-Login gilt.
-- Keine separate `/mitarbeiter`- oder `/einstellungen`-Redirect-Logik — alles unter `/stundenzettel` mit Accordions.
-- Keine Mitarbeiter-Logins.
-- Kein html2canvas/jsPDF im Browser — nur serverseitiges pdfmake für Determinismus und Drive-Sync.
-
-Sag mir „los" wenn Phase 1 starten soll, oder korrigiere vorher Reihenfolge/Umfang.
+- `src/components/stundenzettel/StundenzettelWorkspace.tsx`: `PdfVorschau` von iframe auf `PdfCanvasViewer` umstellen; neuer lokaler State `bearbeiten` für das Ein-/Ausklappen der Tabelle.
+- `src/routes/stundenzettel.tsx`: Button-Label/Icon, Hinweistext, und im Mitarbeiter-Akkordeon Tabelle hinter „Bearbeiten“ legen.
+- `src/components/stundenzettel/StundenzettelPdfAktionen.tsx`: optionaler `extra`-Slot bzw. `onBearbeiten`-Prop, damit der Bearbeiten-Button in derselben Buttonzeile sitzt.
+- Keine Backend-Änderungen.

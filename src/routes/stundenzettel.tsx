@@ -5,14 +5,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   CalendarDays,
+  CalendarPlus,
   ChevronLeft,
   ChevronRight,
   FileSpreadsheet,
   Loader2,
+  Pencil,
   Plus,
   Trash2,
   UserRound,
-  Wand2,
 } from "lucide-react";
 import { FolderInput, Download } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
@@ -221,12 +222,12 @@ function Page() {
                 {generieren.isPending ? (
                   <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                 ) : (
-                  <Wand2 className="mr-1.5 h-4 w-4" />
+                  <CalendarPlus className="mr-1.5 h-4 w-4" />
                 )}
-                Alle aktiven generieren
+                Generieren
               </Button>
               <span className="text-xs text-muted-foreground">
-                Vorhandene Zettel dieses Monats werden dabei überschrieben.
+                Bereits erstellte Zettel für diesen Monat werden neu erzeugt.
               </span>
               <Button
                 size="sm"
@@ -300,15 +301,7 @@ function Page() {
                         </AccordionTrigger>
                         <AccordionContent className="pb-4">
                           {z ? (
-                            <div className="space-y-3">
-                              {z.id ? <StundenzettelPdfAktionen zettelId={z.id} /> : null}
-                              <StundenzettelTabelle
-                                zettel={z}
-                                name={m.name}
-                                jahr={jahr}
-                                monat={monat}
-                              />
-                            </div>
+                            <ZettelBlock zettel={z} name={m.name} jahr={jahr} monat={monat} />
                           ) : (
                             <Button
                               size="sm"
@@ -316,7 +309,7 @@ function Page() {
                               onClick={() => handleGenerieren([m.id])}
                               disabled={generieren.isPending}
                             >
-                              <Wand2 className="mr-1.5 h-4 w-4" />
+                              <CalendarPlus className="mr-1.5 h-4 w-4" />
                               Für {MONATE[monat - 1]} generieren
                             </Button>
                           )}
@@ -435,6 +428,43 @@ function initials(name: string): string {
     .slice(0, 2)
     .map((p) => p[0]?.toUpperCase() ?? "")
     .join("");
+}
+
+/** Aktionsleiste + Tabelle, die erst per „Bearbeiten“ aufklappt. */
+function ZettelBlock({
+  zettel,
+  name,
+  jahr,
+  monat,
+}: {
+  zettel: import("@/lib/stundenzettel/types").Stundenzettel;
+  name: string;
+  jahr: number;
+  monat: number;
+}) {
+  const [bearbeiten, setBearbeiten] = useState(false);
+  return (
+    <div className="space-y-3">
+      {zettel.id ? (
+        <StundenzettelPdfAktionen
+          zettelId={zettel.id}
+          extra={
+            <Button
+              size="sm"
+              variant={bearbeiten ? "secondary" : "outline"}
+              onClick={() => setBearbeiten((b) => !b)}
+            >
+              <Pencil className="mr-1.5 h-4 w-4" />
+              {bearbeiten ? "Bearbeiten schließen" : "Bearbeiten"}
+            </Button>
+          }
+        />
+      ) : null}
+      {bearbeiten ? (
+        <StundenzettelTabelle zettel={zettel} name={name} jahr={jahr} monat={monat} />
+      ) : null}
+    </div>
+  );
 }
 
 function beschreibung(m: Mitarbeiter): string {
