@@ -14,7 +14,6 @@ import {
   Plus,
   Trash2,
   UserRound,
-  Wand2,
 } from "lucide-react";
 import { FolderInput, Download } from "lucide-react";
 import { PageHeader } from "@/components/layout/PageHeader";
