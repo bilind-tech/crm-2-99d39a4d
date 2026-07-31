@@ -1,35 +1,38 @@
 ## Ziel
 
-Die Stundenzettel-Seite und der Arbeitsbereich nach dem Generieren werden aufgeräumt: keine blockierte PDF-Vorschau mehr, keine sofort ausgeklappte Tabelle, klarere Buttons und Texte.
+1. Nach dem Generieren füllt die PDF-Vorschau den kompletten freien Bereich.
+2. Alle Buttons (PDF ansehen, Drucken, Herunterladen, In Dokumente ablegen, Bearbeiten, Vorschau aktualisieren) liegen in einer Zeile ganz oben.
+3. „Bearbeiten" öffnet die Tabelle über den ganzen Bildschirm (statt der halben Spalte).
+4. Das neu hochgeladene MYCLEANCENTER-Logo wird im Stundenzettel-PDF oben verwendet.
 
-## 1. PDF-Vorschau reparieren („Dieser Inhalt ist blockiert“)
+## Umsetzung
 
-Die Vorschau in `StundenzettelWorkspace.tsx` rendert das PDF aktuell in einem `<iframe src="blob:…">`. Genau das blockiert der Browser/Host in der Vorschauumgebung.
+### Layout (`src/components/stundenzettel/StundenzettelWorkspace.tsx`)
 
-Lösung: statt iframe den im Projekt bereits vorhandenen Canvas-Viewer (`src/components/pdf/PdfCanvasViewer.tsx`, pdf.js-basiert, wird schon für Rechnungen/Angebote genutzt) verwenden. Das rendert die Seiten direkt ins Canvas — kein eingebettetes Dokument, also kein Blocken. Beide Seiten (1 und 2) scrollbar untereinander.
+```text
+┌──────────────────────────────────────────────┐
+│ Titel + Schließen                            │
+├───────────┬──────────────────────────────────┤
+│ Mit-      │ [Buttons in einer Zeile]         │
+│ arbeiter  ├──────────────────────────────────┤
+│ liste     │                                  │
+│           │   PDF-Vorschau (voller Rest)     │
+│           │                                  │
+└───────────┴──────────────────────────────────┘
+```
 
-Fällt das Laden fehl (z. B. kein Pi-Backend in der Lovable-Vorschau), erscheint eine verständliche Meldung plus „PDF ansehen“-Button statt einer leeren Fläche.
+- Buttonleiste wird aus der linken Karte herausgezogen und als eigene Zeile über den Inhaltsbereich gelegt.
+- Darunter nur noch die PDF-Vorschau — volle Breite und Höhe (kein `xl:grid-cols-2` mehr, keine Text-Zusammenfassungsspalte).
+- PDF-Vorschau ist auch auf kleineren Breiten sichtbar (bisher `hidden … xl:block`).
+- „Bearbeiten" schaltet nicht mehr eine Spalte um, sondern ersetzt die PDF-Vorschau durch die Tabelle über die volle Fläche (scrollbar); erneuter Klick bzw. „Bearbeiten schließen" geht zurück zur Vorschau. Nach dem Schließen wird die Vorschau automatisch aktualisiert, damit Änderungen sichtbar sind.
 
-## 2. Tabelle erst auf Klick
+### Logo im Stundenzettel-PDF
 
-Direkt nach dem Generieren sieht man pro Mitarbeiter nur noch:
-- Kopfzeile mit Name + Gesamtstunden
-- die Buttons **PDF ansehen · Drucken · Herunterladen · In Dokumente ablegen**
-- einen neuen Button **Bearbeiten**
+- Das hochgeladene Bild wird als feste Datei ins Backend gelegt: `backend/src/pdf/assets/stundenzettel-logo.png`.
+- `backend/src/pdf/stundenzettelPdf.ts` lädt dieses Bild (Base64) als Kopfbild und nutzt es anstelle des Branding-Logos; nur falls die Datei fehlt, greift wie bisher `loadLogoDataUrl()`.
+- Datei wird in `backend/package.json` (files/Distribution) mitverteilt, analog zum Font-Ordner, damit sie beim Pi-Update mitkommt.
+- Cache-Hash im PDF-Renderer berücksichtigt das neue Logo, damit alte gecachte PDFs nicht weiterverwendet werden.
 
-Erst ein Klick auf „Bearbeiten“ klappt die Tabelle mit Tag/Beginn/Ende/Pause/Std./Status/Bemerkung auf (Button wechselt dann zu „Bearbeiten schließen“). Gilt sowohl im Vollbild-Arbeitsbereich als auch in den Mitarbeiter-Akkordeons auf der Hauptseite.
+### Hinweis
 
-Im Arbeitsbereich heißt das konkret: rechts die PDF-Vorschau, links Buttons + eingeklappte Tabelle.
-
-## 3. Texte und Buttons
-
-- Button „Alle aktiven generieren“ → nur noch **„Generieren“**, mit neuem, passenderem Icon (`Sparkles` ist per Projektregel verboten — stattdessen `CalendarPlus`/`FilePlus2`, klar als „Zettel erzeugen“ lesbar).
-- Hinweis „Vorhandene Zettel dieses Monats werden dabei überschrieben.“ → neu formuliert, freundlicher und kürzer, z. B. *„Bereits erstellte Zettel für diesen Monat werden neu erzeugt.“*
-- Icons der übrigen Aktionen (Ablegen, Alle als PDF, Öffnen) auf einen einheitlichen, ruhigen Satz bringen.
-
-## Technische Details
-
-- `src/components/stundenzettel/StundenzettelWorkspace.tsx`: `PdfVorschau` von iframe auf `PdfCanvasViewer` umstellen; neuer lokaler State `bearbeiten` für das Ein-/Ausklappen der Tabelle.
-- `src/routes/stundenzettel.tsx`: Button-Label/Icon, Hinweistext, und im Mitarbeiter-Akkordeon Tabelle hinter „Bearbeiten“ legen.
-- `src/components/stundenzettel/StundenzettelPdfAktionen.tsx`: optionaler `extra`-Slot bzw. `onBearbeiten`-Prop, damit der Bearbeiten-Button in derselben Buttonzeile sitzt.
-- Keine Backend-Änderungen.
+Die Rechnungen/Angebote bleiben unverändert beim Branding-Logo aus den Einstellungen — nur der Stundenzettel bekommt das fest hinterlegte Bild.

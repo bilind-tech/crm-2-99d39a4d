@@ -97,6 +97,14 @@ export function StundenzettelWorkspace({
 
   const aktiv = zettel.find((z) => z.mitarbeiterId === aktivId) ?? null;
 
+  /** Beim Schließen des Editors die PDF-Vorschau neu laden. */
+  function toggleBearbeiten() {
+    setBearbeiten((b) => {
+      if (b) setRefreshKey((k) => k + 1);
+      return !b;
+    });
+  }
+
   return (
     <div className="flex h-[calc(100vh-6rem)] flex-col gap-3 sm:h-[calc(100vh-7rem)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -148,58 +156,56 @@ export function StundenzettelWorkspace({
           </select>
 
           {aktiv ? (
-            <div className="grid min-h-0 flex-1 gap-3 xl:grid-cols-2">
-              <div className="min-h-0 overflow-y-auto rounded-xl border border-border bg-card p-3">
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  {aktiv.id ? (
-                    <StundenzettelPdfAktionen
-                      zettelId={aktiv.id}
-                      extra={
-                        <Button
-                          size="sm"
-                          variant={bearbeiten ? "secondary" : "outline"}
-                          onClick={() => setBearbeiten((b) => !b)}
-                        >
-                          {bearbeiten ? (
-                            <ChevronDown className="mr-1.5 h-4 w-4" />
-                          ) : (
-                            <Pencil className="mr-1.5 h-4 w-4" />
-                          )}
-                          {bearbeiten ? "Bearbeiten schließen" : "Bearbeiten"}
-                        </Button>
-                      }
-                    />
-                  ) : null}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setRefreshKey((k) => k + 1)}
-                  >
-                    <RefreshCw className="mr-1.5 h-4 w-4" /> Vorschau aktualisieren
-                  </Button>
-                </div>
-                {bearbeiten ? (
+            <div className="flex min-h-0 flex-1 flex-col gap-3">
+              {/* Alle Aktionen in einer Zeile ganz oben */}
+              <div className="flex flex-wrap items-center gap-2">
+                {aktiv.id ? (
+                  <StundenzettelPdfAktionen
+                    zettelId={aktiv.id}
+                    extra={
+                      <Button
+                        size="sm"
+                        variant={bearbeiten ? "secondary" : "outline"}
+                        onClick={() => toggleBearbeiten()}
+                      >
+                        {bearbeiten ? (
+                          <ChevronDown className="mr-1.5 h-4 w-4" />
+                        ) : (
+                          <Pencil className="mr-1.5 h-4 w-4" />
+                        )}
+                        {bearbeiten ? "Bearbeiten schließen" : "Bearbeiten"}
+                      </Button>
+                    }
+                  />
+                ) : null}
+                <Button size="sm" variant="ghost" onClick={() => setRefreshKey((k) => k + 1)}>
+                  <RefreshCw className="mr-1.5 h-4 w-4" /> Vorschau aktualisieren
+                </Button>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  {nameById.get(aktiv.mitarbeiterId) ?? "—"} ·{" "}
+                  {aktiv.gesamtStunden.toLocaleString("de-DE")} Std.
+                </span>
+              </div>
+
+              {/* Voller Bereich: Tabelle beim Bearbeiten, sonst PDF-Vorschau */}
+              {bearbeiten ? (
+                <div className="min-h-0 flex-1 overflow-auto rounded-xl border border-border bg-card p-3">
                   <StundenzettelTabelle
                     zettel={aktiv}
                     name={nameById.get(aktiv.mitarbeiterId) ?? ""}
                     jahr={jahr}
                     monat={monat}
                   />
-                ) : (
-                  <p className="px-1 py-4 text-sm text-muted-foreground">
-                    {nameById.get(aktiv.mitarbeiterId) ?? "—"} ·{" "}
-                    {aktiv.gesamtStunden.toLocaleString("de-DE")} Std. — auf „Bearbeiten“ klicken,
-                    um Zeiten und Status zu ändern.
-                  </p>
-                )}
-              </div>
-              <div className="hidden min-h-0 overflow-hidden rounded-xl border border-border bg-muted/30 xl:block">
-                {aktiv.id ? (
-                  <PdfVorschau zettelId={aktiv.id} refreshKey={refreshKey} />
-                ) : (
-                  <p className="p-4 text-sm text-muted-foreground">Noch kein PDF vorhanden.</p>
-                )}
-              </div>
+                </div>
+              ) : (
+                <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-muted/30">
+                  {aktiv.id ? (
+                    <PdfVorschau zettelId={aktiv.id} refreshKey={refreshKey} />
+                  ) : (
+                    <p className="p-4 text-sm text-muted-foreground">Noch kein PDF vorhanden.</p>
+                  )}
+                </div>
+              )}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">Keine Stundenzettel für diesen Monat.</p>
