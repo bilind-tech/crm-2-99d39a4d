@@ -468,15 +468,6 @@ function ZettelBlock({
   );
 }
 
-function _unusedInitials(name: string): string {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase() ?? "")
-    .join("");
-}
-
 function beschreibung(m: Mitarbeiter): string {
   const cfg = m.arbeitszeiten;
   const std = `${cfg.standardZeiten.arbeitsbeginn}–${cfg.standardZeiten.arbeitsende}`;
