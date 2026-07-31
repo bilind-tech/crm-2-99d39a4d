@@ -5,10 +5,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import {
   CalendarDays,
+  CalendarPlus,
   ChevronLeft,
   ChevronRight,
   FileSpreadsheet,
   Loader2,
+  Pencil,
   Plus,
   Trash2,
   UserRound,
@@ -221,12 +223,12 @@ function Page() {
                 {generieren.isPending ? (
                   <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
                 ) : (
-                  <Wand2 className="mr-1.5 h-4 w-4" />
+                  <CalendarPlus className="mr-1.5 h-4 w-4" />
                 )}
-                Alle aktiven generieren
+                Generieren
               </Button>
               <span className="text-xs text-muted-foreground">
-                Vorhandene Zettel dieses Monats werden dabei überschrieben.
+                Bereits erstellte Zettel für diesen Monat werden neu erzeugt.
               </span>
               <Button
                 size="sm"
