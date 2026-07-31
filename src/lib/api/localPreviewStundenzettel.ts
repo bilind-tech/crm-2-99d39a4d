@@ -13,6 +13,7 @@ import {
   type Stundenzettel,
   type Wochentag,
 } from "@/lib/stundenzettel/types";
+import { summeStunden, wendeZielausgleichAn } from "@/lib/stundenzettel/ziel";
 
 const KEY = "mcc.localPreview.stundenzettel.v1";
 
@@ -158,7 +159,7 @@ function generiereTage(m: Mitarbeiter, jahr: number, monat: number, feiertage: M
 }
 
 function summe(tage: GenerierterTag[]): number {
-  return Math.round(tage.reduce((s, t) => s + (t.stunden || 0), 0) * 100) / 100;
+  return summeStunden(tage);
 }
 
 // ---------- Router ----------
