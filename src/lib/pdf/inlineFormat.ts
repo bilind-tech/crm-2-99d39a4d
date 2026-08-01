@@ -61,7 +61,13 @@ function parseInto(text: string, style: Style, out: InlineFragment[]): void {
       continue;
     }
 
-    const marker = MARKERS.find((m) => text.startsWith(m.token, i) && !style[m.key]);
+    const marker = MARKERS.find(
+      (m) =>
+        text.startsWith(m.token, i) &&
+        !style[m.key] &&
+        // Unterstriche mitten im Wort (snake_case) sind keine Marker.
+        !(m.token.startsWith("_") && /\w/.test(text[i - 1] ?? "")),
+    );
     // Öffnender Marker muss direkt von einem Nicht-Leerzeichen gefolgt werden
     // („2 * 3 * 4" bleibt dadurch normaler Text).
     if (marker && /\S/.test(text[i + marker.token.length] ?? "")) {
