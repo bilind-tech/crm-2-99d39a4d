@@ -896,7 +896,13 @@ export async function generateRechnungPdf(
         .join("\n\n");
   const headerNote = "Bei Zahlung bitte\ndie Rechnungs-Nr. angeben";
   const doc = await buildDoc(
-    { firma: effFirma, kunde, ansprechpartner, objekt: objekt ?? null },
+    {
+      firma: effFirma,
+      kunde,
+      ansprechpartner,
+      objekt: objekt ?? null,
+      zeigeObjektname: rechnung.optionen?.objektnameImEmpfaenger ?? true,
+    },
     "Rechnung",
     meta,
     "box",
