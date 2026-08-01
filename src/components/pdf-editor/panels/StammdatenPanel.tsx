@@ -10,8 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useVertraege, useObjekt } from "@/hooks/useApi";
-import type { Angebot, Rechnung, Kunde, BelegOptionen } from "@/lib/api/types";
+import { useVertraege, useObjekt, useKunde } from "@/hooks/useApi";
+import type { Angebot, Rechnung, Kunde, BelegOptionen, Ansprechpartner } from "@/lib/api/types";
 
 interface Props {
   kind: "angebot" | "rechnung";
@@ -26,10 +26,13 @@ interface Props {
 export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
   const { data: vertraege = [] } = useVertraege(kind === "rechnung" ? kunde.id : "");
   const { data: objekt } = useObjekt(draft.objektId ?? "");
+  const { data: kundeVoll } = useKunde(kunde.id);
   const o = draft.optionen;
   const zeigeAp = o?.ansprechpartnerImEmpfaenger ?? true;
   const zeigeObjekt = o?.objektnameImEmpfaenger ?? true;
-  const ansprechpartner = kunde.ansprechpartner?.find((a) => a.id === draft.ansprechpartnerId);
+  const ansprechpartner = kundeVoll?.ansprechpartner?.find(
+    (a) => a.id === draft.ansprechpartnerId,
+  );
   const autoAnrede = automatischeAnrede(kunde, ansprechpartner, zeigeAp);
   return (
     <div className="space-y-5">
@@ -239,11 +242,7 @@ function SwitchRow({
 }
 
 /** Spiegelt die Anrede-Logik der PDF-Renderer für die Vorschau im Editor. */
-function automatischeAnrede(
-  k: Kunde,
-  ap: Kunde["ansprechpartner"] extends (infer A)[] | undefined ? A | undefined : never,
-  zeigeAp: boolean,
-): string {
+function automatischeAnrede(k: Kunde, ap: Ansprechpartner | undefined, zeigeAp: boolean): string {
   if (ap && zeigeAp) {
     const name = ap.nachname?.trim() || "";
     if (ap.anrede === "herr") return `Sehr geehrter Herr ${name},`;
