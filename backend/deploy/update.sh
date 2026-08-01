@@ -73,9 +73,23 @@ if [[ -f "$NEW_SELF" ]] && ! cmp -s "$NEW_SELF" "$SELF_PATH" 2>/dev/null; then
   exec sudo "$SELF_PATH" "$@"
 fi
 
-# Robuster npm-ci-Wrapper: bei kaputtem Cache (ENOENT/EINTEGRITY) einmal
-# Cache leeren und wiederholen. Nutzt den pro-Lauf-Cache aus $npm_config_cache.
+# Robuster npm-Wrapper.
+#
+# 1. Stille Vorabprüfung, ob package.json und package-lock.json synchron sind.
+#    Sind sie es nicht (typisch nach einem Plattform-Update einer Lovable-
+#    Abhängigkeit), verweigert `npm ci` grundsätzlich den Dienst und wirft eine
+#    lange rote Fehlerwand. Wir prüfen das lautlos vorab und wechseln direkt
+#    auf `npm install` — mit einer einzigen ruhigen Hinweiszeile.
+#    `npm install` löst die Ranges neu auf und schreibt die Lockfile nur im
+#    temporären Build-Verzeichnis — Repo und Daten bleiben unangetastet.
+# 2. Nur bei echten Netz-/Cache-Fehlern (ENOENT/EINTEGRITY) wird der Cache
+#    geleert und einmal wiederholt; dort ist eine Fehlermeldung sinnvoll.
 npm_ci_safe() {
+  if ! npm ci --dry-run --ignore-scripts --no-audit --no-fund "$@" >/dev/null 2>&1; then
+    echo "   Hinweis: package-lock.json nicht synchron zur package.json — nutze 'npm install'."
+    npm install --prefer-online --no-audit --no-fund "$@"
+    return $?
+  fi
   if npm ci --prefer-online --no-audit --no-fund "$@"; then
     return 0
   fi
@@ -86,12 +100,7 @@ npm_ci_safe() {
   if npm ci --prefer-online --no-audit --no-fund "$@"; then
     return 0
   fi
-  # Letzter Rettungsanker: package-lock.json ist nicht synchron zur package.json
-  # (typisch nach einem Plattform-Update einer Lovable-Abhängigkeit). `npm ci`
-  # bricht dann prinzipiell ab. `npm install` löst die Ranges neu auf und
-  # erzeugt die Lockfile lokal im Build-Verzeichnis neu — das Repo bleibt
-  # unangetastet, Daten sowieso.
-  echo "!! npm ci weiterhin fehlgeschlagen — weiche auf 'npm install' aus (Lockfile-Drift)."
+  echo "!! npm ci weiterhin fehlgeschlagen — weiche auf 'npm install' aus."
   npm install --prefer-online --no-audit --no-fund "$@"
 }
 
