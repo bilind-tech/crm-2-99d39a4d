@@ -507,13 +507,13 @@ function buildDoc(args: BuildArgs) {
       {
         stack: [
           { text: anrede(args.kunde, args.ansprechpartner, args.eigeneAnrede), margin: [0, 0, 0, 8] },
-          { text: args.intro, margin: [0, 0, 0, 14] },
+          { text: inlineText(args.intro), margin: [0, 0, 0, 14] },
         ],
       },
       leistungstabelle(args.positionen, t, args.steuersatz),
       {
         stack: [
-          { text: args.outro, margin: [0, 16, 0, 0] },
+          { text: inlineText(args.outro), margin: [0, 16, 0, 0] },
           { text: "Mit freundlichen Grüßen", margin: [0, 18, 0, 0] },
           ...signatur.map((s) => ({ text: s, margin: [0, 0, 0, 0], color: COLOR_TEXT })),
         ],
