@@ -826,7 +826,13 @@ export async function generateAngebotPdf(
   const effFirma = mergeFirma(firma, angebot.optionen?.firmaOverride);
   const tracker = createHotspotTracker(A4);
   const doc = await buildDoc(
-    { firma: effFirma, kunde, ansprechpartner, objekt: objekt ?? null },
+    {
+      firma: effFirma,
+      kunde,
+      ansprechpartner,
+      objekt: objekt ?? null,
+      zeigeObjektname: angebot.optionen?.objektnameImEmpfaenger ?? true,
+    },
     `Angebot ${angebot.titel || ""}`.trim(),
     meta,
     "plain",
