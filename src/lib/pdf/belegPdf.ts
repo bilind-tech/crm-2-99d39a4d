@@ -773,14 +773,14 @@ async function buildDoc(
             text: anrede(ctx.kunde, ctx.ansprechpartner, ctx.eigeneAnrede),
             margin: [0, 0, 0, 8],
           },
-          { id: "intro", text: intro, margin: [0, 0, 0, 14] },
+          { id: "intro", text: inlineText(intro), margin: [0, 0, 0, 14] },
         ],
       },
       leistungstabelle(beleg.positionen, t, beleg.steuersatz),
       {
         id: "outro",
         stack: [
-          { text: outro, margin: [0, 16, 0, 0] },
+          { text: inlineText(outro), margin: [0, 16, 0, 0] },
           { text: "Mit freundlichen Grüßen", margin: [0, 18, 0, 0] },
           ...signatur.map((s) => ({ text: s, margin: [0, 0, 0, 0], color: COLOR_TEXT })),
         ],
