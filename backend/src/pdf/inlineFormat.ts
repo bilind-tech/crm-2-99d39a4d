@@ -62,7 +62,9 @@ function parseInto(text: string, style: Style, out: InlineFragment[]): void {
     }
 
     const marker = MARKERS.find((m) => text.startsWith(m.token, i) && !style[m.key]);
-    if (marker) {
+    // Öffnender Marker muss direkt von einem Nicht-Leerzeichen gefolgt werden
+    // („2 * 3 * 4" bleibt dadurch normaler Text).
+    if (marker && /\S/.test(text[i + marker.token.length] ?? "")) {
       const close = findClosing(text, i + marker.token.length, marker.token);
       if (close > -1) {
         flush();
@@ -88,7 +90,10 @@ function findClosing(text: string, from: number, token: string): number {
       continue;
     }
     if (text.startsWith(token, i)) {
-      return i > from ? i : -1;
+      // Schließender Marker muss direkt auf ein Nicht-Leerzeichen folgen.
+      if (i > from && /\S/.test(text[i - 1] ?? "")) return i;
+      i += token.length;
+      continue;
     }
     i += 1;
   }
