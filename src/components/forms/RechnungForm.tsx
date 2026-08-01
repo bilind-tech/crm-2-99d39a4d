@@ -30,6 +30,7 @@ import {
   type PositionDraft,
 } from "./PositionenEditor";
 import { OptionenBlock, defaultOptionen, type OptionenState } from "./OptionenBlock";
+import { EmpfaengerOptionen } from "./EmpfaengerOptionen";
 import { AnsprechpartnerPicker } from "./AnsprechpartnerPicker";
 import { Repeat, Check } from "lucide-react";
 import { DateInput } from "@/components/ui/date-input";
@@ -143,6 +144,8 @@ export function RechnungForm({ onClose, defaultKundeId, defaultObjektId }: Props
         materialBereitgestellt: optionen.materialBereitgestellt,
         standardAnschreiben: optionen.standardAnschreiben,
         objektnameImEmpfaenger: optionen.objektnameImEmpfaenger,
+        ansprechpartnerImEmpfaenger: optionen.ansprechpartnerImEmpfaenger,
+        eigeneAnrede: optionen.eigeneAnrede.trim() || undefined,
         eigenesIntro: optionen.eigenesIntroAktiv ? optionen.eigenesIntro : undefined,
         eigenesOutro: optionen.eigenesOutroAktiv ? optionen.eigenesOutro : undefined,
         wiederkehrend: optionen.wiederkehrend,
@@ -199,6 +202,14 @@ export function RechnungForm({ onClose, defaultKundeId, defaultObjektId }: Props
           kundeId={kundeId}
           value={ansprechpartnerId}
           onChange={setAnsprechpartnerId}
+        />
+      )}
+
+      {kundeId && (
+        <EmpfaengerOptionen
+          value={optionen}
+          onChange={setOptionen}
+          objektName={objekteVonKunde.find((o) => o.id === objektId)?.name}
         />
       )}
 
