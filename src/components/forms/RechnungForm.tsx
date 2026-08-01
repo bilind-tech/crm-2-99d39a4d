@@ -142,6 +142,7 @@ export function RechnungForm({ onClose, defaultKundeId, defaultObjektId }: Props
       optionen: {
         materialBereitgestellt: optionen.materialBereitgestellt,
         standardAnschreiben: optionen.standardAnschreiben,
+        objektnameImEmpfaenger: optionen.objektnameImEmpfaenger,
         eigenesIntro: optionen.eigenesIntroAktiv ? optionen.eigenesIntro : undefined,
         eigenesOutro: optionen.eigenesOutroAktiv ? optionen.eigenesOutro : undefined,
         wiederkehrend: optionen.wiederkehrend,
