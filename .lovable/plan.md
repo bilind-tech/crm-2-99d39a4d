@@ -1,41 +1,52 @@
-## Ziel
+## Problem
 
-Im PDF-Editor und beim Erstellen von Angebot/Rechnung sollen drei Dinge direkt beim Empfänger/Ansprechpartner steuerbar sein:
+Die Toolbar in `src/components/forms/LeistungsBeschreibung.tsx` schreibt Markdown-Marker (`**fett**`, `*kursiv*`, `__unterstrichen__`) direkt in den Text. Beide PDF-Renderer — `src/lib/pdf/belegPdf.ts` (`beschreibungBlock`, Zeile 162) und `backend/src/pdf/layout.ts` (`beschreibungBlock`, Zeile 34) — geben den Text jedoch unverändert als einfachen String an pdfmake weiter. Ergebnis: die Sterne stehen sichtbar in der PDF, nichts ist fett oder kursiv.
 
-1. **Ansprechpartner im Empfängerblock ausblenden** (Name-Zeile oben links).
-2. **Anrede frei bearbeiten** („Sehr geehrter Herr Müller,“) — ohne dass ein Ansprechpartner angelegt werden muss.
-3. **Objektname im Empfängerblock** — der Schalter existiert bereits, ist aber versteckt (Checkbox unter „Optionen“ bzw. Tab „Texte & Optionen“). Er wird dorthin geholt, wo man ihn erwartet: direkt beim Objekt bzw. beim Empfängerblock.
+## Lösung
 
-## Was gebaut wird
+### 1. Gemeinsamer Inline-Parser
 
-### Neue Beleg-Optionen (`BelegOptionen`)
-- `ansprechpartnerImEmpfaenger?: boolean` (Standard: **an**)
-- `eigeneAnrede?: string` (leer = automatisch aus Ansprechpartner/Kunde)
+Neues Modul `src/lib/pdf/inlineFormat.ts` mit einer Funktion, die eine Textzeile in pdfmake-Textfragmente zerlegt:
 
-Beide werden wie `objektnameImEmpfaenger` als JSON in den bestehenden `optionen`-Feldern von Angebot/Rechnung gespeichert — **keine DB-Migration nötig**.
+- `**…**` → `{ text, bold: true }`
+- `__…__` → `{ text, decoration: "underline" }`
+- `*…*` / `_…_` → `{ text, italics: true }`
+- Kombinationen verschachtelt (z. B. `**_x_**`)
+- Ein zweites Export `plainText(text)` entfernt alle Marker — wird für Zeilenschätzung/vertikale Zentrierung und für Dateinamen/Vorschauen gebraucht.
 
-### PDF-Rendering (Frontend-Vorschau + Backend identisch)
-- `src/lib/pdf/belegPdf.ts` und `backend/src/pdf/layout.ts`:
-  - Empfängerblock: Ansprechpartner-/Personenzeile entfällt, wenn der Schalter aus ist (Firmenname + Adresse bleiben).
-  - Anrede: wenn `eigeneAnrede` gefüllt ist, wird exakt dieser Text verwendet, sonst die bisherige Automatik.
-- Beide Renderer werden 1:1 gleich angepasst, damit Live-Vorschau und finales PDF identisch bleiben.
+Wichtig: Der Bullet-Erkenner `^[•\-*]\s+` kollidiert mit dem Kursiv-Marker. Er wird auf `^[•\-]\s+` bzw. `^\*\s+` (Stern **mit** Leerzeichen danach) eingeschränkt, damit `*kursiv*` am Zeilenanfang nicht als Aufzählungspunkt gilt.
 
-### PDF-Editor (`StammdatenPanel`)
-Der Abschnitt „Empfänger“ / „Ansprechpartner“ bekommt:
-- Switch **„Ansprechpartner im Empfängerblock anzeigen“** + kurzer Erklärtext.
-- Switch **„Objektname im Empfängerblock anzeigen“** + Erklärtext (nur sichtbar, wenn ein Objekt gewählt ist) — die Checkbox im Tab „Texte & Optionen“ entfällt, damit es nur eine Stelle gibt.
-- Feld **„Anrede (individuell)“** mit Platzhalter der automatisch berechneten Anrede und Button „Zurücksetzen“ (leert das Feld → wieder automatisch).
-- Live-Vorschau aktualisiert sich wie gewohnt über den bestehenden Autosave/Draft-Pfad.
+Da das Backend nicht aus `src/` importieren kann, wird der Parser 1:1 als `backend/src/pdf/inlineFormat.ts` gespiegelt (gleiche Datei-Inhalte, wie bereits bei `layout.ts` ↔ `belegPdf.ts` üblich).
 
-### Angebot/Rechnung erstellen (`AngebotForm`, `RechnungForm`)
-- Die beiden Empfänger-Schalter und das Anrede-Feld wandern aus dem generischen „Optionen“-Block direkt unter die Kunden-/Objektauswahl (Objekt-Schalter erscheint erst, sobald ein Objekt gewählt ist).
-- `OptionenBlock` behält nur die inhaltlichen Optionen (Material, Standard-Anschreiben, Intro/Outro, Dauerauftrag).
+### 2. Renderer anpassen
 
-### Update-Sicherheit
-- Vor Abschluss: Root- und `backend/`-Lockfile auf Sync prüfen (`npm ci --dry-run`), damit `mcc-update` fehlerfrei durchläuft.
-- Typecheck + bestehende Backend-Tests (`belege`, `pdf`) laufen lassen.
+In beiden `beschreibungBlock`-Funktionen werden Titelzeile, Fließzeilen und Bullet-Einträge statt `{ text: string }` als `{ text: [ …Fragmente ] }` erzeugt. Zusätzlich benutzen `beschreibungZeilenIntern` und `geschaetzteZeilen` den markerfreien Text, damit Umbruch- und Zentrierungs-Schätzung stimmen.
+
+Der gleiche Parser wird auch auf Intro-/Outro-Texte angewendet, damit Formatierung dort ebenfalls funktioniert statt Sterne zu zeigen.
+
+### 3. Eingabefeld ohne sichtbare Sterne
+
+`LeistungsBeschreibung` wird von `<textarea>` auf ein `contentEditable`-Feld umgestellt:
+
+- Anzeige gerendert (fett/kursiv/unterstrichen sichtbar, keine Marker)
+- Gespeichert wird weiterhin derselbe Markdown-String → Datenmodell, Backend, Migrationen und bestehende Datensätze bleiben unverändert
+- Toolbar-Buttons und Cmd/Ctrl+B/I/U wirken auf die Auswahl (via `document.execCommand` mit HTML→Markdown-Serialisierung beim Change)
+- Auto-Resize, Bullet-Button und Platzhalter bleiben erhalten
+- Einfügen aus der Zwischenablage wird als Plaintext übernommen
+
+Damit sind die Sterne nirgends mehr sichtbar — weder im Formular noch in der PDF.
+
+### 4. Update-Sicherheit
+
+Vor dem Abschluss: `package-lock.json` (Root) und `backend/package-lock.json` gegen die jeweilige `package.json` mit `npm install --package-lock-only` synchronisieren und `npm ci --dry-run` in beiden Verzeichnissen prüfen, damit `mcc-update` fehlerfrei durchläuft. Keine neuen Abhängigkeiten — der Parser ist eigener Code.
 
 ## Technische Details
-- Betroffene Dateien: `src/lib/api/types.ts`, `src/lib/pdf/belegPdf.ts`, `backend/src/pdf/layout.ts`, `src/components/pdf-editor/panels/StammdatenPanel.tsx`, `src/components/pdf-editor/panels/TexteOptionenPanel.tsx`, `src/components/forms/OptionenBlock.tsx`, `AngebotForm.tsx`, `RechnungForm.tsx`.
-- Defaults per `?? true` bzw. `?? ""`, damit bestehende Belege unverändert aussehen.
-- Der PDF-Cache-Key enthält bereits die `optionen`, daher wird die Vorschau bei Änderung automatisch neu gerendert.
+
+Betroffene Dateien:
+- neu: `src/lib/pdf/inlineFormat.ts`, `backend/src/pdf/inlineFormat.ts`
+- `src/lib/pdf/belegPdf.ts` (`beschreibungBlock`, `beschreibungZeilenIntern`, `geschaetzteZeilen`, Intro/Outro)
+- `backend/src/pdf/layout.ts` (gleiche Stellen)
+- `src/components/forms/LeistungsBeschreibung.tsx` (WYSIWYG-Umbau)
+- Lockfiles falls Drift
+
+Kein Datenbank-Migrationsbedarf, keine API-Änderung.
