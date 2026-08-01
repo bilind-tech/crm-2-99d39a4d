@@ -1,5 +1,7 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/ui/button";
 import { AnsprechpartnerPicker } from "@/components/forms/AnsprechpartnerPicker";
 import {
   Select,
@@ -9,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useVertraege, useObjekt } from "@/hooks/useApi";
-import type { Angebot, Rechnung, Kunde } from "@/lib/api/types";
+import type { Angebot, Rechnung, Kunde, BelegOptionen } from "@/lib/api/types";
 
 interface Props {
   kind: "angebot" | "rechnung";
@@ -17,11 +19,18 @@ interface Props {
   kunde: Kunde;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   set: (key: any, value: any) => void;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  setOption: (key: keyof BelegOptionen, value: any) => void;
 }
 
-export function StammdatenPanel({ kind, draft, kunde, set }: Props) {
+export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
   const { data: vertraege = [] } = useVertraege(kind === "rechnung" ? kunde.id : "");
   const { data: objekt } = useObjekt(draft.objektId ?? "");
+  const o = draft.optionen;
+  const zeigeAp = o?.ansprechpartnerImEmpfaenger ?? true;
+  const zeigeObjekt = o?.objektnameImEmpfaenger ?? true;
+  const ansprechpartner = kunde.ansprechpartner?.find((a) => a.id === draft.ansprechpartnerId);
+  const autoAnrede = automatischeAnrede(kunde, ansprechpartner, zeigeAp);
   return (
     <div className="space-y-5">
       <Section label="Empfänger" feldId="kunde">
@@ -29,7 +38,7 @@ export function StammdatenPanel({ kind, draft, kunde, set }: Props) {
           <p className="font-medium">
             {kunde.firmenname || `${kunde.vorname ?? ""} ${kunde.nachname ?? ""}`.trim() || "—"}
           </p>
-          {objekt?.name && (
+          {objekt?.name && zeigeObjekt && (
             <p className="mt-0.5 text-xs text-muted-foreground">{objekt.name}</p>
           )}
           <p className="mt-0.5 text-xs text-muted-foreground">
@@ -41,6 +50,23 @@ export function StammdatenPanel({ kind, draft, kunde, set }: Props) {
             Zum Ändern: Kundenstammdaten bearbeiten.
           </p>
         </div>
+
+        <div className="mt-3 space-y-3 rounded-lg border border-border p-3">
+          <SwitchRow
+            checked={zeigeAp}
+            onChange={(v) => setOption("ansprechpartnerImEmpfaenger", v)}
+            label="Ansprechpartner im Empfängerblock anzeigen"
+            hint="Aus = die Namenszeile des Ansprechpartners entfällt oben links; Kundenname und Adresse bleiben."
+          />
+          {objekt?.name && (
+            <SwitchRow
+              checked={zeigeObjekt}
+              onChange={(v) => setOption("objektnameImEmpfaenger", v)}
+              label="Objektname im Empfängerblock anzeigen"
+              hint={`Zeigt „${objekt.name}" oben links zwischen Kundenname und Adresse. Aus = nur Kundenname und Adresse.`}
+            />
+          )}
+        </div>
       </Section>
 
       <Section label="Ansprechpartner" feldId="ansprechpartner">
@@ -49,6 +75,31 @@ export function StammdatenPanel({ kind, draft, kunde, set }: Props) {
           value={draft.ansprechpartnerId}
           onChange={(id) => set("ansprechpartnerId", id)}
         />
+      </Section>
+
+      <Section label="Anrede" feldId="anrede">
+        <Input
+          value={o?.eigeneAnrede ?? ""}
+          onChange={(e) => setOption("eigeneAnrede", e.target.value)}
+          placeholder={autoAnrede}
+        />
+        <div className="flex items-start justify-between gap-3">
+          <p className="text-[11px] text-muted-foreground">
+            Leer lassen = automatisch: <span className="font-medium">{autoAnrede}</span>. Eigener
+            Text ersetzt die Anrede im PDF — ganz ohne zusätzlichen Ansprechpartner.
+          </p>
+          {!!o?.eigeneAnrede && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
+              onClick={() => setOption("eigeneAnrede", "")}
+            >
+              Zurücksetzen
+            </Button>
+          )}
+        </div>
       </Section>
 
       {kind === "rechnung" && vertraege.length > 0 && (
@@ -161,4 +212,46 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <div className="mt-1.5">{children}</div>
     </div>
   );
+}
+
+function SwitchRow({
+  checked,
+  onChange,
+  label,
+  hint,
+}: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  label: string;
+  hint?: string;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <Label className="cursor-pointer text-sm font-medium" onClick={() => onChange(!checked)}>
+          {label}
+        </Label>
+        {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
+      </div>
+      <Switch checked={checked} onCheckedChange={onChange} className="mt-0.5 shrink-0" />
+    </div>
+  );
+}
+
+/** Spiegelt die Anrede-Logik der PDF-Renderer für die Vorschau im Editor. */
+function automatischeAnrede(
+  k: Kunde,
+  ap: Kunde["ansprechpartner"] extends (infer A)[] | undefined ? A | undefined : never,
+  zeigeAp: boolean,
+): string {
+  if (ap && zeigeAp) {
+    const name = ap.nachname?.trim() || "";
+    if (ap.anrede === "herr") return `Sehr geehrter Herr ${name},`;
+    if (ap.anrede === "frau") return `Sehr geehrte Frau ${name},`;
+    if (ap.vorname || ap.nachname)
+      return `Hallo ${[ap.vorname, ap.nachname].filter(Boolean).join(" ")},`;
+  }
+  if (k.anrede === "herr") return `Sehr geehrter Herr ${k.nachname ?? ""},`;
+  if (k.anrede === "frau") return `Sehr geehrte Frau ${k.nachname ?? ""},`;
+  return "Sehr geehrte Damen und Herren,";
 }
