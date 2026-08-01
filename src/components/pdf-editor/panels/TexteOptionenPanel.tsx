@@ -57,6 +57,12 @@ export function TexteOptionenPanel({ draft, setOption }: Props) {
           label="Standard-Anschreiben verwenden"
         />
         <CheckRow
+          checked={o.objektnameImEmpfaenger ?? true}
+          onChange={(v) => setOption("objektnameImEmpfaenger", v)}
+          label="Objektname im Empfängerblock anzeigen"
+          hint="Der Objektname erscheint oben links im Empfängerblock zwischen Kundenname und Adresse. Aus = nur Kundenname und Adresse."
+        />
+        <CheckRow
           checked={o.wiederkehrend}
           onChange={(v) => setOption("wiederkehrend", v)}
           label="Wiederkehrend / Dauerauftrag"
@@ -70,15 +76,20 @@ function CheckRow({
   checked,
   onChange,
   label,
+  hint,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;
+  hint?: string;
 }) {
   return (
     <label className="flex items-start gap-3 text-sm">
       <Checkbox checked={checked} onCheckedChange={(v) => onChange(!!v)} className="mt-0.5" />
-      <span>{label}</span>
+      <span>
+        {label}
+        {hint && <span className="mt-0.5 block text-xs text-muted-foreground">{hint}</span>}
+      </span>
     </label>
   );
 }
