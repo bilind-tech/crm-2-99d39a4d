@@ -184,12 +184,20 @@ function beschreibungBlock(text: string): unknown {
   return { stack: items };
 }
 
-function kundeAdresse(k: Kunde, ap?: Ansprechpartner, o?: Objekt | null, zeigeObjektname = true) {
+function kundeAdresse(
+  k: Kunde,
+  ap?: Ansprechpartner,
+  o?: Objekt | null,
+  zeigeObjektname = true,
+  zeigeAnsprechpartner = true,
+) {
   const lines: string[] = [];
   if (k.firmenname) lines.push(k.firmenname);
-  const apPerson = ap ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim() : "";
+  const apPerson = ap && zeigeAnsprechpartner
+    ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim()
+    : "";
   const person = apPerson || [k.vorname, k.nachname].filter(Boolean).join(" ");
-  if (person) lines.push(person);
+  if (person && (zeigeAnsprechpartner || !k.firmenname)) lines.push(person);
   if (o?.name && zeigeObjektname) lines.push(o.name);
   // Wenn ein Objekt ausgewählt ist, ist dessen Einsatzadresse maßgeblich.
   // Falls dort nichts gepflegt ist, fällt die PDF auf die Kundenadresse zurück.
