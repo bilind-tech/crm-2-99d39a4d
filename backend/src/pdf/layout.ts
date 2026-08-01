@@ -524,7 +524,11 @@ export function angebotDocDef(args: {
   logoDataUrl: string | null;
 }) {
   const { angebot, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
-  const opts = (angebot.optionen ?? {}) as { eigenesIntro?: string; eigenesOutro?: string };
+  const opts = (angebot.optionen ?? {}) as {
+    eigenesIntro?: string;
+    eigenesOutro?: string;
+    objektnameImEmpfaenger?: boolean;
+  };
   const intro = defaultIntroAngebot(angebot, opts.eigenesIntro || angebot.introText);
   const outro = defaultOutroAngebot(angebot, opts.eigenesOutro || angebot.outroText);
   const meta: { label: string; wert: string }[] = [
@@ -534,6 +538,7 @@ export function angebotDocDef(args: {
   ];
   return buildDoc({
     firma, kunde, ansprechpartner, objekt, logoDataUrl,
+    zeigeObjektname: opts.objektnameImEmpfaenger ?? true,
     titel: `Angebot ${angebot.titel || ""}`.trim(),
     meta,
     metaVariant: "plain",
@@ -553,7 +558,11 @@ export function rechnungDocDef(args: {
   logoDataUrl: string | null;
 }) {
   const { rechnung, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
-  const opts = (rechnung.optionen ?? {}) as { eigenesIntro?: string; eigenesOutro?: string };
+  const opts = (rechnung.optionen ?? {}) as {
+    eigenesIntro?: string;
+    eigenesOutro?: string;
+    objektnameImEmpfaenger?: boolean;
+  };
   const intro = defaultIntroRechnung(rechnung, opts.eigenesIntro || rechnung.introText);
   const t = totals(rechnung.positionen, rechnung.rabattGesamt, rechnung.steuersatz);
   let tage = 14;
@@ -573,6 +582,7 @@ export function rechnungDocDef(args: {
   const metaNote = "Bei Zahlung bitte\ndie Rechnungs-Nr. angeben";
   return buildDoc({
     firma, kunde, ansprechpartner, objekt, logoDataUrl,
+    zeigeObjektname: opts.objektnameImEmpfaenger ?? true,
     titel: "Rechnung",
     meta,
     metaVariant: "box",
