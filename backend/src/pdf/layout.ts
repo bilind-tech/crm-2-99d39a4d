@@ -61,12 +61,15 @@ function kundeAdresse(
   ap?: ApiAnsprechpartner,
   o?: ApiObjekt | null,
   zeigeObjektname = true,
+  zeigeAnsprechpartner = true,
 ): string[] {
   const lines: string[] = [];
   if (k.firmenname) lines.push(k.firmenname);
-  const apPerson = ap ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim() : "";
+  const apPerson = ap && zeigeAnsprechpartner
+    ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim()
+    : "";
   const person = apPerson || [k.vorname, k.nachname].filter(Boolean).join(" ");
-  if (person) lines.push(person);
+  if (person && (zeigeAnsprechpartner || !k.firmenname)) lines.push(person);
   if (o?.name && zeigeObjektname) lines.push(o.name);
   // Wenn ein Objekt ausgewählt ist, ist dessen Einsatzadresse maßgeblich.
   // Falls dort nichts gepflegt ist, fällt die PDF auf die Kundenadresse zurück.
@@ -367,7 +370,8 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
   };
 }
 
-function anrede(k: ApiKunde, ap?: ApiAnsprechpartner): string {
+function anrede(k: ApiKunde, ap?: ApiAnsprechpartner, eigene?: string): string {
+  if (eigene && eigene.trim()) return eigene.trim();
   if (ap) {
     const name = ap.nachname?.trim() || "";
     if (ap.anrede === "herr") return `Sehr geehrter Herr ${name},`;
@@ -465,6 +469,8 @@ interface BuildArgs {
   intro: string;
   outro: string;
   zeigeObjektname?: boolean;
+  zeigeAnsprechpartner?: boolean;
+  eigeneAnrede?: string;
 }
 
 function buildDoc(args: BuildArgs) {
@@ -486,6 +492,7 @@ function buildDoc(args: BuildArgs) {
               args.ansprechpartner,
               args.objekt ?? null,
               args.zeigeObjektname ?? true,
+              args.zeigeAnsprechpartner ?? true,
             ).map((l) => ({
               text: l,
               fontSize: 10,
@@ -498,7 +505,7 @@ function buildDoc(args: BuildArgs) {
       { text: args.titel, fontSize: 22, bold: true, color: COLOR_TEXT, margin: [0, 30, 0, 14] },
       {
         stack: [
-          { text: anrede(args.kunde, args.ansprechpartner), margin: [0, 0, 0, 8] },
+          { text: anrede(args.kunde, args.ansprechpartner, args.eigeneAnrede), margin: [0, 0, 0, 8] },
           { text: args.intro, margin: [0, 0, 0, 14] },
         ],
       },
@@ -528,6 +535,8 @@ export function angebotDocDef(args: {
     eigenesIntro?: string;
     eigenesOutro?: string;
     objektnameImEmpfaenger?: boolean;
+    ansprechpartnerImEmpfaenger?: boolean;
+    eigeneAnrede?: string;
   };
   const intro = defaultIntroAngebot(angebot, opts.eigenesIntro || angebot.introText);
   const outro = defaultOutroAngebot(angebot, opts.eigenesOutro || angebot.outroText);
@@ -539,6 +548,8 @@ export function angebotDocDef(args: {
   return buildDoc({
     firma, kunde, ansprechpartner, objekt, logoDataUrl,
     zeigeObjektname: opts.objektnameImEmpfaenger ?? true,
+    zeigeAnsprechpartner: opts.ansprechpartnerImEmpfaenger ?? true,
+    eigeneAnrede: opts.eigeneAnrede,
     titel: `Angebot ${angebot.titel || ""}`.trim(),
     meta,
     metaVariant: "plain",
@@ -562,6 +573,8 @@ export function rechnungDocDef(args: {
     eigenesIntro?: string;
     eigenesOutro?: string;
     objektnameImEmpfaenger?: boolean;
+    ansprechpartnerImEmpfaenger?: boolean;
+    eigeneAnrede?: string;
   };
   const intro = defaultIntroRechnung(rechnung, opts.eigenesIntro || rechnung.introText);
   const t = totals(rechnung.positionen, rechnung.rabattGesamt, rechnung.steuersatz);
@@ -583,6 +596,8 @@ export function rechnungDocDef(args: {
   return buildDoc({
     firma, kunde, ansprechpartner, objekt, logoDataUrl,
     zeigeObjektname: opts.objektnameImEmpfaenger ?? true,
+    zeigeAnsprechpartner: opts.ansprechpartnerImEmpfaenger ?? true,
+    eigeneAnrede: opts.eigeneAnrede,
     titel: "Rechnung",
     meta,
     metaVariant: "box",
