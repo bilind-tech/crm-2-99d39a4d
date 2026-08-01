@@ -14,6 +14,7 @@ import type {
 import logoUrl from "@/assets/logo.png";
 import { getBackendUrl } from "@/lib/api/backendUrl";
 import { A4, createHotspotTracker, type RuntimeHotspot } from "./hotspotTracker";
+import { inlineText, plainText, bulletMatch } from "./inlineFormat";
 
 // ───────── Mock-LRU-Cache (nur Lovable-Preview) ────────────────────────────
 // Im Pi-Backend übernimmt der Disk-Cache (`backend/src/pdf/cache.ts`) diese
