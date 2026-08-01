@@ -202,6 +202,19 @@ function beschreibungZeilen(text: string): string[] {
   return chunks.length > 0 ? chunks : ["Pauschal"];
 }
 
+/**
+ * Schätzt die Zeilenanzahl der Leistungs-Spalte, damit die rechten Spalten
+ * (Stunden / Abrechnungsart / Preis) optisch vertikal mittig stehen.
+ * pdfmake kennt keine echte vertikale Zentrierung in Tabellenzellen.
+ */
+function vertikalMittigMargin(text: string, charsPerLine: number): [number, number, number, number] {
+  const zeilen = (text || "").split("\n").map((z) => z.trim()).filter(Boolean);
+  let anzahl = 0;
+  for (const z of zeilen) anzahl += Math.max(1, Math.ceil(z.length / Math.max(10, charsPerLine)));
+  anzahl = Math.max(1, anzahl);
+  return [0, Math.max(0, Math.round(((anzahl - 1) * 12.5) / 2)), 0, 0];
+}
+
 function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number) {
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
