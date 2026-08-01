@@ -150,6 +150,8 @@ export interface BelegOptionen {
   wiederkehrendDetails?: WiederkehrendDetails;
   /** Per-Beleg Logo-Override (Data-URL). Wenn gesetzt, statt Standard-Logo verwenden. */
   logoOverride?: string;
+  /** Objektname im Empfängerblock (oben links) anzeigen. Default: true. */
+  objektnameImEmpfaenger?: boolean;
   /** Per-Beleg Firmendaten-Override. Felder, die hier gesetzt sind, überschreiben die globalen Firmendaten im PDF. */
   firmaOverride?: Partial<Firmendaten>;
 }
