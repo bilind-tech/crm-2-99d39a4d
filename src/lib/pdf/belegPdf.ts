@@ -173,7 +173,7 @@ function beschreibungBlock(text: string): unknown {
     else if (!titel) titel = t;
     else plainLines.push(t);
   }
-  if (titel) items.push({ text: titel, fontSize: 10, bold: true, margin: [0, 0, 0, 2] });
+  if (titel) items.push({ text: titel, fontSize: 10, margin: [0, 0, 0, 2] });
   for (const line of plainLines) {
     items.push({ text: line, fontSize: 10, margin: [0, 0, 0, 0] });
   }
@@ -184,13 +184,13 @@ function beschreibungBlock(text: string): unknown {
   return { stack: items };
 }
 
-function kundeAdresse(k: Kunde, ap?: Ansprechpartner, o?: Objekt | null) {
+function kundeAdresse(k: Kunde, ap?: Ansprechpartner, o?: Objekt | null, zeigeObjektname = true) {
   const lines: string[] = [];
   if (k.firmenname) lines.push(k.firmenname);
   const apPerson = ap ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim() : "";
   const person = apPerson || [k.vorname, k.nachname].filter(Boolean).join(" ");
   if (person) lines.push(person);
-  if (o?.name) lines.push(o.name);
+  if (o?.name && zeigeObjektname) lines.push(o.name);
   // Wenn ein Objekt ausgewählt ist, ist dessen Einsatzadresse maßgeblich.
   // Falls dort nichts gepflegt ist, fällt die PDF auf die Kundenadresse zurück.
   const strasse = o?.strasse || k.strasse || "";
