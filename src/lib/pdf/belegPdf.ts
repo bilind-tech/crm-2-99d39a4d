@@ -667,6 +667,7 @@ interface PdfContext {
   kunde: Kunde;
   ansprechpartner?: Ansprechpartner;
   objekt?: Objekt | null;
+  zeigeObjektname?: boolean;
 }
 
 function mergeFirma(firma: Firmendaten, override?: Partial<Firmendaten>): Firmendaten {
@@ -717,7 +718,12 @@ async function buildDoc(
     id: "kunde",
     width: "*",
     stack: [
-      ...kundeAdresse(ctx.kunde, ctx.ansprechpartner, ctx.objekt ?? null).map((l) => ({
+      ...kundeAdresse(
+        ctx.kunde,
+        ctx.ansprechpartner,
+        ctx.objekt ?? null,
+        ctx.zeigeObjektname ?? true,
+      ).map((l) => ({
         text: l,
         fontSize: 10,
       })),
