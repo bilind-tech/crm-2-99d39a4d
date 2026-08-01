@@ -220,11 +220,14 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
   const body: unknown[][] = [headerRow];
   positionen.forEach((p) => {
     const fallback = p.modus === "pauschal" ? "Pauschal" : "";
-    const row: unknown[] = [{ stack: [beschreibungBlock(p.beschreibung || fallback)] }];
-    if (showStunden) row.push({ text: stundenText(p), fontSize: 10, alignment: "center" });
+    const beschreibung = p.beschreibung || fallback;
+    const mittig = vertikalMittigMargin(beschreibung, showStunden ? 47 : 54);
+    const row: unknown[] = [{ stack: [beschreibungBlock(beschreibung)] }];
+    if (showStunden)
+      row.push({ text: stundenText(p), fontSize: 10, alignment: "center", margin: mittig });
     row.push(
-      { text: abrechnungsartText(p), fontSize: 10, alignment: "center" },
-      { text: eur(summe(p)), fontSize: 10, alignment: "right" },
+      { text: abrechnungsartText(p), fontSize: 10, alignment: "center", margin: mittig },
+      { text: eur(summe(p)), fontSize: 10, alignment: "right", margin: mittig },
     );
     body.push(row);
   });
