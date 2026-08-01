@@ -1,38 +1,41 @@
-## Ziel
-Drei Anpassungen an Angebot- und Rechnungs-PDFs (und den zugehörigen Formularen).
+## Was passiert ist
 
-### 1. Leistungstext nicht mehr automatisch fett
-Aktuell wird in `beschreibungBlock()` die **erste Zeile** einer Leistungsbeschreibung immer fett gesetzt (`bold: true`) — sowohl im Frontend (`src/lib/pdf/belegPdf.ts`) als auch im Backend (`backend/src/pdf/layout.ts`).
+Der Build ist **durchgelaufen** (Fallback hat gegriffen) — aber der Bildschirm war voller roter `npm error`-Blöcke. Ursache, bestätigt durch Prüfung:
 
-Änderung: `bold` entfällt, alle Zeilen werden normal gerendert. Aufzählungspunkte (`•`, `-`, `*`) und Zeilenumbrüche bleiben unverändert. Fett gibt es dann nur noch, wenn es explizit über die Formatierung gesetzt wird.
+- `package.json`: `@lovable.dev/vite-tanstack-config` = **2.8.4**
+- `package-lock.json`: noch **2.8.3** (und dessen Unterpaket `vite-plugin-hmr-gate` 1.3.1 statt 1.3.3)
 
-### 2. Switch „Objektname im Empfängerblock"
-Heute wird der Objektname fest in den Empfängerblock oben links eingefügt (`kundeAdresse()`), sobald ein Objekt ausgewählt ist.
+Die Lovable-Plattform hebt diese Pakete automatisch in der `package.json` an, ohne die Lockfile mitzuziehen. `npm ci` verweigert dann prinzipiell den Dienst.
 
-Neu: eine schaltbare Option, **standardmäßig eingeschaltet**.
-- Gespeichert im vorhandenen JSON-Feld `optionen` des Belegs (`objektnameImEmpfaenger`) — **keine Datenbank-Migration nötig**, alte Belege ohne das Feld gelten als „an".
-- Sichtbar an zwei Stellen:
-  - Rechnung/Angebot erstellen & bearbeiten → Optionen-Block, direkt bei den anderen Schaltern
-  - PDF-Editor → Tab „Texte/Optionen"
-- Kurzer Erklärtext darunter, z. B.: *„Zeigt den Objektnamen (z. B. »Bürogebäude Nord«) oben links im Empfängerblock zwischen Kundenname und Adresse an. Die Einsatzadresse des Objekts bleibt unabhängig davon erhalten."*
-- Der Switch erscheint nur, wenn überhaupt ein Objekt am Beleg hängt (sonst ohne Wirkung).
-- Aus = nur Kundenname/Ansprechpartner + Adresse, an = wie bisher.
+## Lösung (zwei Ebenen)
 
-Wirksam in beiden PDF-Pfaden (Live-Vorschau im Editor **und** Backend-PDF), damit Vorschau und finales PDF identisch bleiben.
+### 1. Lockfile jetzt synchronisieren
+`npm install --package-lock-only` im Projekt-Root ausführen, damit die Lockfile auf 2.8.4 / 1.3.3 steht. Danach `npm ci --dry-run` als Gegenprobe.
 
-### 3. Spalten „Abrechnungsart" / „Preis (netto)" vertikal mittig
-Aktuell kleben die Werte am oberen Rand der Zeile, während die Leistungsbeschreibung mehrere Zeilen hoch sein kann.
+### 2. Update-Skript so umbauen, dass Drift nie mehr als Fehler aussieht
 
-pdfmake kennt keine echte vertikale Zentrierung in Tabellenzellen. Umsetzung deshalb über einen berechneten Oberrand: Aus der Beschreibungsbreite und dem Text wird die Zeilenanzahl der linken Spalte geschätzt und daraus ein `margin-top` für die Zellen „Stunden", „Abrechnungsart" und „Preis (netto)" abgeleitet, sodass sie optisch mittig in der Zeile stehen. Bei einzeiligen Positionen ändert sich nichts.
+In `backend/deploy/update.sh` wird `npm_ci_safe` umgedreht:
 
-Die gleiche Berechnung kommt in Frontend- und Backend-Renderer, damit Vorschau und Ausgabe deckungsgleich sind.
+```text
+vorher:  npm ci  →  Fehlerwand  →  Cache leeren  →  Fehlerwand  →  npm install
+nachher: stille Sync-Prüfung
+         ├─ synchron    → npm ci (wie gewohnt)
+         └─ Drift       → Hinweiszeile "Lockfile-Drift erkannt, nutze npm install"
+                          → npm install (kein npm-error-Block)
+```
 
-## Betroffene Dateien
-- `src/lib/pdf/belegPdf.ts` — Beschreibung ohne Bold, Objektname-Option, vertikale Zentrierung
-- `backend/src/pdf/layout.ts` — identische drei Änderungen
-- `src/lib/api/types.ts` — `objektnameImEmpfaenger?: boolean` in `BelegOptionen`
-- `src/components/forms/OptionenBlock.tsx` (+ Angebot-/Rechnung-Form-Anbindung) — neuer Schalter mit Erklärtext
-- `src/components/pdf-editor/panels/TexteOptionenPanel.tsx` — gleicher Schalter im PDF-Editor
+Konkret:
+- Vorab-Prüfung `npm ci --dry-run --ignore-scripts >/dev/null 2>&1` — schlägt sie fehl, wird direkt auf `npm install` gewechselt, mit einer einzigen ruhigen Info-Zeile statt der npm-Fehlerausgabe.
+- Der bisherige Cache-Leeren-Retry bleibt erhalten, aber nur für den Fall echter Netz-/Cache-Fehler (dort ist eine Fehlermeldung ja sinnvoll).
+- Gilt für Frontend- **und** Backend-Schritt, da beide `npm_ci_safe` nutzen.
 
-## Prüfung vor Abschluss
-Test-PDF (Angebot + Rechnung) mit mehrzeiliger Beschreibung, Objekt an/aus, Pauschal- und Einzelposition rendern und optisch gegenchecken. Keine Migration, `mcc-update` läuft unverändert.
+### 3. Dauerhafte Absicherung
+Notiz im Projektgedächtnis: Vor jeder Auslieferung prüfen, ob `package.json` und `package-lock.json` synchron sind, und die Lockfile bei Drift regenerieren — damit dieser Fall gar nicht erst auf dem Pi ankommt.
+
+## Danach auf dem Pi
+
+Ganz normal `mcc-update` — das Skript aktualisiert sich beim Lauf selbst und die Ausgabe bleibt sauber.
+
+## Technische Details
+- Betroffene Dateien: `package-lock.json` (regeneriert), `backend/deploy/update.sh` (Funktion `npm_ci_safe`), `mem/`-Eintrag.
+- Keine Migration, keine Änderung am Datenverzeichnis, kein Eingriff in Backend-Logik.
