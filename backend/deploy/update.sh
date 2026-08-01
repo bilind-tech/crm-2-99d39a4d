@@ -19,6 +19,7 @@ BUILD_DIR="$BUILD_ROOT/mcc-build-$$"
 NPM_CACHE_DIR="$BUILD_DIR/.npm-cache"
 SERVICE="mycleancenter"
 SELF_PATH="/opt/mycleancenter/update.sh"
+UPDATE_SCRIPT_VERSION="2026-08-01-locksync-v2"
 
 cleanup() {
   rm -rf "$BUILD_DIR"
@@ -52,6 +53,8 @@ require_build_space() {
 cleanup_stale_build_dirs
 require_build_space
 
+echo "==> mcc-update Version: $UPDATE_SCRIPT_VERSION"
+
 # Alte, potenziell beschädigte gemeinsame npm-Caches aus früheren Script-
 # Versionen komplett entfernen (heute nutzen wir einen frischen Cache pro Lauf).
 rm -rf /var/tmp/mcc-npm-cache 2>/dev/null || true
@@ -75,33 +78,15 @@ fi
 
 # Robuster npm-Wrapper.
 #
-# 1. Stille Vorabprüfung, ob package.json und package-lock.json synchron sind.
-#    Sind sie es nicht (typisch nach einem Plattform-Update einer Lovable-
-#    Abhängigkeit), verweigert `npm ci` grundsätzlich den Dienst und wirft eine
-#    lange rote Fehlerwand. Wir prüfen das lautlos vorab und wechseln direkt
-#    auf `npm install` — mit einer einzigen ruhigen Hinweiszeile.
-#    `npm install` löst die Ranges neu auf und schreibt die Lockfile nur im
-#    temporären Build-Verzeichnis — Repo und Daten bleiben unangetastet.
-# 2. Nur bei echten Netz-/Cache-Fehlern (ENOENT/EINTEGRITY) wird der Cache
-#    geleert und einmal wiederholt; dort ist eine Fehlermeldung sinnvoll.
+# Lovable kann package.json automatisch anheben, bevor die passende Lockfile-
+# Änderung im Git-Stand angekommen ist. Deshalb synchronisieren wir die
+# Lockfile IMMER zuerst im temporären Build-Verzeichnis. Erst danach startet
+# npm ci. So kann npm ci nie mit EUSAGE wegen Lockfile-Drift abbrechen.
+# Das Repository und /var/lib/mycleancenter bleiben dabei unangetastet.
 npm_ci_safe() {
-  if ! npm ci --dry-run --ignore-scripts --no-audit --no-fund "$@" >/dev/null 2>&1; then
-    echo "   Hinweis: package-lock.json nicht synchron zur package.json — nutze 'npm install'."
-    npm install --prefer-online --no-audit --no-fund "$@"
-    return $?
-  fi
-  if npm ci --prefer-online --no-audit --no-fund "$@"; then
-    return 0
-  fi
-  echo "!! npm ci fehlgeschlagen — leere Cache und wiederhole einmal."
-  rm -rf "${npm_config_cache:-$NPM_CACHE_DIR}"
-  mkdir -p "${npm_config_cache:-$NPM_CACHE_DIR}"
-  npm cache verify >/dev/null 2>&1 || true
-  if npm ci --prefer-online --no-audit --no-fund "$@"; then
-    return 0
-  fi
-  echo "!! npm ci weiterhin fehlgeschlagen — weiche auf 'npm install' aus."
-  npm install --prefer-online --no-audit --no-fund "$@"
+  echo "   Paketstand synchronisieren …"
+  npm install --package-lock-only --ignore-scripts --prefer-online --no-audit --no-fund
+  npm ci --prefer-online --no-audit --no-fund "$@"
 }
 
 echo "==> 2/6  Frontend bauen (SPA)"
