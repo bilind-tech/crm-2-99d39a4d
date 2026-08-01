@@ -325,6 +325,31 @@ function abrechnungsartText(p: Position): string {
 }
 
 function beschreibungZeilen(text: string): string[] {
+  return beschreibungZeilenIntern(text);
+}
+
+/**
+ * Schätzt die Zeilenanzahl der Leistungs-Spalte, damit die rechten Spalten
+ * (Stunden / Abrechnungsart / Preis) optisch vertikal mittig stehen.
+ * pdfmake kennt keine echte vertikale Zentrierung in Tabellenzellen.
+ */
+export function geschaetzteZeilen(text: string, charsPerLine: number): number {
+  const zeilen = (text || "").split("\n").map((z) => z.trim()).filter(Boolean);
+  if (zeilen.length === 0) return 1;
+  let sum = 0;
+  for (const z of zeilen) sum += Math.max(1, Math.ceil(z.length / Math.max(10, charsPerLine)));
+  return Math.max(1, sum);
+}
+
+export function vertikalMittigMargin(
+  text: string,
+  charsPerLine: number,
+): [number, number, number, number] {
+  const zeilen = geschaetzteZeilen(text, charsPerLine);
+  return [0, Math.max(0, Math.round(((zeilen - 1) * 12.5) / 2)), 0, 0];
+}
+
+function beschreibungZeilenIntern(text: string): string[] {
   const lines = (text || "")
     .split("\n")
     .map((line) => line.trim())
