@@ -184,12 +184,20 @@ function beschreibungBlock(text: string): unknown {
   return { stack: items };
 }
 
-function kundeAdresse(k: Kunde, ap?: Ansprechpartner, o?: Objekt | null, zeigeObjektname = true) {
+function kundeAdresse(
+  k: Kunde,
+  ap?: Ansprechpartner,
+  o?: Objekt | null,
+  zeigeObjektname = true,
+  zeigeAnsprechpartner = true,
+) {
   const lines: string[] = [];
   if (k.firmenname) lines.push(k.firmenname);
-  const apPerson = ap ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim() : "";
+  const apPerson = ap && zeigeAnsprechpartner
+    ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim()
+    : "";
   const person = apPerson || [k.vorname, k.nachname].filter(Boolean).join(" ");
-  if (person) lines.push(person);
+  if (person && (zeigeAnsprechpartner || !k.firmenname)) lines.push(person);
   if (o?.name && zeigeObjektname) lines.push(o.name);
   // Wenn ein Objekt ausgewählt ist, ist dessen Einsatzadresse maßgeblich.
   // Falls dort nichts gepflegt ist, fällt die PDF auf die Kundenadresse zurück.
@@ -209,7 +217,8 @@ function absenderzeile(f: Firmendaten) {
   return teile.join(" – ");
 }
 
-function anrede(k: Kunde, ap?: Ansprechpartner) {
+function anrede(k: Kunde, ap?: Ansprechpartner, eigene?: string) {
+  if (eigene && eigene.trim()) return eigene.trim();
   if (ap) {
     const name = ap.nachname?.trim() || "";
     if (ap.anrede === "herr") return `Sehr geehrter Herr ${name},`;
@@ -668,6 +677,8 @@ interface PdfContext {
   ansprechpartner?: Ansprechpartner;
   objekt?: Objekt | null;
   zeigeObjektname?: boolean;
+  zeigeAnsprechpartner?: boolean;
+  eigeneAnrede?: string;
 }
 
 function mergeFirma(firma: Firmendaten, override?: Partial<Firmendaten>): Firmendaten {
@@ -723,6 +734,7 @@ async function buildDoc(
         ctx.ansprechpartner,
         ctx.objekt ?? null,
         ctx.zeigeObjektname ?? true,
+        ctx.zeigeAnsprechpartner ?? true,
       ).map((l) => ({
         text: l,
         fontSize: 10,
@@ -755,7 +767,11 @@ async function buildDoc(
       },
       {
         stack: [
-          { id: "anrede", text: anrede(ctx.kunde, ctx.ansprechpartner), margin: [0, 0, 0, 8] },
+          {
+            id: "anrede",
+            text: anrede(ctx.kunde, ctx.ansprechpartner, ctx.eigeneAnrede),
+            margin: [0, 0, 0, 8],
+          },
           { id: "intro", text: intro, margin: [0, 0, 0, 14] },
         ],
       },
@@ -832,6 +848,8 @@ export async function generateAngebotPdf(
       ansprechpartner,
       objekt: objekt ?? null,
       zeigeObjektname: angebot.optionen?.objektnameImEmpfaenger ?? true,
+      zeigeAnsprechpartner: angebot.optionen?.ansprechpartnerImEmpfaenger ?? true,
+      eigeneAnrede: angebot.optionen?.eigeneAnrede,
     },
     `Angebot ${angebot.titel || ""}`.trim(),
     meta,
@@ -902,6 +920,8 @@ export async function generateRechnungPdf(
       ansprechpartner,
       objekt: objekt ?? null,
       zeigeObjektname: rechnung.optionen?.objektnameImEmpfaenger ?? true,
+      zeigeAnsprechpartner: rechnung.optionen?.ansprechpartnerImEmpfaenger ?? true,
+      eigeneAnrede: rechnung.optionen?.eigeneAnrede,
     },
     "Rechnung",
     meta,

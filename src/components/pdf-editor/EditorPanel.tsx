@@ -53,7 +53,7 @@ export function EditorPanel({
 
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <TabsContent value="stammdaten" className="m-0">
-          <StammdatenPanel kind={kind} draft={draft} kunde={kunde} set={set} />
+          <StammdatenPanel kind={kind} draft={draft} kunde={kunde} set={set} setOption={setOption} />
         </TabsContent>
         <TabsContent value="positionen" className="m-0">
           <PositionenPanel draft={draft} set={set} />

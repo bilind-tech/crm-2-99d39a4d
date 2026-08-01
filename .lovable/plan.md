@@ -1,31 +1,41 @@
 ## Ziel
-`mcc-update` darf bei automatisch geänderten Lovable-Paketversionen keine sichtbaren `npm ci`-Synchronisationsfehler mehr erzeugen.
 
-## Bestätigte Ursache
-- Das öffentliche GitHub-Repository enthält aktuell bereits `2.8.4` und `1.3.3` im Root-Lockfile.
-- Der gezeigte Pi-Lauf verwendet trotzdem einen Stand mit `2.8.3` und `1.3.1`.
-- Die ausgegebenen Fallback-Texte weichen außerdem vom aktuell öffentlich ausgelieferten `backend/deploy/update.sh` ab. Damit läuft auf dem Pi nicht exakt die derzeitige Skriptfassung.
-- Die jetzige Strategie startet bei einer unerkannten Drift trotzdem zunächst `npm ci`; dadurch entsteht die komplette rote EUSAGE-Ausgabe, bevor auf `npm install` ausgewichen wird.
+Im PDF-Editor und beim Erstellen von Angebot/Rechnung sollen drei Dinge direkt beim Empfänger/Ansprechpartner steuerbar sein:
 
-## Umsetzung
-1. **Installationsablauf grundsätzlich absichern**
-   - Vor jeder Frontend- und Backend-Installation die jeweilige `package-lock.json` im temporären Build-Verzeichnis mit `npm install --package-lock-only` synchronisieren.
-   - Erst nach erfolgreicher Synchronisierung die eigentliche saubere Installation ausführen.
-   - Dadurch sieht `npm ci` niemals ein veraltetes Lockfile und kann keinen EUSAGE-Lockfilefehler mehr ausgeben.
+1. **Ansprechpartner im Empfängerblock ausblenden** (Name-Zeile oben links).
+2. **Anrede frei bearbeiten** („Sehr geehrter Herr Müller,“) — ohne dass ein Ansprechpartner angelegt werden muss.
+3. **Objektname im Empfängerblock** — der Schalter existiert bereits, ist aber versteckt (Checkbox unter „Optionen“ bzw. Tab „Texte & Optionen“). Er wird dorthin geholt, wo man ihn erwartet: direkt beim Objekt bzw. beim Empfängerblock.
 
-2. **Fallback gezielt und ruhig halten**
-   - Den bisherigen Ablauf „`npm ci` sichtbar scheitern lassen, Cache löschen, erneut versuchen“ entfernen.
-   - Nur echte Netzwerk-/Paketfehler ausgeben; Lockfile-Drift wird vorab behoben und nicht als roter Fehlerblock angezeigt.
-   - Daten unter `/var/lib/mycleancenter` bleiben vollständig unberührt; Änderungen erfolgen ausschließlich im temporären Build-Verzeichnis.
+## Was gebaut wird
 
-3. **Self-Update zuverlässig beibehalten**
-   - Das geklonte Update-Skript weiterhin vor dem Build nach `/opt/mycleancenter/update.sh` übernehmen und einmal neu starten.
-   - Eine eindeutige Skriptversions-Ausgabe ergänzen, damit künftig sofort erkennbar ist, welche Update-Logik der Pi tatsächlich verwendet.
+### Neue Beleg-Optionen (`BelegOptionen`)
+- `ansprechpartnerImEmpfaenger?: boolean` (Standard: **an**)
+- `eigeneAnrede?: string` (leer = automatisch aus Ansprechpartner/Kunde)
 
-4. **Fehlerfall reproduzierbar testen**
-   - Eine absichtlich veraltete Kopie des Root-Lockfiles gegen die aktuelle `package.json` testen.
-   - Verifizieren, dass die Vorab-Synchronisierung die Versionen korrigiert und danach die Installation ohne EUSAGE durchläuft.
-   - Root- und Backend-Lockfile abschließend auf Synchronität prüfen.
+Beide werden wie `objektnameImEmpfaenger` als JSON in den bestehenden `optionen`-Feldern von Angebot/Rechnung gespeichert — **keine DB-Migration nötig**.
 
-5. **Dauerhafte Projektregel aktualisieren**
-   - Festhalten, dass `mcc-update` Lockfiles vor der Installation selbst synchronisiert und niemals zuerst ein erwartbar unsynchrones `npm ci` ausführt.
+### PDF-Rendering (Frontend-Vorschau + Backend identisch)
+- `src/lib/pdf/belegPdf.ts` und `backend/src/pdf/layout.ts`:
+  - Empfängerblock: Ansprechpartner-/Personenzeile entfällt, wenn der Schalter aus ist (Firmenname + Adresse bleiben).
+  - Anrede: wenn `eigeneAnrede` gefüllt ist, wird exakt dieser Text verwendet, sonst die bisherige Automatik.
+- Beide Renderer werden 1:1 gleich angepasst, damit Live-Vorschau und finales PDF identisch bleiben.
+
+### PDF-Editor (`StammdatenPanel`)
+Der Abschnitt „Empfänger“ / „Ansprechpartner“ bekommt:
+- Switch **„Ansprechpartner im Empfängerblock anzeigen“** + kurzer Erklärtext.
+- Switch **„Objektname im Empfängerblock anzeigen“** + Erklärtext (nur sichtbar, wenn ein Objekt gewählt ist) — die Checkbox im Tab „Texte & Optionen“ entfällt, damit es nur eine Stelle gibt.
+- Feld **„Anrede (individuell)“** mit Platzhalter der automatisch berechneten Anrede und Button „Zurücksetzen“ (leert das Feld → wieder automatisch).
+- Live-Vorschau aktualisiert sich wie gewohnt über den bestehenden Autosave/Draft-Pfad.
+
+### Angebot/Rechnung erstellen (`AngebotForm`, `RechnungForm`)
+- Die beiden Empfänger-Schalter und das Anrede-Feld wandern aus dem generischen „Optionen“-Block direkt unter die Kunden-/Objektauswahl (Objekt-Schalter erscheint erst, sobald ein Objekt gewählt ist).
+- `OptionenBlock` behält nur die inhaltlichen Optionen (Material, Standard-Anschreiben, Intro/Outro, Dauerauftrag).
+
+### Update-Sicherheit
+- Vor Abschluss: Root- und `backend/`-Lockfile auf Sync prüfen (`npm ci --dry-run`), damit `mcc-update` fehlerfrei durchläuft.
+- Typecheck + bestehende Backend-Tests (`belege`, `pdf`) laufen lassen.
+
+## Technische Details
+- Betroffene Dateien: `src/lib/api/types.ts`, `src/lib/pdf/belegPdf.ts`, `backend/src/pdf/layout.ts`, `src/components/pdf-editor/panels/StammdatenPanel.tsx`, `src/components/pdf-editor/panels/TexteOptionenPanel.tsx`, `src/components/forms/OptionenBlock.tsx`, `AngebotForm.tsx`, `RechnungForm.tsx`.
+- Defaults per `?? true` bzw. `?? ""`, damit bestehende Belege unverändert aussehen.
+- Der PDF-Cache-Key enthält bereits die `optionen`, daher wird die Vorschau bei Änderung automatisch neu gerendert.

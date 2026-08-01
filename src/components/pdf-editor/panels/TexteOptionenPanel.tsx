@@ -57,16 +57,14 @@ export function TexteOptionenPanel({ draft, setOption }: Props) {
           label="Standard-Anschreiben verwenden"
         />
         <CheckRow
-          checked={o.objektnameImEmpfaenger ?? true}
-          onChange={(v) => setOption("objektnameImEmpfaenger", v)}
-          label="Objektname im Empfängerblock anzeigen"
-          hint="Der Objektname erscheint oben links im Empfängerblock zwischen Kundenname und Adresse. Aus = nur Kundenname und Adresse."
-        />
-        <CheckRow
           checked={o.wiederkehrend}
           onChange={(v) => setOption("wiederkehrend", v)}
           label="Wiederkehrend / Dauerauftrag"
         />
+        <p className="text-[11px] text-muted-foreground">
+          Empfängerblock (Objektname, Ansprechpartner) und Anrede stellst du im Tab „Stammdaten"
+          ein.
+        </p>
       </div>
     </div>
   );
