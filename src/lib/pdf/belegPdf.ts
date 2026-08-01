@@ -677,6 +677,8 @@ interface PdfContext {
   ansprechpartner?: Ansprechpartner;
   objekt?: Objekt | null;
   zeigeObjektname?: boolean;
+  zeigeAnsprechpartner?: boolean;
+  eigeneAnrede?: string;
 }
 
 function mergeFirma(firma: Firmendaten, override?: Partial<Firmendaten>): Firmendaten {
@@ -732,6 +734,7 @@ async function buildDoc(
         ctx.ansprechpartner,
         ctx.objekt ?? null,
         ctx.zeigeObjektname ?? true,
+        ctx.zeigeAnsprechpartner ?? true,
       ).map((l) => ({
         text: l,
         fontSize: 10,
@@ -764,7 +767,11 @@ async function buildDoc(
       },
       {
         stack: [
-          { id: "anrede", text: anrede(ctx.kunde, ctx.ansprechpartner), margin: [0, 0, 0, 8] },
+          {
+            id: "anrede",
+            text: anrede(ctx.kunde, ctx.ansprechpartner, ctx.eigeneAnrede),
+            margin: [0, 0, 0, 8],
+          },
           { id: "intro", text: intro, margin: [0, 0, 0, 14] },
         ],
       },
