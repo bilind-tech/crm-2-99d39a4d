@@ -464,6 +464,7 @@ interface BuildArgs {
   steuersatz: number;
   intro: string;
   outro: string;
+  zeigeObjektname?: boolean;
 }
 
 function buildDoc(args: BuildArgs) {
@@ -480,7 +481,12 @@ function buildDoc(args: BuildArgs) {
         columns: [
           {
             width: "*",
-            stack: kundeAdresse(args.kunde, args.ansprechpartner, args.objekt ?? null).map((l) => ({
+            stack: kundeAdresse(
+              args.kunde,
+              args.ansprechpartner,
+              args.objekt ?? null,
+              args.zeigeObjektname ?? true,
+            ).map((l) => ({
               text: l,
               fontSize: 10,
             })),
