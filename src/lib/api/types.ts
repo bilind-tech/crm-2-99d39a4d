@@ -152,6 +152,10 @@ export interface BelegOptionen {
   logoOverride?: string;
   /** Objektname im Empfängerblock (oben links) anzeigen. Default: true. */
   objektnameImEmpfaenger?: boolean;
+  /** Ansprechpartner-/Personenzeile im Empfängerblock (oben links) anzeigen. Default: true. */
+  ansprechpartnerImEmpfaenger?: boolean;
+  /** Individuelle Anrede (z. B. „Sehr geehrter Herr Müller,"). Leer = automatisch. */
+  eigeneAnrede?: string;
   /** Per-Beleg Firmendaten-Override. Felder, die hier gesetzt sind, überschreiben die globalen Firmendaten im PDF. */
   firmaOverride?: Partial<Firmendaten>;
 }
