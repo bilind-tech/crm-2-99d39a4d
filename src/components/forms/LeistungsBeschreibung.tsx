@@ -1,4 +1,4 @@
-import { useEffect, useRef, type KeyboardEvent } from "react";
+import { useEffect, useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 import { Bold, Italic, List, Underline } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,14 +19,11 @@ interface Props {
 const LINE_HEIGHT_PX = 22; // entspricht text-sm + leading-relaxed
 
 /**
- * Auto-Resize-Textarea für Leistungsbeschreibungen.
- * - Wächst automatisch mit dem Inhalt zwischen min/max Zeilen.
- * - Enter auf einer Zeile, die mit „• " beginnt, fügt automatisch ein neues „• " ein.
- * - Tab rückt mit zwei Leerzeichen ein (kein Fokus-Sprung).
- * - Optional eine kleine Toolbar mit B / I / U / Liste.
- *
- * Format-Marker (Markdown-kompatibel, vom Backend / PDF-Renderer interpretiert):
- *   **fett** · *kursiv* · __unterstrichen__
+ * WYSIWYG-Feld für Leistungsbeschreibungen.
+ * - Zeigt Fett / Kursiv / Unterstrichen direkt an — keine sichtbaren Marker.
+ * - Gespeichert wird weiterhin Markdown (`**fett**`, `*kursiv*`, `__unterstrichen__`),
+ *   das die PDF-Renderer (`src/lib/pdf/inlineFormat.ts`) interpretieren.
+ * - Wächst automatisch zwischen min/max Zeilen.
  */
 export function LeistungsBeschreibung({
   value,
@@ -38,108 +35,84 @@ export function LeistungsBeschreibung({
   className,
   id,
 }: Props) {
-  const ref = useRef<HTMLTextAreaElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const lastEmitted = useRef<string>("");
+
+  // Externen Wert übernehmen (ohne den Cursor beim Tippen zu zerstören)
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (value === lastEmitted.current) return;
+    el.innerHTML = markdownToHtml(value);
+    lastEmitted.current = value;
+  }, [value]);
 
   // Auto-Resize
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.style.height = "0px";
+    el.style.height = "auto";
     const scroll = el.scrollHeight;
-    const min = minRows * LINE_HEIGHT_PX + 16; // + Padding
+    const min = minRows * LINE_HEIGHT_PX + 16;
     const max = maxRows * LINE_HEIGHT_PX + 16;
-    const next = Math.max(min, Math.min(max, scroll + 2));
-    el.style.height = `${next}px`;
+    el.style.height = `${Math.max(min, Math.min(max, scroll + 2))}px`;
     el.style.overflowY = scroll > max ? "auto" : "hidden";
   }, [value, minRows, maxRows]);
 
-  /** Wickelt Markdown-Marker um die aktuelle Auswahl. Toggle bei bereits umschlossener Auswahl. */
-  function wrapMarker(marker: string) {
+  function emit() {
     const el = ref.current;
     if (!el) return;
-    const { selectionStart, selectionEnd, value: v } = el;
-    const sel = v.slice(selectionStart, selectionEnd);
-    const before = v.slice(0, selectionStart);
-    const after = v.slice(selectionEnd);
-    const len = marker.length;
-    const innerLen = sel.length;
-    const surrounded = innerLen > 0 && before.endsWith(marker) && after.startsWith(marker);
-    if (surrounded) {
-      const next = before.slice(0, -len) + sel + after.slice(len);
-      onChange(next);
-      requestAnimationFrame(() => {
-        el.focus();
-        const a = selectionStart - len;
-        el.setSelectionRange(a, a + innerLen);
-      });
-      return;
-    }
-    const next = `${before}${marker}${sel}${marker}${after}`;
-    onChange(next);
-    requestAnimationFrame(() => {
-      el.focus();
-      if (sel.length === 0) {
-        const pos = selectionStart + marker.length;
-        el.setSelectionRange(pos, pos);
-      } else {
-        el.setSelectionRange(selectionStart + marker.length, selectionEnd + marker.length);
-      }
-    });
+    const md = htmlToMarkdown(el);
+    lastEmitted.current = md;
+    onChange(md);
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    // Cmd/Ctrl + B / I / U → Markdown-Wrap
+  function exec(command: "bold" | "italic" | "underline") {
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+    document.execCommand(command);
+    emit();
+  }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
       const k = e.key.toLowerCase();
-      if (k === "b") {
+      if (k === "b" || k === "i" || k === "u") {
         e.preventDefault();
-        wrapMarker("**");
-        return;
-      }
-      if (k === "i") {
-        e.preventDefault();
-        wrapMarker("*");
-        return;
-      }
-      if (k === "u") {
-        e.preventDefault();
-        wrapMarker("__");
-        return;
+        exec(k === "b" ? "bold" : k === "i" ? "italic" : "underline");
       }
     }
-    // Kein Auto-Bullet, kein Tab-Einrücken: Formatierung erfolgt manuell über
-    // die Toolbar (B/I/U/Liste). Enter erzeugt nur einen normalen Zeilenumbruch.
+  }
+
+  function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
+    e.preventDefault();
+    const text = e.clipboardData.getData("text/plain");
+    document.execCommand("insertText", false, text);
+    emit();
   }
 
   function bulletEinfuegen() {
     const el = ref.current;
     if (!el) return;
-    const { selectionStart, value: v } = el;
-    const lineStart = v.lastIndexOf("\n", selectionStart - 1) + 1;
-    const currentLine = v.slice(lineStart, selectionStart);
-    const before = v.slice(0, lineStart);
-    const after = v.slice(lineStart);
-    if (currentLine.trimStart().startsWith("• ")) return;
-    const next = `${before}• ${after}`;
-    onChange(next);
-    requestAnimationFrame(() => {
-      const pos = selectionStart + 2;
-      el.focus();
-      el.setSelectionRange(pos, pos);
-    });
+    el.focus();
+    document.execCommand("insertText", false, "• ");
+    emit();
   }
+
+  const isEmpty = !value || !value.trim();
 
   return (
     <div className={cn("relative", className)}>
       {withToolbar && (
         <div className="pointer-events-none absolute right-2 top-2 z-10 flex gap-1">
-          <ToolbarBtn onClick={() => wrapMarker("**")} title="Fett (Cmd/Ctrl+B)">
+          <ToolbarBtn onClick={() => exec("bold")} title="Fett (Cmd/Ctrl+B)">
             <Bold className="h-3.5 w-3.5" />
           </ToolbarBtn>
-          <ToolbarBtn onClick={() => wrapMarker("*")} title="Kursiv (Cmd/Ctrl+I)">
+          <ToolbarBtn onClick={() => exec("italic")} title="Kursiv (Cmd/Ctrl+I)">
             <Italic className="h-3.5 w-3.5" />
           </ToolbarBtn>
-          <ToolbarBtn onClick={() => wrapMarker("__")} title="Unterstrichen (Cmd/Ctrl+U)">
+          <ToolbarBtn onClick={() => exec("underline")} title="Unterstrichen (Cmd/Ctrl+U)">
             <Underline className="h-3.5 w-3.5" />
           </ToolbarBtn>
           <ToolbarBtn onClick={bulletEinfuegen} title="Aufzählungs-Punkt einfügen">
@@ -147,23 +120,113 @@ export function LeistungsBeschreibung({
           </ToolbarBtn>
         </div>
       )}
-      <textarea
+      <div
         ref={ref}
         id={id}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+        role="textbox"
+        aria-multiline="true"
+        aria-label={placeholder}
+        contentEditable
+        suppressContentEditableWarning
+        data-placeholder={placeholder}
+        onInput={emit}
+        onBlur={emit}
         onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        rows={minRows}
+        onPaste={handlePaste}
         className={cn(
-          "block w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm leading-relaxed shadow-sm",
-          "placeholder:text-muted-foreground",
+          "block w-full whitespace-pre-wrap break-words rounded-lg border border-input bg-background px-3 py-2 text-sm leading-relaxed shadow-sm",
           "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
+          isEmpty &&
+            "before:pointer-events-none before:text-muted-foreground before:content-[attr(data-placeholder)]",
           withToolbar && "pr-32",
         )}
       />
     </div>
   );
+}
+
+/** Markdown → HTML für die Anzeige im contentEditable. */
+function markdownToHtml(md: string): string {
+  const escaped = escapeHtml(md ?? "");
+  const withMarks = escaped
+    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+    .replace(/__([^_]+)__/g, "<u>$1</u>")
+    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<i>$2</i>")
+    .replace(/(^|[^_])_([^_\n]+)_/g, "$1<i>$2</i>");
+  return withMarks.replace(/\n/g, "<br>");
+}
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/** HTML aus dem contentEditable → Markdown-String. */
+function htmlToMarkdown(root: HTMLElement): string {
+  const out = serializeNodes(Array.from(root.childNodes), {
+    bold: false,
+    italic: false,
+    underline: false,
+  });
+  return out.replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n").trimEnd();
+}
+
+interface Marks {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+}
+
+const BLOCK_TAGS = new Set(["DIV", "P", "LI", "TR", "H1", "H2", "H3", "H4", "H5", "H6"]);
+
+function serializeNodes(nodes: Node[], marks: Marks): string {
+  let out = "";
+  nodes.forEach((node) => {
+    out += serializeNode(node, marks);
+  });
+  return out;
+}
+
+function serializeNode(node: Node, marks: Marks): string {
+  if (node.nodeType === Node.TEXT_NODE) return wrap(node.textContent ?? "", marks);
+  if (node.nodeType !== Node.ELEMENT_NODE) return "";
+
+  const el = node as HTMLElement;
+  const tag = el.tagName;
+  if (tag === "BR") return "\n";
+
+  const style = el.style;
+  const next: Marks = {
+    bold:
+      marks.bold ||
+      tag === "B" ||
+      tag === "STRONG" ||
+      style.fontWeight === "bold" ||
+      Number(style.fontWeight) >= 600,
+    italic: marks.italic || tag === "I" || tag === "EM" || style.fontStyle === "italic",
+    underline:
+      marks.underline || tag === "U" || (style.textDecoration || "").includes("underline"),
+  };
+
+  const inner = serializeNodes(Array.from(el.childNodes), next);
+  if (BLOCK_TAGS.has(tag)) {
+    return inner.endsWith("\n") ? inner : `${inner}\n`;
+  }
+  return inner;
+}
+
+function wrap(text: string, marks: Marks): string {
+  if (!text) return "";
+  // Führende/abschließende Leerzeichen bleiben außerhalb der Marker.
+  const match = text.match(/^(\s*)([\s\S]*?)(\s*)$/);
+  const pre = match?.[1] ?? "";
+  const core = match?.[2] ?? "";
+  const post = match?.[3] ?? "";
+  if (!core) return text;
+  let out = core;
+  if (marks.underline) out = `__${out}__`;
+  if (marks.italic) out = `*${out}*`;
+  if (marks.bold) out = `**${out}**`;
+  return pre + out + post;
 }
 
 function ToolbarBtn({
@@ -178,6 +241,7 @@ function ToolbarBtn({
   return (
     <button
       type="button"
+      onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       title={title}
       className="pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background/95 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground"

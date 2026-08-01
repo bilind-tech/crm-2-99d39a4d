@@ -14,6 +14,7 @@ import type {
 import logoUrl from "@/assets/logo.png";
 import { getBackendUrl } from "@/lib/api/backendUrl";
 import { A4, createHotspotTracker, type RuntimeHotspot } from "./hotspotTracker";
+import { inlineText, plainText, bulletMatch } from "./inlineFormat";
 
 // ───────── Mock-LRU-Cache (nur Lovable-Preview) ────────────────────────────
 // Im Pi-Backend übernimmt der Disk-Cache (`backend/src/pdf/cache.ts`) diese
@@ -168,19 +169,19 @@ function beschreibungBlock(text: string): unknown {
   for (const z of zeilen) {
     const t = z.trim();
     if (!t) continue;
-    const bm = t.match(/^[•\-*]\s+(.*)$/);
-    if (bm) bullets.push(bm[1]);
+    const bm = bulletMatch(t);
+    if (bm !== null) bullets.push(bm);
     else if (!titel) titel = t;
     else plainLines.push(t);
   }
-  if (titel) items.push({ text: titel, fontSize: 10, margin: [0, 0, 0, 2] });
+  if (titel) items.push({ text: inlineText(titel), fontSize: 10, margin: [0, 0, 0, 2] });
   for (const line of plainLines) {
-    items.push({ text: line, fontSize: 10, margin: [0, 0, 0, 0] });
+    items.push({ text: inlineText(line), fontSize: 10, margin: [0, 0, 0, 0] });
   }
   if (bullets.length > 0) {
-    items.push({ ul: bullets.map((b) => ({ text: b, fontSize: 10 })), margin: [0, 0, 0, 0] });
+    items.push({ ul: bullets.map((b) => ({ text: inlineText(b), fontSize: 10 })), margin: [0, 0, 0, 0] });
   }
-  if (items.length === 0) items.push({ text, fontSize: 10 });
+  if (items.length === 0) items.push({ text: inlineText(text), fontSize: 10 });
   return { stack: items };
 }
 
@@ -343,7 +344,7 @@ function beschreibungZeilen(text: string): string[] {
  * pdfmake kennt keine echte vertikale Zentrierung in Tabellenzellen.
  */
 export function geschaetzteZeilen(text: string, charsPerLine: number): number {
-  const zeilen = (text || "").split("\n").map((z) => z.trim()).filter(Boolean);
+  const zeilen = plainText(text || "").split("\n").map((z) => z.trim()).filter(Boolean);
   if (zeilen.length === 0) return 1;
   let sum = 0;
   for (const z of zeilen) sum += Math.max(1, Math.ceil(z.length / Math.max(10, charsPerLine)));
@@ -359,11 +360,11 @@ export function vertikalMittigMargin(
 }
 
 function beschreibungZeilenIntern(text: string): string[] {
-  const lines = (text || "")
+  const lines = plainText(text || "")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  const source = lines.length > 0 ? lines : [text || "Pauschal"];
+  const source = lines.length > 0 ? lines : [plainText(text || "") || "Pauschal"];
   const chunks: string[] = [];
   const maxChars = 135;
   for (const raw of source) {
@@ -772,14 +773,14 @@ async function buildDoc(
             text: anrede(ctx.kunde, ctx.ansprechpartner, ctx.eigeneAnrede),
             margin: [0, 0, 0, 8],
           },
-          { id: "intro", text: intro, margin: [0, 0, 0, 14] },
+          { id: "intro", text: inlineText(intro), margin: [0, 0, 0, 14] },
         ],
       },
       leistungstabelle(beleg.positionen, t, beleg.steuersatz),
       {
         id: "outro",
         stack: [
-          { text: outro, margin: [0, 16, 0, 0] },
+          { text: inlineText(outro), margin: [0, 16, 0, 0] },
           { text: "Mit freundlichen Grüßen", margin: [0, 18, 0, 0] },
           ...signatur.map((s) => ({ text: s, margin: [0, 0, 0, 0], color: COLOR_TEXT })),
         ],
