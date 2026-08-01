@@ -173,7 +173,7 @@ function beschreibungBlock(text: string): unknown {
     else if (!titel) titel = t;
     else plainLines.push(t);
   }
-  if (titel) items.push({ text: titel, fontSize: 10, bold: true, margin: [0, 0, 0, 2] });
+  if (titel) items.push({ text: titel, fontSize: 10, margin: [0, 0, 0, 2] });
   for (const line of plainLines) {
     items.push({ text: line, fontSize: 10, margin: [0, 0, 0, 0] });
   }
@@ -184,13 +184,13 @@ function beschreibungBlock(text: string): unknown {
   return { stack: items };
 }
 
-function kundeAdresse(k: Kunde, ap?: Ansprechpartner, o?: Objekt | null) {
+function kundeAdresse(k: Kunde, ap?: Ansprechpartner, o?: Objekt | null, zeigeObjektname = true) {
   const lines: string[] = [];
   if (k.firmenname) lines.push(k.firmenname);
   const apPerson = ap ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim() : "";
   const person = apPerson || [k.vorname, k.nachname].filter(Boolean).join(" ");
   if (person) lines.push(person);
-  if (o?.name) lines.push(o.name);
+  if (o?.name && zeigeObjektname) lines.push(o.name);
   // Wenn ein Objekt ausgewählt ist, ist dessen Einsatzadresse maßgeblich.
   // Falls dort nichts gepflegt ist, fällt die PDF auf die Kundenadresse zurück.
   const strasse = o?.strasse || k.strasse || "";
@@ -325,6 +325,31 @@ function abrechnungsartText(p: Position): string {
 }
 
 function beschreibungZeilen(text: string): string[] {
+  return beschreibungZeilenIntern(text);
+}
+
+/**
+ * Schätzt die Zeilenanzahl der Leistungs-Spalte, damit die rechten Spalten
+ * (Stunden / Abrechnungsart / Preis) optisch vertikal mittig stehen.
+ * pdfmake kennt keine echte vertikale Zentrierung in Tabellenzellen.
+ */
+export function geschaetzteZeilen(text: string, charsPerLine: number): number {
+  const zeilen = (text || "").split("\n").map((z) => z.trim()).filter(Boolean);
+  if (zeilen.length === 0) return 1;
+  let sum = 0;
+  for (const z of zeilen) sum += Math.max(1, Math.ceil(z.length / Math.max(10, charsPerLine)));
+  return Math.max(1, sum);
+}
+
+export function vertikalMittigMargin(
+  text: string,
+  charsPerLine: number,
+): [number, number, number, number] {
+  const zeilen = geschaetzteZeilen(text, charsPerLine);
+  return [0, Math.max(0, Math.round(((zeilen - 1) * 12.5) / 2)), 0, 0];
+}
+
+function beschreibungZeilenIntern(text: string): string[] {
   const lines = (text || "")
     .split("\n")
     .map((line) => line.trim())
@@ -400,11 +425,14 @@ function leistungstabelle(
   const body: unknown[][] = [headerRow];
   positionen.forEach((p) => {
     const fallback = p.modus === "pauschal" ? "Pauschal" : "";
-    const row: unknown[] = [{ stack: [beschreibungBlock(p.beschreibung || fallback)], id: `pos:${p.id}` }];
-    if (showStunden) row.push({ text: stundenText(p), fontSize: 10, alignment: "center" });
+    const beschreibung = p.beschreibung || fallback;
+    const mittig = vertikalMittigMargin(beschreibung, showStunden ? 47 : 54);
+    const row: unknown[] = [{ stack: [beschreibungBlock(beschreibung)], id: `pos:${p.id}` }];
+    if (showStunden)
+      row.push({ text: stundenText(p), fontSize: 10, alignment: "center", margin: mittig });
     row.push(
-      { text: abrechnungsartText(p), fontSize: 10, alignment: "center" },
-      { text: eur(summe(p)), fontSize: 10, alignment: "right" },
+      { text: abrechnungsartText(p), fontSize: 10, alignment: "center", margin: mittig },
+      { text: eur(summe(p)), fontSize: 10, alignment: "right", margin: mittig },
     );
     body.push(row);
   });
@@ -639,6 +667,7 @@ interface PdfContext {
   kunde: Kunde;
   ansprechpartner?: Ansprechpartner;
   objekt?: Objekt | null;
+  zeigeObjektname?: boolean;
 }
 
 function mergeFirma(firma: Firmendaten, override?: Partial<Firmendaten>): Firmendaten {
@@ -689,7 +718,12 @@ async function buildDoc(
     id: "kunde",
     width: "*",
     stack: [
-      ...kundeAdresse(ctx.kunde, ctx.ansprechpartner, ctx.objekt ?? null).map((l) => ({
+      ...kundeAdresse(
+        ctx.kunde,
+        ctx.ansprechpartner,
+        ctx.objekt ?? null,
+        ctx.zeigeObjektname ?? true,
+      ).map((l) => ({
         text: l,
         fontSize: 10,
       })),
@@ -792,7 +826,13 @@ export async function generateAngebotPdf(
   const effFirma = mergeFirma(firma, angebot.optionen?.firmaOverride);
   const tracker = createHotspotTracker(A4);
   const doc = await buildDoc(
-    { firma: effFirma, kunde, ansprechpartner, objekt: objekt ?? null },
+    {
+      firma: effFirma,
+      kunde,
+      ansprechpartner,
+      objekt: objekt ?? null,
+      zeigeObjektname: angebot.optionen?.objektnameImEmpfaenger ?? true,
+    },
     `Angebot ${angebot.titel || ""}`.trim(),
     meta,
     "plain",
@@ -856,7 +896,13 @@ export async function generateRechnungPdf(
         .join("\n\n");
   const headerNote = "Bei Zahlung bitte\ndie Rechnungs-Nr. angeben";
   const doc = await buildDoc(
-    { firma: effFirma, kunde, ansprechpartner, objekt: objekt ?? null },
+    {
+      firma: effFirma,
+      kunde,
+      ansprechpartner,
+      objekt: objekt ?? null,
+      zeigeObjektname: rechnung.optionen?.objektnameImEmpfaenger ?? true,
+    },
     "Rechnung",
     meta,
     "box",

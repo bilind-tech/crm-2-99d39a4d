@@ -7,6 +7,7 @@ import { DauerauftragKonfig, defaultWiederkehrendDetails } from "./DauerauftragK
 export interface OptionenState {
   materialBereitgestellt: boolean;
   standardAnschreiben: boolean;
+  objektnameImEmpfaenger: boolean;
   eigenesIntroAktiv: boolean;
   eigenesIntro: string;
   eigenesOutroAktiv: boolean;
@@ -18,6 +19,7 @@ export interface OptionenState {
 export const defaultOptionen: OptionenState = {
   materialBereitgestellt: true,
   standardAnschreiben: true,
+  objektnameImEmpfaenger: true,
   eigenesIntroAktiv: false,
   eigenesIntro: "",
   eigenesOutroAktiv: false,
@@ -51,6 +53,12 @@ export function OptionenBlock({ value, onChange }: Props) {
         checked={value.standardAnschreiben}
         onChange={(v) => set("standardAnschreiben", v)}
         label="Standard-Anschreiben verwenden"
+      />
+      <Row
+        checked={value.objektnameImEmpfaenger}
+        onChange={(v) => set("objektnameImEmpfaenger", v)}
+        label="Objektname im Empfängerblock anzeigen"
+        hint="Zeigt den Namen des gewählten Objekts oben links im Empfängerblock des PDFs — zwischen Kundenname und Adresse. Aus = nur Kundenname und Adresse."
       />
 
       <Row

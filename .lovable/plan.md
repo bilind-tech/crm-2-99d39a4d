@@ -1,42 +1,38 @@
 ## Ziel
+Drei Anpassungen an Angebot- und Rechnungs-PDFs (und den zugehörigen Formularen).
 
-Beim Generieren eines Stundenzettels soll die Monatssumme **exakt** die im Mitarbeiter hinterlegten Zielstunden treffen. Abweichungen werden durch ±1 volle Stunde an einzelnen, pseudo-zufällig gewählten Arbeitstagen ausgeglichen. Danach wird gegengerechnet — stimmt es nicht, erscheint eine rote Warnung.
+### 1. Leistungstext nicht mehr automatisch fett
+Aktuell wird in `beschreibungBlock()` die **erste Zeile** einer Leistungsbeschreibung immer fett gesetzt (`bold: true`) — sowohl im Frontend (`src/lib/pdf/belegPdf.ts`) als auch im Backend (`backend/src/pdf/layout.ts`).
 
-## Was heute schon da ist (geprüft)
+Änderung: `bold` entfällt, alle Zeilen werden normal gerendert. Aufzählungspunkte (`•`, `-`, `*`) und Zeilenumbrüche bleiben unverändert. Fett gibt es dann nur noch, wenn es explizit über die Formatierung gesetzt wird.
 
-- Der Mitarbeiter-Dialog ist bereits kompakt: Muster „immer gleich" oder „pro Wochentag", je Wochentag von/bis + Pause, Wochenend-Schalter, Feld „Zielstunden pro Monat". **Keine** Tabelle mit allen Monatstagen. Hier wird nur nachgeschärft, nicht neu gebaut.
-- Es gibt bereits einen Zielausgleich (`backend/src/stundenzettel/zielausgleich.ts`), aber er ist bewusst schwach: maximal 2 Runden, feste Wochentag-Reihenfolge Fr→Mo, kein Zufall, kein Nachweis. Dadurch bleibt bei größeren Differenzen ein Rest übrig.
+### 2. Switch „Objektname im Empfängerblock"
+Heute wird der Objektname fest in den Empfängerblock oben links eingefügt (`kundeAdresse()`), sobald ein Objekt ausgewählt ist.
 
-## Neue Ausgleichs-Logik (Backend)
+Neu: eine schaltbare Option, **standardmäßig eingeschaltet**.
+- Gespeichert im vorhandenen JSON-Feld `optionen` des Belegs (`objektnameImEmpfaenger`) — **keine Datenbank-Migration nötig**, alte Belege ohne das Feld gelten als „an".
+- Sichtbar an zwei Stellen:
+  - Rechnung/Angebot erstellen & bearbeiten → Optionen-Block, direkt bei den anderen Schaltern
+  - PDF-Editor → Tab „Texte/Optionen"
+- Kurzer Erklärtext darunter, z. B.: *„Zeigt den Objektnamen (z. B. »Bürogebäude Nord«) oben links im Empfängerblock zwischen Kundenname und Adresse an. Die Einsatzadresse des Objekts bleibt unabhängig davon erhalten."*
+- Der Switch erscheint nur, wenn überhaupt ein Objekt am Beleg hängt (sonst ohne Wirkung).
+- Aus = nur Kundenname/Ansprechpartner + Adresse, an = wie bisher.
 
-`zielausgleich.ts` wird ersetzt durch einen Algorithmus, der:
+Wirksam in beiden PDF-Pfaden (Live-Vorschau im Editor **und** Backend-PDF), damit Vorschau und finales PDF identisch bleiben.
 
-1. Alle normalen Arbeitstage des Monats als Kandidaten sammelt (Feiertage, Krank/Urlaub, leere Tage bleiben unangetastet).
-2. Die Differenz `Ziel − Summe` in ganze Stunden zerlegt.
-3. Die Kandidaten **pseudo-zufällig** mischt — mit einem Seed aus Mitarbeiter-ID + Jahr + Monat. Dadurch sieht die Verteilung zufällig/natürlich aus, ist aber reproduzierbar: dasselbe Neu-Generieren ergibt denselben Zettel.
-4. Reihum je 1 Stunde an einem Tag addiert bzw. abzieht, bis die Differenz 0 ist. Mehrere Durchläufe sind erlaubt (ein Tag kann also auch 2h abweichen, wenn nötig), bis alle Kandidaten ausgereizt sind.
-5. Grenzen bleiben hart: jeder Block mindestens 1h und höchstens 12h, Block 1 wächst nie in Block 2 hinein, Ende nie nach 24:00. Bei Zwei-Block-Tagen wird zuerst Block 2 verschoben.
-6. Die Endzeit wird passend zurückgerechnet, die Pause bleibt korrekt berücksichtigt.
+### 3. Spalten „Abrechnungsart" / „Preis (netto)" vertikal mittig
+Aktuell kleben die Werte am oberen Rand der Zeile, während die Leistungsbeschreibung mehrere Zeilen hoch sein kann.
 
-## Gegenprüfung
+pdfmake kennt keine echte vertikale Zentrierung in Tabellenzellen. Umsetzung deshalb über einen berechneten Oberrand: Aus der Beschreibungsbreite und dem Text wird die Zeilenanzahl der linken Spalte geschätzt und daraus ein `margin-top` für die Zellen „Stunden", „Abrechnungsart" und „Preis (netto)" abgeleitet, sodass sie optisch mittig in der Zeile stehen. Bei einzeiligen Positionen ändert sich nichts.
 
-- Nach dem Ausgleich summiert das Backend alle Tagesstunden neu und vergleicht mit dem Ziel. Das Ergebnis wird am Stundenzettel mitgeführt: Zielstunden, Ist-Summe, Abweichung.
-- Diese Felder werden bei jeder Änderung (auch bei manuellen Edits in der Tabelle) neu berechnet, nicht nur beim Generieren.
+Die gleiche Berechnung kommt in Frontend- und Backend-Renderer, damit Vorschau und Ausgabe deckungsgleich sind.
 
-## Anzeige (Frontend)
+## Betroffene Dateien
+- `src/lib/pdf/belegPdf.ts` — Beschreibung ohne Bold, Objektname-Option, vertikale Zentrierung
+- `backend/src/pdf/layout.ts` — identische drei Änderungen
+- `src/lib/api/types.ts` — `objektnameImEmpfaenger?: boolean` in `BelegOptionen`
+- `src/components/forms/OptionenBlock.tsx` (+ Angebot-/Rechnung-Form-Anbindung) — neuer Schalter mit Erklärtext
+- `src/components/pdf-editor/panels/TexteOptionenPanel.tsx` — gleicher Schalter im PDF-Editor
 
-- Im Stundenzettel-Workspace und in der Mitarbeiterliste: kleine Statuszeile „Ziel 40 h · Ist 40 h ✓" in dezenter Form.
-- Bei Abweichung: **rote** Hinweiszeile „Zielstunden nicht erreicht: Ist 39 h, Ziel 40 h (−1 h)" — direkt über der PDF-Vorschau bzw. der Tabelle, damit es nicht übersehen wird.
-- Ohne gesetztes Ziel bleibt alles wie bisher, keine Warnung.
-
-## Mitarbeiter-Dialog
-
-- Feld „Zielstunden pro Monat" wird prominenter mit Erklärtext: „Das System verteilt die Differenz automatisch als ±1 Stunde auf einzelne Arbeitstage."
-- Plausibilitäts-Hinweis direkt im Dialog: aus Wochentagen + Zeiten wird die typische Monatsspanne (min/max Stunden) geschätzt. Liegt das Ziel außerhalb, erscheint ein gelber Hinweis „Ziel ist mit diesen Arbeitszeiten kaum erreichbar" — blockiert das Speichern aber nicht.
-- Die Wochentag-Eingabe bleibt kompakt wie bisher (eine Zeile je Wochentag).
-
-## Technisches
-
-- Betroffene Dateien: `backend/src/stundenzettel/zielausgleich.ts` (neu geschrieben), `generieren.ts`, `repo.ts`/`types.ts` (Zielabgleich-Felder), `routes/stundenzettel.ts` (auch beim manuellen Patch neu prüfen), `src/lib/stundenzettel/types.ts`, `src/components/stundenzettel/StundenzettelWorkspace.tsx`, `MitarbeiterDialog.tsx`, `src/lib/api/localPreviewStundenzettel.ts` (Mock-Layer gleichziehen).
-- **Keine Datenbank-Migration nötig** — die Abgleich-Werte werden aus den vorhandenen Tagesdaten berechnet, nicht zusätzlich gespeichert. Damit bleibt `mcc-update` ein reines Code-Update ohne Datenrisiko.
-- Backend-Tests für den Ausgleich: Ziel exakt getroffen bei Über- und Unterdeckung, keine Änderung an Feiertagen/Krank/Urlaub, Reproduzierbarkeit beim zweiten Generieren.
+## Prüfung vor Abschluss
+Test-PDF (Angebot + Rechnung) mit mehrzeiliger Beschreibung, Objekt an/aus, Pauschal- und Einzelposition rendern und optisch gegenchecken. Keine Migration, `mcc-update` läuft unverändert.

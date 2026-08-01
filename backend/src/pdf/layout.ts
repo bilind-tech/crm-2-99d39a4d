@@ -45,7 +45,7 @@ function beschreibungBlock(text: string): unknown {
     else if (!titel) titel = t;
     else plainLines.push(t);
   }
-  if (titel) items.push({ text: titel, fontSize: 10, bold: true, margin: [0, 0, 0, 2] });
+  if (titel) items.push({ text: titel, fontSize: 10, margin: [0, 0, 0, 2] });
   for (const line of plainLines) {
     items.push({ text: line, fontSize: 10, margin: [0, 0, 0, 0] });
   }
@@ -56,13 +56,18 @@ function beschreibungBlock(text: string): unknown {
   return { stack: items };
 }
 
-function kundeAdresse(k: ApiKunde, ap?: ApiAnsprechpartner, o?: ApiObjekt | null): string[] {
+function kundeAdresse(
+  k: ApiKunde,
+  ap?: ApiAnsprechpartner,
+  o?: ApiObjekt | null,
+  zeigeObjektname = true,
+): string[] {
   const lines: string[] = [];
   if (k.firmenname) lines.push(k.firmenname);
   const apPerson = ap ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim() : "";
   const person = apPerson || [k.vorname, k.nachname].filter(Boolean).join(" ");
   if (person) lines.push(person);
-  if (o?.name) lines.push(o.name);
+  if (o?.name && zeigeObjektname) lines.push(o.name);
   // Wenn ein Objekt ausgewählt ist, ist dessen Einsatzadresse maßgeblich.
   // Falls dort nichts gepflegt ist, fällt die PDF auf die Kundenadresse zurück.
   const strasse = o?.strasse || k.strasse || "";
@@ -197,6 +202,19 @@ function beschreibungZeilen(text: string): string[] {
   return chunks.length > 0 ? chunks : ["Pauschal"];
 }
 
+/**
+ * Schätzt die Zeilenanzahl der Leistungs-Spalte, damit die rechten Spalten
+ * (Stunden / Abrechnungsart / Preis) optisch vertikal mittig stehen.
+ * pdfmake kennt keine echte vertikale Zentrierung in Tabellenzellen.
+ */
+function vertikalMittigMargin(text: string, charsPerLine: number): [number, number, number, number] {
+  const zeilen = (text || "").split("\n").map((z) => z.trim()).filter(Boolean);
+  let anzahl = 0;
+  for (const z of zeilen) anzahl += Math.max(1, Math.ceil(z.length / Math.max(10, charsPerLine)));
+  anzahl = Math.max(1, anzahl);
+  return [0, Math.max(0, Math.round(((anzahl - 1) * 12.5) / 2)), 0, 0];
+}
+
 function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number) {
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
@@ -215,11 +233,14 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
   const body: unknown[][] = [headerRow];
   positionen.forEach((p) => {
     const fallback = p.modus === "pauschal" ? "Pauschal" : "";
-    const row: unknown[] = [{ stack: [beschreibungBlock(p.beschreibung || fallback)] }];
-    if (showStunden) row.push({ text: stundenText(p), fontSize: 10, alignment: "center" });
+    const beschreibung = p.beschreibung || fallback;
+    const mittig = vertikalMittigMargin(beschreibung, showStunden ? 47 : 54);
+    const row: unknown[] = [{ stack: [beschreibungBlock(beschreibung)] }];
+    if (showStunden)
+      row.push({ text: stundenText(p), fontSize: 10, alignment: "center", margin: mittig });
     row.push(
-      { text: abrechnungsartText(p), fontSize: 10, alignment: "center" },
-      { text: eur(summe(p)), fontSize: 10, alignment: "right" },
+      { text: abrechnungsartText(p), fontSize: 10, alignment: "center", margin: mittig },
+      { text: eur(summe(p)), fontSize: 10, alignment: "right", margin: mittig },
     );
     body.push(row);
   });
@@ -443,6 +464,7 @@ interface BuildArgs {
   steuersatz: number;
   intro: string;
   outro: string;
+  zeigeObjektname?: boolean;
 }
 
 function buildDoc(args: BuildArgs) {
@@ -459,7 +481,12 @@ function buildDoc(args: BuildArgs) {
         columns: [
           {
             width: "*",
-            stack: kundeAdresse(args.kunde, args.ansprechpartner, args.objekt ?? null).map((l) => ({
+            stack: kundeAdresse(
+              args.kunde,
+              args.ansprechpartner,
+              args.objekt ?? null,
+              args.zeigeObjektname ?? true,
+            ).map((l) => ({
               text: l,
               fontSize: 10,
             })),
@@ -497,7 +524,11 @@ export function angebotDocDef(args: {
   logoDataUrl: string | null;
 }) {
   const { angebot, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
-  const opts = (angebot.optionen ?? {}) as { eigenesIntro?: string; eigenesOutro?: string };
+  const opts = (angebot.optionen ?? {}) as {
+    eigenesIntro?: string;
+    eigenesOutro?: string;
+    objektnameImEmpfaenger?: boolean;
+  };
   const intro = defaultIntroAngebot(angebot, opts.eigenesIntro || angebot.introText);
   const outro = defaultOutroAngebot(angebot, opts.eigenesOutro || angebot.outroText);
   const meta: { label: string; wert: string }[] = [
@@ -507,6 +538,7 @@ export function angebotDocDef(args: {
   ];
   return buildDoc({
     firma, kunde, ansprechpartner, objekt, logoDataUrl,
+    zeigeObjektname: opts.objektnameImEmpfaenger ?? true,
     titel: `Angebot ${angebot.titel || ""}`.trim(),
     meta,
     metaVariant: "plain",
@@ -526,7 +558,11 @@ export function rechnungDocDef(args: {
   logoDataUrl: string | null;
 }) {
   const { rechnung, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
-  const opts = (rechnung.optionen ?? {}) as { eigenesIntro?: string; eigenesOutro?: string };
+  const opts = (rechnung.optionen ?? {}) as {
+    eigenesIntro?: string;
+    eigenesOutro?: string;
+    objektnameImEmpfaenger?: boolean;
+  };
   const intro = defaultIntroRechnung(rechnung, opts.eigenesIntro || rechnung.introText);
   const t = totals(rechnung.positionen, rechnung.rabattGesamt, rechnung.steuersatz);
   let tage = 14;
@@ -546,6 +582,7 @@ export function rechnungDocDef(args: {
   const metaNote = "Bei Zahlung bitte\ndie Rechnungs-Nr. angeben";
   return buildDoc({
     firma, kunde, ansprechpartner, objekt, logoDataUrl,
+    zeigeObjektname: opts.objektnameImEmpfaenger ?? true,
     titel: "Rechnung",
     meta,
     metaVariant: "box",
