@@ -217,7 +217,8 @@ function absenderzeile(f: Firmendaten) {
   return teile.join(" – ");
 }
 
-function anrede(k: Kunde, ap?: Ansprechpartner) {
+function anrede(k: Kunde, ap?: Ansprechpartner, eigene?: string) {
+  if (eigene && eigene.trim()) return eigene.trim();
   if (ap) {
     const name = ap.nachname?.trim() || "";
     if (ap.anrede === "herr") return `Sehr geehrter Herr ${name},`;
