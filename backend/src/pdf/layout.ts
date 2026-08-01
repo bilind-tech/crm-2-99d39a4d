@@ -5,6 +5,7 @@ import type { ApiPosition, ApiAngebot, ApiRechnung } from "../belege/mappers.js"
 import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.js";
 import type { FirmaForPdf } from "./types.js";
 import { DEFAULT_FONT } from "./printer.js";
+import { inlineText, plainText, bulletMatch } from "./inlineFormat.js";
 
 const COLOR_TEXT = "#000000";
 const COLOR_MUTED = "#555555";
@@ -40,19 +41,19 @@ function beschreibungBlock(text: string): unknown {
   for (const z of zeilen) {
     const t = z.trim();
     if (!t) continue;
-    const bm = t.match(/^[•\-*]\s+(.*)$/);
-    if (bm) bullets.push(bm[1]);
+    const bm = bulletMatch(t);
+    if (bm !== null) bullets.push(bm);
     else if (!titel) titel = t;
     else plainLines.push(t);
   }
-  if (titel) items.push({ text: titel, fontSize: 10, margin: [0, 0, 0, 2] });
+  if (titel) items.push({ text: inlineText(titel), fontSize: 10, margin: [0, 0, 0, 2] });
   for (const line of plainLines) {
-    items.push({ text: line, fontSize: 10, margin: [0, 0, 0, 0] });
+    items.push({ text: inlineText(line), fontSize: 10, margin: [0, 0, 0, 0] });
   }
   if (bullets.length > 0) {
-    items.push({ ul: bullets.map((b) => ({ text: b, fontSize: 10 })), margin: [0, 0, 0, 0] });
+    items.push({ ul: bullets.map((b) => ({ text: inlineText(b), fontSize: 10 })), margin: [0, 0, 0, 0] });
   }
-  if (items.length === 0) items.push({ text: text || "", fontSize: 10 });
+  if (items.length === 0) items.push({ text: inlineText(text || ""), fontSize: 10 });
   return { stack: items };
 }
 
@@ -173,11 +174,11 @@ function abrechnungsartText(p: ApiPosition): string {
 }
 
 function beschreibungZeilen(text: string): string[] {
-  const lines = (text || "")
+  const lines = plainText(text || "")
     .split("\n")
     .map((line) => line.trim())
     .filter(Boolean);
-  const source = lines.length > 0 ? lines : [text || "Pauschal"];
+  const source = lines.length > 0 ? lines : [plainText(text || "") || "Pauschal"];
   const chunks: string[] = [];
   const maxChars = 135;
   for (const raw of source) {
@@ -211,7 +212,7 @@ function beschreibungZeilen(text: string): string[] {
  * pdfmake kennt keine echte vertikale Zentrierung in Tabellenzellen.
  */
 function vertikalMittigMargin(text: string, charsPerLine: number): [number, number, number, number] {
-  const zeilen = (text || "").split("\n").map((z) => z.trim()).filter(Boolean);
+  const zeilen = plainText(text || "").split("\n").map((z) => z.trim()).filter(Boolean);
   let anzahl = 0;
   for (const z of zeilen) anzahl += Math.max(1, Math.ceil(z.length / Math.max(10, charsPerLine)));
   anzahl = Math.max(1, anzahl);
