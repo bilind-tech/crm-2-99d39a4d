@@ -13,4 +13,7 @@ mitzuziehen. Dann bricht `npm ci` beim `mcc-update` ab.
 Vor jeder Änderung prüfen:
 `npm ci --dry-run --ignore-scripts >/dev/null 2>&1 || npm install --package-lock-only`
 (sowohl im Root als auch in `backend/`).
-`backend/deploy/update.sh` erkennt Drift zusätzlich still und weicht auf `npm install` aus.
+`backend/deploy/update.sh` muss vor jedem `npm ci` zwingend zuerst
+`npm install --package-lock-only --ignore-scripts` im temporären Build-Verzeichnis ausführen.
+Ein erwartbar unsynchrones `npm ci` darf niemals zuerst gestartet werden, damit auf dem Pi
+keine EUSAGE-Fehlerwand erscheint. Die Daten unter `/var/lib/mycleancenter` bleiben unberührt.
