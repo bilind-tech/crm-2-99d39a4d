@@ -1,52 +1,43 @@
-## Problem
+# Leistungseditor und PDF-Ausgabe zuverlässig reparieren
 
-Die Toolbar in `src/components/forms/LeistungsBeschreibung.tsx` schreibt Markdown-Marker (`**fett**`, `*kursiv*`, `__unterstrichen__`) direkt in den Text. Beide PDF-Renderer — `src/lib/pdf/belegPdf.ts` (`beschreibungBlock`, Zeile 162) und `backend/src/pdf/layout.ts` (`beschreibungBlock`, Zeile 34) — geben den Text jedoch unverändert als einfachen String an pdfmake weiter. Ergebnis: die Sterne stehen sichtbar in der PDF, nichts ist fett oder kursiv.
+## Ziel
+Leistungsbeschreibungen sollen beim Erstellen und späteren Bearbeiten von Angeboten/Rechnungen exakt in derselben Reihenfolge, mit denselben Zeilenumbrüchen und Formatierungen in Vorschau, gespeicherter PDF und erneut geöffnetem Editor erscheinen. Eingaben dürfen weder springen noch umsortiert werden.
 
-## Lösung
+## Umsetzung
 
-### 1. Gemeinsamer Inline-Parser
+1. **Leistungseditor stabilisieren**
+   - Den Rich-Text-Editor so überarbeiten, dass React-/Autosave-Aktualisierungen während des Tippens das DOM und damit Cursor oder Auswahl nicht neu aufbauen.
+   - `Enter`, Leerzeilen, Einfügen aus der Zwischenablage sowie Fett, Kursiv und Unterstrichen deterministisch zwischen Editor-Darstellung und gespeichertem Text umwandeln.
+   - Toolbar-Aktionen auf die aktuelle Auswahl anwenden und den Fokus zuverlässig im Textfeld behalten.
+   - Im PDF-Hotspot-Editor denselben Leistungseditor verwenden, damit Erstellen und Bearbeiten nicht zwei unterschiedliche Eingabeverhalten haben.
 
-Neues Modul `src/lib/pdf/inlineFormat.ts` mit einer Funktion, die eine Textzeile in pdfmake-Textfragmente zerlegt:
+2. **PDF-Zeilenreihenfolge korrigieren**
+   - Die aktuelle Gruppierung nach „Titel / normale Zeilen / Aufzählungen“ entfernen; sie verschiebt im Screenshot Adresse und Datum vor die Bulletpoints.
+   - Jede Eingabezeile in Originalreihenfolge rendern: normale Zeile, Aufzählung und Leerzeile bleiben an ihrer eingegebenen Position.
+   - Formatierungen innerhalb jeder Zeile in echte PDF-Formatierung übersetzen, ohne sichtbare Stern- oder Unterstrichmarker.
+   - Den identischen Algorithmus im Live-Renderer und im Raspberry-Pi-Backend verwenden, einschließlich sauberer Umbrüche über mehrere PDF-Seiten.
 
-- `**…**` → `{ text, bold: true }`
-- `__…__` → `{ text, decoration: "underline" }`
-- `*…*` / `_…_` → `{ text, italics: true }`
-- Kombinationen verschachtelt (z. B. `**_x_**`)
-- Ein zweites Export `plainText(text)` entfernt alle Marker — wird für Zeilenschätzung/vertikale Zentrierung und für Dateinamen/Vorschauen gebraucht.
+3. **Datenfluss und Autosave absichern**
+   - Positionen im PDF-Editor mit stabilen IDs weiterreichen, damit Vorschau-Neuberechnung und Server-Echos keine Texte überschreiben oder an den Anfang setzen.
+   - Speichern, Autosave, Verwerfen und erneutes Öffnen mit mehrzeiligen und formatierten Beschreibungen prüfen.
+   - Alte bereits gespeicherte Beschreibungen mit Markern weiterhin korrekt anzeigen und rendern.
 
-Wichtig: Der Bullet-Erkenner `^[•\-*]\s+` kollidiert mit dem Kursiv-Marker. Er wird auf `^[•\-]\s+` bzw. `^\*\s+` (Stern **mit** Leerzeichen danach) eingeschränkt, damit `*kursiv*` am Zeilenanfang nicht als Aufzählungspunkt gilt.
+4. **Gezielte Regressionstests ergänzen**
+   - Tests für exakt die Screenshot-Reihenfolge: Überschrift → vier Bulletpoints → Adresse → Datum.
+   - Roundtrip-Tests für `Enter`, Leerzeilen, Fett/Kursiv/Unterstrichen, gemischte Aufzählungen und kopierten Text.
+   - Frontend- und Backend-PDF-Parität sowie lange mehrseitige Leistungsbeschreibungen testen.
+   - Den Ablauf sowohl beim erstmaligen Erstellen als auch im PDF-Editor auf Desktop und Mobil prüfen.
 
-Da das Backend nicht aus `src/` importieren kann, wird der Parser 1:1 als `backend/src/pdf/inlineFormat.ts` gespiegelt (gleiche Datei-Inhalte, wie bereits bei `layout.ts` ↔ `belegPdf.ts` üblich).
+5. **PDF visuell prüfen**
+   - Eine Testrechnung mit dem Inhalt aus dem Screenshot erzeugen, PDF-Seiten in Bilder rendern und kritisch auf Reihenfolge, Formatierung, Abstände, Tabellenumbruch und abgeschnittene Inhalte prüfen.
+   - Gefundene Darstellungsfehler iterativ korrigieren und die betroffenen Seiten erneut kontrollieren.
 
-### 2. Renderer anpassen
+6. **`mcc-update` absichern**
+   - Root-`package-lock.json` an den aktuell deklarierten Paketstand synchronisieren; derzeit steht `package.json` auf `@lovable.dev/vite-tanstack-config` 2.9.1, die Lockfile noch auf 2.8.4.
+   - Frontend- und Backend-Installations-/Buildtests sowie relevante PDF-Tests ausführen.
+   - Den selbstheilenden temporären Lockfile-Abgleich in `backend/deploy/update.sh` beibehalten und einen Update-/Release-Smoke-Test durchführen, ohne `/var/lib/mycleancenter` anzufassen.
 
-In beiden `beschreibungBlock`-Funktionen werden Titelzeile, Fließzeilen und Bullet-Einträge statt `{ text: string }` als `{ text: [ …Fragmente ] }` erzeugt. Zusätzlich benutzen `beschreibungZeilenIntern` und `geschaetzteZeilen` den markerfreien Text, damit Umbruch- und Zentrierungs-Schätzung stimmen.
-
-Der gleiche Parser wird auch auf Intro-/Outro-Texte angewendet, damit Formatierung dort ebenfalls funktioniert statt Sterne zu zeigen.
-
-### 3. Eingabefeld ohne sichtbare Sterne
-
-`LeistungsBeschreibung` wird von `<textarea>` auf ein `contentEditable`-Feld umgestellt:
-
-- Anzeige gerendert (fett/kursiv/unterstrichen sichtbar, keine Marker)
-- Gespeichert wird weiterhin derselbe Markdown-String → Datenmodell, Backend, Migrationen und bestehende Datensätze bleiben unverändert
-- Toolbar-Buttons und Cmd/Ctrl+B/I/U wirken auf die Auswahl (via `document.execCommand` mit HTML→Markdown-Serialisierung beim Change)
-- Auto-Resize, Bullet-Button und Platzhalter bleiben erhalten
-- Einfügen aus der Zwischenablage wird als Plaintext übernommen
-
-Damit sind die Sterne nirgends mehr sichtbar — weder im Formular noch in der PDF.
-
-### 4. Update-Sicherheit
-
-Vor dem Abschluss: `package-lock.json` (Root) und `backend/package-lock.json` gegen die jeweilige `package.json` mit `npm install --package-lock-only` synchronisieren und `npm ci --dry-run` in beiden Verzeichnissen prüfen, damit `mcc-update` fehlerfrei durchläuft. Keine neuen Abhängigkeiten — der Parser ist eigener Code.
-
-## Technische Details
-
-Betroffene Dateien:
-- neu: `src/lib/pdf/inlineFormat.ts`, `backend/src/pdf/inlineFormat.ts`
-- `src/lib/pdf/belegPdf.ts` (`beschreibungBlock`, `beschreibungZeilenIntern`, `geschaetzteZeilen`, Intro/Outro)
-- `backend/src/pdf/layout.ts` (gleiche Stellen)
-- `src/components/forms/LeistungsBeschreibung.tsx` (WYSIWYG-Umbau)
-- Lockfiles falls Drift
-
-Kein Datenbank-Migrationsbedarf, keine API-Änderung.
+## Technische Leitplanken
+- Bestehendes Markdown-kompatibles Speicherformat bleibt abwärtskompatibel; sichtbare Marker erscheinen weder im Editor noch in PDFs.
+- Frontend- und Backend-Renderer bleiben funktional identisch.
+- Keine Änderung an Kundendaten, Belegen oder dem Datenverzeichnis; geändert werden nur Editor-, PDF-, Test- und Builddateien.
