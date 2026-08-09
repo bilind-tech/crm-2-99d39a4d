@@ -103,7 +103,7 @@ export function LeistungsBeschreibung({
     }
     if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
-      insertTextAtSelection("\n");
+      document.execCommand("insertLineBreak");
       emit();
     }
   }
@@ -111,7 +111,7 @@ export function LeistungsBeschreibung({
   function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
-    insertTextAtSelection(text.replace(/\r\n?/g, "\n"));
+    document.execCommand("insertText", false, text.replace(/\r\n?/g, "\n"));
     emit();
   }
 
@@ -119,7 +119,7 @@ export function LeistungsBeschreibung({
     const el = ref.current;
     if (!el) return;
     el.focus();
-    insertTextAtSelection("• ");
+    document.execCommand("insertText", false, "• ");
     emit();
   }
 
@@ -279,18 +279,3 @@ function ToolbarBtn({
   );
 }
 
-function insertTextAtSelection(text: string) {
-  const selection = window.getSelection();
-  if (!selection || selection.rangeCount === 0) return;
-  const range = selection.getRangeAt(0);
-  range.deleteContents();
-  // Mit whitespace-pre-wrap sind echte \n-Textknoten stabiler als <br>:
-  // Der Cursor bleibt auch direkt nach Enter auf der neuen Zeile und der
-  // gespeicherte Wert entspricht exakt der sichtbaren Eingabe.
-  const node = document.createTextNode(text.replace(/\n/g, "\n\u200b"));
-  range.insertNode(node);
-  range.setStart(node, node.data.length);
-  range.collapse(true);
-  selection.removeAllRanges();
-  selection.addRange(range);
-}
