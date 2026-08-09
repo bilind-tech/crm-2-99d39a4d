@@ -287,7 +287,7 @@ function insertTextAtSelection(text: string) {
   // Mit whitespace-pre-wrap sind echte \n-Textknoten stabiler als <br>:
   // Der Cursor bleibt auch direkt nach Enter auf der neuen Zeile und der
   // gespeicherte Wert entspricht exakt der sichtbaren Eingabe.
-  const node = document.createTextNode(text);
+  const node = document.createTextNode(text.replace(/\n/g, "\n\u200b"));
   range.insertNode(node);
   range.setStart(node, node.data.length);
   range.collapse(true);
