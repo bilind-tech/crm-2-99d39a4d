@@ -186,7 +186,7 @@ function insertParagraphBreak(root: HTMLDivElement | null) {
   const nextLine = document.createElement("div");
   nextLine.append(tail);
   if (!nextLine.hasChildNodes()) nextLine.append(document.createElement("br"));
-  line.after(nextLine);
+  line.parentNode?.insertBefore(nextLine, line.nextSibling);
 
   const caretRange = document.createRange();
   caretRange.setStart(nextLine, 0);
