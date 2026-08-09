@@ -193,7 +193,7 @@ function htmlToMarkdown(root: HTMLElement): string {
   // Keine Leerzeilen oder abschließenden Zeilenumbrüche weg-normalisieren:
   // Sie gehören zum aktuellen Bearbeitungszustand und müssen einen
   // Parent-Rerender unverändert überstehen.
-  return out.replace(/\u00a0/g, " ").replace(/\r\n?/g, "\n");
+  return out.replace(/[\u200b\ufeff]/g, "").replace(/\u00a0/g, " ").replace(/\r\n?/g, "\n");
 }
 
 interface Marks {
@@ -291,7 +291,12 @@ function insertTextAtSelection(text: string) {
     if (index > 0) {
       const br = document.createElement("br");
       fragment.appendChild(br);
-      lastNode = br;
+      // Ein unsichtbarer Anker hinter <br> hält den Cursor auch in Safari/
+      // Chromium zuverlässig auf der neuen Zeile. Beim Speichern wird er
+      // in htmlToMarkdown wieder entfernt.
+      const caretAnchor = document.createTextNode("\u200b");
+      fragment.appendChild(caretAnchor);
+      lastNode = caretAnchor;
     }
     if (part) {
       const node = document.createTextNode(part);
