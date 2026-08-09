@@ -103,7 +103,7 @@ export function LeistungsBeschreibung({
     }
     if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.altKey) {
       e.preventDefault();
-      document.execCommand("insertLineBreak");
+      insertStableLineBreak();
       emit();
     }
   }
@@ -166,6 +166,26 @@ export function LeistungsBeschreibung({
       />
     </div>
   );
+}
+
+function insertStableLineBreak() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+
+  const br = document.createElement("br");
+  const caretAnchor = document.createTextNode("\u200b");
+  const fragment = document.createDocumentFragment();
+  fragment.append(br, caretAnchor);
+  range.insertNode(fragment);
+
+  // Innerhalb des Ankers positionieren (nicht nur dahinter). So fügt der
+  // Browser das nächste Zeichen garantiert nach dem Zeilenumbruch ein.
+  range.setStart(caretAnchor, caretAnchor.data.length);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 /** Markdown → HTML für die Anzeige im contentEditable. */
