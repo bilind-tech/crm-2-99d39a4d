@@ -81,7 +81,7 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
 
       <Section label="Empfänger" feldId="kunde">
         <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm">
-          {(manuell ? (o?.empfaengerZeilen ?? []) : autoZeilen).map((zeile, i) => (
+          {(manuell ? (o?.empfaengerZeilen ?? []) : autoZeilen).map((zeile: string, i: number) => (
             <p key={i} className={i === 0 ? "font-medium" : "mt-0.5 text-xs text-muted-foreground"}>
               {zeile || "\u00a0"}
             </p>
@@ -316,6 +316,32 @@ function SwitchRow({
 }
 
 /** Spiegelt die Anrede-Logik der PDF-Renderer für die Vorschau im Editor. */
+/** Spiegelt den automatischen Empfängerblock der PDF-Renderer. */
+function empfaengerZeilenAuto(
+  k: Kunde,
+  ap: Ansprechpartner | undefined,
+  o: Objekt | null,
+  zeigeObjektname: boolean,
+  zeigeAnsprechpartner: boolean,
+): string[] {
+  const lines: string[] = [];
+  if (k.firmenname) lines.push(k.firmenname);
+  const apPerson =
+    ap && zeigeAnsprechpartner ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim() : "";
+  const person = apPerson || [k.vorname, k.nachname].filter(Boolean).join(" ");
+  if (person && (zeigeAnsprechpartner || !k.firmenname)) lines.push(person);
+  if (o?.name && zeigeObjektname) lines.push(o.name);
+  const strasse = o?.strasse || k.strasse || "";
+  const plz = o?.plz || k.plz || "";
+  const ort = o?.ort || k.ort || "";
+  if (strasse) lines.push(strasse);
+  const plzOrt = [plz, ort].filter(Boolean).join(" ");
+  if (plzOrt) lines.push(plzOrt);
+  const land = o?.land || k.land;
+  if (land && land !== "Deutschland") lines.push(land);
+  return lines;
+}
+
 function automatischeAnrede(k: Kunde, ap: Ansprechpartner | undefined, zeigeAp: boolean): string {
   if (ap && zeigeAp) {
     const name = ap.nachname?.trim() || "";
