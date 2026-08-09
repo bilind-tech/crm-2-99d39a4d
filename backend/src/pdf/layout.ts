@@ -5,7 +5,7 @@ import type { ApiPosition, ApiAngebot, ApiRechnung } from "../belege/mappers.js"
 import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.js";
 import type { FirmaForPdf } from "./types.js";
 import { DEFAULT_FONT } from "./printer.js";
-import { inlineText, plainText, bulletMatch } from "./inlineFormat.js";
+import { descriptionLines, inlineText, plainText } from "./inlineFormat.js";
 
 const COLOR_TEXT = "#000000";
 const COLOR_MUTED = "#555555";
@@ -33,27 +33,17 @@ export function totals(positionen: ApiPosition[], rabattGesamt: number, steuersa
 }
 
 function beschreibungBlock(text: string): unknown {
-  const zeilen = (text || "").split("\n");
-  const items: unknown[] = [];
-  const bullets: string[] = [];
-  const plainLines: string[] = [];
-  let titel: string | null = null;
-  for (const z of zeilen) {
-    const t = z.trim();
-    if (!t) continue;
-    const bm = bulletMatch(t);
-    if (bm !== null) bullets.push(bm);
-    else if (!titel) titel = t;
-    else plainLines.push(t);
-  }
-  if (titel) items.push({ text: inlineText(titel), fontSize: 10, margin: [0, 0, 0, 2] });
-  for (const line of plainLines) {
-    items.push({ text: inlineText(line), fontSize: 10, margin: [0, 0, 0, 0] });
-  }
-  if (bullets.length > 0) {
-    items.push({ ul: bullets.map((b) => ({ text: inlineText(b), fontSize: 10 })), margin: [0, 0, 0, 0] });
-  }
-  if (items.length === 0) items.push({ text: inlineText(text || ""), fontSize: 10 });
+  const items = descriptionLines(text).map((line) => {
+    if (line.kind === "blank") return { text: " ", fontSize: 5, lineHeight: 1 };
+    if (line.kind === "bullet") {
+      return { ul: [{ text: inlineText(line.text), fontSize: 10 }], margin: [0, 0, 0, 0] };
+    }
+    return {
+      text: inlineText(line.text),
+      fontSize: 10,
+      margin: [0, 0, 0, line.first ? 2 : 0],
+    };
+  });
   return { stack: items };
 }
 

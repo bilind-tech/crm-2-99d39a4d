@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 import { Bold, Italic, List, Underline } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
   withToolbar?: boolean;
   className?: string;
   id?: string;
+  autoFocus?: boolean;
 }
 
 const LINE_HEIGHT_PX = 22; // entspricht text-sm + leading-relaxed
@@ -34,6 +36,7 @@ export function LeistungsBeschreibung({
   withToolbar = false,
   className,
   id,
+  autoFocus = false,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string>("");
@@ -42,10 +45,14 @@ export function LeistungsBeschreibung({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (value === lastEmitted.current) return;
+    if (value === lastEmitted.current || document.activeElement === el) return;
     el.innerHTML = markdownToHtml(value);
     lastEmitted.current = value;
   }, [value]);
+
+  useEffect(() => {
+    if (autoFocus) requestAnimationFrame(() => ref.current?.focus());
+  }, [autoFocus]);
 
   // Auto-Resize
   useEffect(() => {
@@ -59,12 +66,23 @@ export function LeistungsBeschreibung({
     el.style.overflowY = scroll > max ? "auto" : "hidden";
   }, [value, minRows, maxRows]);
 
+  function resize() {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const min = minRows * LINE_HEIGHT_PX + 16;
+    const max = maxRows * LINE_HEIGHT_PX + 16;
+    el.style.height = `${Math.max(min, Math.min(max, el.scrollHeight + 2))}px`;
+    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
+  }
+
   function emit() {
     const el = ref.current;
     if (!el) return;
     const md = htmlToMarkdown(el);
     lastEmitted.current = md;
     onChange(md);
+    resize();
   }
 
   function exec(command: "bold" | "italic" | "underline") {
@@ -83,12 +101,17 @@ export function LeistungsBeschreibung({
         exec(k === "b" ? "bold" : k === "i" ? "italic" : "underline");
       }
     }
+    if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      insertTextAtSelection("\n");
+      emit();
+    }
   }
 
   function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text);
+    insertTextAtSelection(text.replace(/\r\n?/g, "\n"));
     emit();
   }
 
@@ -96,7 +119,7 @@ export function LeistungsBeschreibung({
     const el = ref.current;
     if (!el) return;
     el.focus();
-    document.execCommand("insertText", false, "• ");
+    insertTextAtSelection("• ");
     emit();
   }
 
@@ -239,14 +262,43 @@ function ToolbarBtn({
   title: string;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      size="icon"
+      variant="outline"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       title={title}
-      className="pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background/95 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground"
+      className="pointer-events-auto h-7 w-7 text-muted-foreground hover:text-foreground"
     >
       {children}
-    </button>
+    </Button>
   );
+}
+
+function insertTextAtSelection(text: string) {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+  const fragment = document.createDocumentFragment();
+  const parts = text.split("\n");
+  let lastNode: Node | null = null;
+  parts.forEach((part, index) => {
+    if (index > 0) {
+      const br = document.createElement("br");
+      fragment.appendChild(br);
+      lastNode = br;
+    }
+    if (part) {
+      const node = document.createTextNode(part);
+      fragment.appendChild(node);
+      lastNode = node;
+    }
+  });
+  range.insertNode(fragment);
+  if (lastNode) range.setStartAfter(lastNode);
+  range.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
