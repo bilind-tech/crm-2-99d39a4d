@@ -58,7 +58,7 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
       <Section label="Objekt" feldId="objekt">
         <Select
           value={draft.objektId ?? "__none__"}
-          onValueChange={(v) => set("objektId", v === "__none__" ? undefined : v)}
+          onValueChange={(v) => set("objektId", v === "__none__" ? null : v)}
         >
           <SelectTrigger>
             <SelectValue placeholder="— ohne Objekt —" />
