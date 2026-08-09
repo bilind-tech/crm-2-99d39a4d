@@ -284,28 +284,12 @@ function insertTextAtSelection(text: string) {
   if (!selection || selection.rangeCount === 0) return;
   const range = selection.getRangeAt(0);
   range.deleteContents();
-  const fragment = document.createDocumentFragment();
-  const parts = text.split("\n");
-  let lastNode: Node | null = null;
-  parts.forEach((part, index) => {
-    if (index > 0) {
-      const br = document.createElement("br");
-      fragment.appendChild(br);
-      // Ein unsichtbarer Anker hinter <br> hält den Cursor auch in Safari/
-      // Chromium zuverlässig auf der neuen Zeile. Beim Speichern wird er
-      // in htmlToMarkdown wieder entfernt.
-      const caretAnchor = document.createTextNode("\u200b");
-      fragment.appendChild(caretAnchor);
-      lastNode = caretAnchor;
-    }
-    if (part) {
-      const node = document.createTextNode(part);
-      fragment.appendChild(node);
-      lastNode = node;
-    }
-  });
-  range.insertNode(fragment);
-  if (lastNode) range.setStartAfter(lastNode);
+  // Mit whitespace-pre-wrap sind echte \n-Textknoten stabiler als <br>:
+  // Der Cursor bleibt auch direkt nach Enter auf der neuen Zeile und der
+  // gespeicherte Wert entspricht exakt der sichtbaren Eingabe.
+  const node = document.createTextNode(text);
+  range.insertNode(node);
+  range.setStart(node, node.data.length);
   range.collapse(true);
   selection.removeAllRanges();
   selection.addRange(range);
