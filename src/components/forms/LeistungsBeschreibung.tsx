@@ -101,6 +101,11 @@ export function LeistungsBeschreibung({
         exec(k === "b" ? "bold" : k === "i" ? "italic" : "underline");
       }
     }
+    if (e.key === "Enter" && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      insertParagraphBreak(ref.current);
+      emit();
+    }
   }
 
   function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
@@ -161,6 +166,33 @@ export function LeistungsBeschreibung({
       />
     </div>
   );
+}
+
+function insertParagraphBreak(root: HTMLDivElement | null) {
+  if (!root) return;
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  const range = selection.getRangeAt(0);
+  range.deleteContents();
+
+  // Ein eigener Block ist browserübergreifend stabiler als ein nacktes <br>.
+  // extractContents übernimmt alles rechts vom Cursor in die neue Zeile.
+  let line: Node = range.startContainer;
+  while (line.parentNode && line.parentNode !== root) line = line.parentNode;
+  const tailRange = document.createRange();
+  tailRange.setStart(range.startContainer, range.startOffset);
+  tailRange.setEndAfter(line);
+  const tail = tailRange.extractContents();
+  const nextLine = document.createElement("div");
+  nextLine.append(tail);
+  if (!nextLine.hasChildNodes()) nextLine.append(document.createElement("br"));
+  line.after(nextLine);
+
+  const caretRange = document.createRange();
+  caretRange.setStart(nextLine, 0);
+  caretRange.collapse(true);
+  selection.removeAllRanges();
+  selection.addRange(caretRange);
 }
 
 
