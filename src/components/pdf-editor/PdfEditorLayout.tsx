@@ -16,6 +16,7 @@ import { EditorPanel, type EditorTab } from "./EditorPanel";
 import { HotspotInlineEditor } from "./HotspotInlineEditor";
 import type { RowAction, TableAction } from "./PdfFieldOverlay";
 import { useBelegEditor } from "@/hooks/useBelegEditor";
+import { useObjekte } from "@/hooks/useApi";
 import { metaForId } from "@/lib/pdf/fieldMap";
 import type {
   Angebot,
@@ -58,7 +59,7 @@ export function PdfEditorLayout(props: Props) {
   // Objektwechsel im Editor sofort in der Vorschau berücksichtigen.
   const { data: objekteDesKunden = [] } = useObjekte(kunde.id);
   const aktivesObjekt: Objekt | null = draft.objektId
-    ? (objekteDesKunden.find((o) => o.id === draft.objektId) ??
+    ? ((objekteDesKunden as Objekt[]).find((o) => o.id === draft.objektId) ??
        (objekt && objekt.id === draft.objektId ? objekt : null))
     : null;
 
