@@ -2,6 +2,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { AnsprechpartnerPicker } from "@/components/forms/AnsprechpartnerPicker";
 import {
   Select,
@@ -10,8 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useVertraege, useObjekt, useKunde } from "@/hooks/useApi";
-import type { Angebot, Rechnung, Kunde, BelegOptionen, Ansprechpartner } from "@/lib/api/types";
+import { useVertraege, useObjekt, useKunde, useObjekte } from "@/hooks/useApi";
+import type {
+  Angebot,
+  Rechnung,
+  Kunde,
+  BelegOptionen,
+  Ansprechpartner,
+  Objekt,
+} from "@/lib/api/types";
 
 interface Props {
   kind: "angebot" | "rechnung";
@@ -27,6 +35,7 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
   const { data: vertraege = [] } = useVertraege(kind === "rechnung" ? kunde.id : "");
   const { data: objekt } = useObjekt(draft.objektId ?? "");
   const { data: kundeVoll } = useKunde(kunde.id);
+  const { data: objekte = [] } = useObjekte(kunde.id);
   const o = draft.optionen;
   const zeigeAp = o?.ansprechpartnerImEmpfaenger ?? true;
   const zeigeObjekt = o?.objektnameImEmpfaenger ?? true;
@@ -34,40 +43,105 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
     (a) => a.id === draft.ansprechpartnerId,
   );
   const autoAnrede = automatischeAnrede(kunde, ansprechpartner, zeigeAp);
+  const aktivesObjekt: Objekt | null =
+    (objekte as Objekt[]).find((x) => x.id === draft.objektId) ?? objekt ?? null;
+  const autoZeilen = empfaengerZeilenAuto(
+    kundeVoll ?? kunde,
+    ansprechpartner,
+    aktivesObjekt,
+    zeigeObjekt,
+    zeigeAp,
+  );
+  const manuell = Array.isArray(o?.empfaengerZeilen);
   return (
     <div className="space-y-5">
+      <Section label="Objekt" feldId="objekt">
+        <Select
+          value={draft.objektId ?? "__none__"}
+          onValueChange={(v) => set("objektId", v === "__none__" ? null : v)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="— ohne Objekt —" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__none__">— ohne Objekt —</SelectItem>
+            {(objekte as Objekt[]).map((x) => (
+              <SelectItem key={x.id} value={x.id}>
+                {x.name || "Objekt"}
+                {x.ort ? ` · ${x.ort}` : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <p className="text-[11px] text-muted-foreground">
+          Ordnet diesen Beleg einem Objekt zu. Die Objektadresse wird dann im Empfängerblock
+          verwendet.
+        </p>
+      </Section>
+
       <Section label="Empfänger" feldId="kunde">
         <div className="rounded-lg border border-border bg-muted/20 p-3 text-sm">
-          <p className="font-medium">
-            {kunde.firmenname || `${kunde.vorname ?? ""} ${kunde.nachname ?? ""}`.trim() || "—"}
-          </p>
-          {objekt?.name && zeigeObjekt && (
-            <p className="mt-0.5 text-xs text-muted-foreground">{objekt.name}</p>
-          )}
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {[kunde.strasse, [kunde.plz, kunde.ort].filter(Boolean).join(" ")]
-              .filter(Boolean)
-              .join(", ") || "Keine Adresse hinterlegt"}
-          </p>
+          {(manuell ? (o?.empfaengerZeilen ?? []) : autoZeilen).map((zeile: string, i: number) => (
+            <p key={i} className={i === 0 ? "font-medium" : "mt-0.5 text-xs text-muted-foreground"}>
+              {zeile || "\u00a0"}
+            </p>
+          ))}
           <p className="mt-1 text-[11px] text-muted-foreground">
-            Zum Ändern: Kundenstammdaten bearbeiten.
+            {manuell
+              ? "Manueller Empfängerblock aktiv — genau diese Zeilen erscheinen im PDF."
+              : "Automatisch aus Kunde, Ansprechpartner und Objekt."}
           </p>
         </div>
 
         <div className="mt-3 space-y-3 rounded-lg border border-border p-3">
+          {!manuell && (
+            <>
+              <SwitchRow
+                checked={zeigeAp}
+                onChange={(v) => setOption("ansprechpartnerImEmpfaenger", v)}
+                label="Ansprechpartner im Empfängerblock anzeigen"
+                hint="Aus = die Namenszeile des Ansprechpartners entfällt oben links; Kundenname und Adresse bleiben."
+              />
+              {aktivesObjekt?.name && (
+                <SwitchRow
+                  checked={zeigeObjekt}
+                  onChange={(v) => setOption("objektnameImEmpfaenger", v)}
+                  label="Objektname im Empfängerblock anzeigen"
+                  hint={`Zeigt „${aktivesObjekt.name}" oben links zwischen Kundenname und Adresse.`}
+                />
+              )}
+            </>
+          )}
           <SwitchRow
-            checked={zeigeAp}
-            onChange={(v) => setOption("ansprechpartnerImEmpfaenger", v)}
-            label="Ansprechpartner im Empfängerblock anzeigen"
-            hint="Aus = die Namenszeile des Ansprechpartners entfällt oben links; Kundenname und Adresse bleiben."
+            checked={manuell}
+            onChange={(v) => setOption("empfaengerZeilen", v ? autoZeilen : undefined)}
+            label="Empfängerblock manuell schreiben"
+            hint="An = jede Zeile frei bearbeitbar (Objektname, Ansprechpartner, Adresse, eigene Zeilen)."
           />
-          {objekt?.name && (
-            <SwitchRow
-              checked={zeigeObjekt}
-              onChange={(v) => setOption("objektnameImEmpfaenger", v)}
-              label="Objektname im Empfängerblock anzeigen"
-              hint={`Zeigt „${objekt.name}" oben links zwischen Kundenname und Adresse. Aus = nur Kundenname und Adresse.`}
-            />
+          {manuell && (
+            <div className="space-y-2">
+              <Textarea
+                rows={7}
+                value={(o?.empfaengerZeilen ?? []).join("\n")}
+                onChange={(e) => setOption("empfaengerZeilen", e.target.value.split("\n"))}
+                placeholder={autoZeilen.join("\n")}
+                className="font-mono text-xs"
+              />
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] text-muted-foreground">
+                  Eine Zeile pro PDF-Zeile. Leere Zeilen bleiben als Abstand erhalten.
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="shrink-0"
+                  onClick={() => setOption("empfaengerZeilen", autoZeilen)}
+                >
+                  Auf Automatik zurücksetzen
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </Section>
@@ -242,6 +316,32 @@ function SwitchRow({
 }
 
 /** Spiegelt die Anrede-Logik der PDF-Renderer für die Vorschau im Editor. */
+/** Spiegelt den automatischen Empfängerblock der PDF-Renderer. */
+function empfaengerZeilenAuto(
+  k: Kunde,
+  ap: Ansprechpartner | undefined,
+  o: Objekt | null,
+  zeigeObjektname: boolean,
+  zeigeAnsprechpartner: boolean,
+): string[] {
+  const lines: string[] = [];
+  if (k.firmenname) lines.push(k.firmenname);
+  const apPerson =
+    ap && zeigeAnsprechpartner ? [ap.vorname, ap.nachname].filter(Boolean).join(" ").trim() : "";
+  const person = apPerson || [k.vorname, k.nachname].filter(Boolean).join(" ");
+  if (person && (zeigeAnsprechpartner || !k.firmenname)) lines.push(person);
+  if (o?.name && zeigeObjektname) lines.push(o.name);
+  const strasse = o?.strasse || k.strasse || "";
+  const plz = o?.plz || k.plz || "";
+  const ort = o?.ort || k.ort || "";
+  if (strasse) lines.push(strasse);
+  const plzOrt = [plz, ort].filter(Boolean).join(" ");
+  if (plzOrt) lines.push(plzOrt);
+  const land = o?.land || k.land;
+  if (land && land !== "Deutschland") lines.push(land);
+  return lines;
+}
+
 function automatischeAnrede(k: Kunde, ap: Ansprechpartner | undefined, zeigeAp: boolean): string {
   if (ap && zeigeAp) {
     const name = ap.nachname?.trim() || "";

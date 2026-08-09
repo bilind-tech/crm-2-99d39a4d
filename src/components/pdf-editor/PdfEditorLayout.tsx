@@ -16,6 +16,7 @@ import { EditorPanel, type EditorTab } from "./EditorPanel";
 import { HotspotInlineEditor } from "./HotspotInlineEditor";
 import type { RowAction, TableAction } from "./PdfFieldOverlay";
 import { useBelegEditor } from "@/hooks/useBelegEditor";
+import { useObjekte } from "@/hooks/useApi";
 import { metaForId } from "@/lib/pdf/fieldMap";
 import type {
   Angebot,
@@ -55,6 +56,12 @@ export function PdfEditorLayout(props: Props) {
 
   const titlePrefix = kind === "angebot" ? "Angebot" : "Rechnung";
   const draft = editor.draft;
+  // Objektwechsel im Editor sofort in der Vorschau berücksichtigen.
+  const { data: objekteDesKunden = [] } = useObjekte(kunde.id);
+  const aktivesObjekt: Objekt | null = draft.objektId
+    ? ((objekteDesKunden as Objekt[]).find((o) => o.id === draft.objektId) ??
+       (objekt && objekt.id === draft.objektId ? objekt : null))
+    : null;
 
   const renderEditor = (fieldId: string, close: () => void) => (
     <HotspotInlineEditor
@@ -102,7 +109,7 @@ export function PdfEditorLayout(props: Props) {
       kunde={kunde}
       firma={firma}
       ansprechpartner={ansprechpartner}
-      objekt={objekt ?? null}
+      objekt={aktivesObjekt}
       renderEditor={renderEditor}
       rowActions={rowActions}
       tableActions={tableActions}
