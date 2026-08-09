@@ -11,6 +11,11 @@ export interface InlineFragment {
   decoration?: "underline";
 }
 
+export type DescriptionLine =
+  | { kind: "text"; text: string; first: boolean }
+  | { kind: "bullet"; text: string }
+  | { kind: "blank" };
+
 interface Style {
   bold: boolean;
   italics: boolean;
@@ -136,4 +141,18 @@ function mergeFragments(fragments: InlineFragment[]): InlineFragment[] {
 export function bulletMatch(line: string): string | null {
   const m = line.match(/^(?:[•\u2022\-–]|\*(?=\s))\s+(.*)$/);
   return m ? m[1] : null;
+}
+
+/** Behält Zeilen, Leerzeilen und Aufzählungen exakt in Eingabereihenfolge. */
+export function descriptionLines(text: string): DescriptionLine[] {
+  const lines = (text ?? "").replace(/\r\n?/g, "\n").split("\n");
+  let firstText = true;
+  return lines.map((line) => {
+    if (!line.trim()) return { kind: "blank" };
+    const bullet = bulletMatch(line.trim());
+    if (bullet !== null) return { kind: "bullet", text: bullet };
+    const result: DescriptionLine = { kind: "text", text: line, first: firstText };
+    firstText = false;
+    return result;
+  });
 }

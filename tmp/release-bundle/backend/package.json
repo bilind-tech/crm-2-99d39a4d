@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "start": "node --enable-source-maps dist/server.js",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node -e \"const fs=require('fs'),path=require('path');const s=path.join('src','db','migrations'),d=path.join('dist','db','migrations');fs.mkdirSync(d,{recursive:true});for(const f of fs.readdirSync(s))if(f.endsWith('.sql'))fs.copyFileSync(path.join(s,f),path.join(d,f));console.log('Migrations copied:',fs.readdirSync(d).length);const fs2=path.join('src','pdf','fonts'),fd=path.join('dist','pdf','fonts');if(fs.existsSync(fs2)){fs.mkdirSync(fd,{recursive:true});for(const f of fs.readdirSync(fs2))fs.copyFileSync(path.join(fs2,f),path.join(fd,f));console.log('Fonts copied:',fs.readdirSync(fd).length);}const as=path.join('src','pdf','assets'),ad=path.join('dist','pdf','assets');if(fs.existsSync(as)){fs.mkdirSync(ad,{recursive:true});for(const f of fs.readdirSync(as))fs.copyFileSync(path.join(as,f),path.join(ad,f));console.log('PDF assets copied:',fs.readdirSync(ad).length);}\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -26,6 +26,7 @@
     "better-sqlite3": "^11.3.0",
     "fastify": "^4.28.1",
     "googleapis": "^171.4.0",
+    "imapflow": "^1.3.3",
     "node-cron": "^4.2.1",
     "nodemailer": "^8.0.7",
     "pdfmake": "^0.2.10",
@@ -43,8 +44,11 @@
     "@types/tar": "^7.0.87",
     "@types/unzipper": "^0.10.11",
     "jszip": "^3.10.1",
-    "tsx": "^4.19.0",
+    "tsx": "4.20.6",
     "typescript": "^5.5.4",
     "vitest": "^2.1.0"
+  },
+  "optionalDependencies": {
+    "@node-rs/argon2-linux-arm64-gnu": "^1.8.3"
   }
 }

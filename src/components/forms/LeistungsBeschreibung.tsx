@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ClipboardEvent, type KeyboardEvent } from "react";
 import { Bold, Italic, List, Underline } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -14,6 +15,7 @@ interface Props {
   withToolbar?: boolean;
   className?: string;
   id?: string;
+  autoFocus?: boolean;
 }
 
 const LINE_HEIGHT_PX = 22; // entspricht text-sm + leading-relaxed
@@ -34,6 +36,7 @@ export function LeistungsBeschreibung({
   withToolbar = false,
   className,
   id,
+  autoFocus = false,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string>("");
@@ -42,10 +45,14 @@ export function LeistungsBeschreibung({
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (value === lastEmitted.current) return;
+    if (value === lastEmitted.current || document.activeElement === el) return;
     el.innerHTML = markdownToHtml(value);
     lastEmitted.current = value;
   }, [value]);
+
+  useEffect(() => {
+    if (autoFocus) requestAnimationFrame(() => ref.current?.focus());
+  }, [autoFocus]);
 
   // Auto-Resize
   useEffect(() => {
@@ -59,12 +66,23 @@ export function LeistungsBeschreibung({
     el.style.overflowY = scroll > max ? "auto" : "hidden";
   }, [value, minRows, maxRows]);
 
+  function resize() {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const min = minRows * LINE_HEIGHT_PX + 16;
+    const max = maxRows * LINE_HEIGHT_PX + 16;
+    el.style.height = `${Math.max(min, Math.min(max, el.scrollHeight + 2))}px`;
+    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
+  }
+
   function emit() {
     const el = ref.current;
     if (!el) return;
     const md = htmlToMarkdown(el);
     lastEmitted.current = md;
     onChange(md);
+    resize();
   }
 
   function exec(command: "bold" | "italic" | "underline") {
@@ -88,7 +106,7 @@ export function LeistungsBeschreibung({
   function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text);
+    document.execCommand("insertText", false, text.replace(/\r\n?/g, "\n"));
     emit();
   }
 
@@ -167,7 +185,10 @@ function htmlToMarkdown(root: HTMLElement): string {
     italic: false,
     underline: false,
   });
-  return out.replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n").trimEnd();
+  // Keine Leerzeilen oder abschließenden Zeilenumbrüche weg-normalisieren:
+  // Sie gehören zum aktuellen Bearbeitungszustand und müssen einen
+  // Parent-Rerender unverändert überstehen.
+  return out.replace(/[\u200b\ufeff]/g, "").replace(/\u00a0/g, " ").replace(/\r\n?/g, "\n");
 }
 
 interface Marks {
@@ -239,14 +260,17 @@ function ToolbarBtn({
   title: string;
 }) {
   return (
-    <button
+    <Button
       type="button"
+      size="icon"
+      variant="outline"
       onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       title={title}
-      className="pointer-events-auto inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-background/95 text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground"
+      className="pointer-events-auto h-7 w-7 text-muted-foreground hover:text-foreground"
     >
       {children}
-    </button>
+    </Button>
   );
 }
+

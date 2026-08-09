@@ -8,6 +8,7 @@ import { ArrowDown, ArrowUp, Copy, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { LeistungsBeschreibung } from "@/components/forms/LeistungsBeschreibung";
 import type { Angebot, Rechnung, Position } from "@/lib/api/types";
 import { metaForId } from "@/lib/pdf/fieldMap";
 import type { RowAction } from "./PdfFieldOverlay";
@@ -384,13 +385,14 @@ function PositionRowEditor({
                 : "1fr 80px 70px 110px",
         }}
       >
-        <Textarea
-          ref={firstRef as React.RefObject<HTMLTextAreaElement>}
+        <LeistungsBeschreibung
           value={pos.beschreibung}
-          onChange={(e) => updatePos({ beschreibung: e.target.value })}
-          rows={3}
+          onChange={(value) => updatePos({ beschreibung: value })}
+          minRows={3}
+          maxRows={12}
+          withToolbar
+          autoFocus
           placeholder="Beschreibung der Leistung"
-          className="resize-none text-sm"
         />
         {pos.modus === "pauschal" ? (
           <>
