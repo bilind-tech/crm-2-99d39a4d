@@ -10,12 +10,22 @@ User=mycleancenter
 Group=mycleancenter
 WorkingDirectory=/opt/mycleancenter/current/backend
 Environment=NODE_ENV=production
+Environment=TZ=Europe/Berlin
 Environment=DATA_DIR=/var/lib/mycleancenter
 Environment=PORT=8787
 Environment=HOST=0.0.0.0
-# CORS muss in Production explizit gesetzt werden — kommagetrennte Liste der erlaubten Origins.
-# Beispiel: http://mycleancenter.local,https://mycleancenter.local
-Environment=CORS_ORIGINS=http://mycleancenter.local,http://mycleancenter.local:80
+Environment=FRONTEND_DIR=/opt/mycleancenter/current/dist
+# CORS: Frontend und Backend laufen auf demselben Port → Same-Origin.
+# Damit Zugriff per LAN-IP, Hostname und mDNS gleichermaßen funktioniert,
+# erlauben wir hier alle Origins. Echte Sicherheit kommt aus Cookie-Auth +
+# Lockout, nicht aus CORS.
+Environment=CORS_ORIGINS=*
+# Cookies dürfen NICHT als Secure laufen, solange im LAN per HTTP zugegriffen
+# wird — sonst sendet der Browser sie nicht zurück und Logins wirken kaputt.
+Environment=COOKIE_SECURE=false
+# Google-OAuth-Redirect: Google erlaubt http:// OAuth nur über localhost/127.0.0.1.
+# Exakt diese URI in der Google Cloud Console eintragen.
+Environment=GOOGLE_OAUTH_REDIRECT=http://localhost:8787/einstellungen/google-drive/callback
 ExecStart=/usr/bin/node dist/server.js
 Restart=on-failure
 RestartSec=3
@@ -25,7 +35,7 @@ SyslogIdentifier=mycleancenter
 
 # Sicherheits-Hardening
 ProtectSystem=strict
-ReadWritePaths=/var/lib/mycleancenter
+ReadWritePaths=/var/lib/mycleancenter /opt/mycleancenter
 PrivateTmp=true
 NoNewPrivileges=true
 ProtectHome=true
