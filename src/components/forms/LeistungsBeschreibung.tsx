@@ -190,7 +190,10 @@ function htmlToMarkdown(root: HTMLElement): string {
     italic: false,
     underline: false,
   });
-  return out.replace(/\u00a0/g, " ").replace(/\n{3,}/g, "\n\n").trimEnd();
+  // Keine Leerzeilen oder abschließenden Zeilenumbrüche weg-normalisieren:
+  // Sie gehören zum aktuellen Bearbeitungszustand und müssen einen
+  // Parent-Rerender unverändert überstehen.
+  return out.replace(/\u00a0/g, " ").replace(/\r\n?/g, "\n");
 }
 
 interface Marks {
