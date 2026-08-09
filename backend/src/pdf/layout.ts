@@ -462,6 +462,8 @@ interface BuildArgs {
   zeigeObjektname?: boolean;
   zeigeAnsprechpartner?: boolean;
   eigeneAnrede?: string;
+  /** Manuell geschriebener Empfängerblock — ersetzt den automatischen Aufbau. */
+  empfaengerZeilen?: string[];
 }
 
 function buildDoc(args: BuildArgs) {
@@ -478,14 +480,17 @@ function buildDoc(args: BuildArgs) {
         columns: [
           {
             width: "*",
-            stack: kundeAdresse(
-              args.kunde,
-              args.ansprechpartner,
-              args.objekt ?? null,
-              args.zeigeObjektname ?? true,
-              args.zeigeAnsprechpartner ?? true,
+            stack: (args.empfaengerZeilen
+              ? args.empfaengerZeilen
+              : kundeAdresse(
+                  args.kunde,
+                  args.ansprechpartner,
+                  args.objekt ?? null,
+                  args.zeigeObjektname ?? true,
+                  args.zeigeAnsprechpartner ?? true,
+                )
             ).map((l) => ({
-              text: l,
+              text: l && l.trim() ? l : " ",
               fontSize: 10,
             })),
           },
@@ -528,6 +533,7 @@ export function angebotDocDef(args: {
     objektnameImEmpfaenger?: boolean;
     ansprechpartnerImEmpfaenger?: boolean;
     eigeneAnrede?: string;
+    empfaengerZeilen?: string[];
   };
   const intro = defaultIntroAngebot(angebot, opts.eigenesIntro || angebot.introText);
   const outro = defaultOutroAngebot(angebot, opts.eigenesOutro || angebot.outroText);
@@ -541,6 +547,7 @@ export function angebotDocDef(args: {
     zeigeObjektname: opts.objektnameImEmpfaenger ?? true,
     zeigeAnsprechpartner: opts.ansprechpartnerImEmpfaenger ?? true,
     eigeneAnrede: opts.eigeneAnrede,
+    empfaengerZeilen: opts.empfaengerZeilen,
     titel: `Angebot ${angebot.titel || ""}`.trim(),
     meta,
     metaVariant: "plain",
@@ -566,6 +573,7 @@ export function rechnungDocDef(args: {
     objektnameImEmpfaenger?: boolean;
     ansprechpartnerImEmpfaenger?: boolean;
     eigeneAnrede?: string;
+    empfaengerZeilen?: string[];
   };
   const intro = defaultIntroRechnung(rechnung, opts.eigenesIntro || rechnung.introText);
   const t = totals(rechnung.positionen, rechnung.rabattGesamt, rechnung.steuersatz);
@@ -589,6 +597,7 @@ export function rechnungDocDef(args: {
     zeigeObjektname: opts.objektnameImEmpfaenger ?? true,
     zeigeAnsprechpartner: opts.ansprechpartnerImEmpfaenger ?? true,
     eigeneAnrede: opts.eigeneAnrede,
+    empfaengerZeilen: opts.empfaengerZeilen,
     titel: "Rechnung",
     meta,
     metaVariant: "box",

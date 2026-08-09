@@ -156,6 +156,11 @@ export interface BelegOptionen {
   ansprechpartnerImEmpfaenger?: boolean;
   /** Individuelle Anrede (z. B. „Sehr geehrter Herr Müller,"). Leer = automatisch. */
   eigeneAnrede?: string;
+  /**
+   * Manuell geschriebener Empfängerblock (oben links). Wenn gesetzt (Array vorhanden),
+   * werden exakt diese Zeilen gerendert — der automatische Aufbau entfällt.
+   */
+  empfaengerZeilen?: string[];
   /** Per-Beleg Firmendaten-Override. Felder, die hier gesetzt sind, überschreiben die globalen Firmendaten im PDF. */
   firmaOverride?: Partial<Firmendaten>;
 }

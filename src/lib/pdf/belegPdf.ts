@@ -670,6 +670,8 @@ interface PdfContext {
   zeigeObjektname?: boolean;
   zeigeAnsprechpartner?: boolean;
   eigeneAnrede?: string;
+  /** Manuell geschriebener Empfängerblock — ersetzt den automatischen Aufbau. */
+  empfaengerZeilen?: string[];
 }
 
 function mergeFirma(firma: Firmendaten, override?: Partial<Firmendaten>): Firmendaten {
@@ -720,14 +722,17 @@ async function buildDoc(
     id: "kunde",
     width: "*",
     stack: [
-      ...kundeAdresse(
-        ctx.kunde,
-        ctx.ansprechpartner,
-        ctx.objekt ?? null,
-        ctx.zeigeObjektname ?? true,
-        ctx.zeigeAnsprechpartner ?? true,
+      ...(ctx.empfaengerZeilen
+        ? ctx.empfaengerZeilen
+        : kundeAdresse(
+            ctx.kunde,
+            ctx.ansprechpartner,
+            ctx.objekt ?? null,
+            ctx.zeigeObjektname ?? true,
+            ctx.zeigeAnsprechpartner ?? true,
+          )
       ).map((l) => ({
-        text: l,
+        text: l && l.trim() ? l : " ",
         fontSize: 10,
       })),
     ],
@@ -841,6 +846,7 @@ export async function generateAngebotPdf(
       zeigeObjektname: angebot.optionen?.objektnameImEmpfaenger ?? true,
       zeigeAnsprechpartner: angebot.optionen?.ansprechpartnerImEmpfaenger ?? true,
       eigeneAnrede: angebot.optionen?.eigeneAnrede,
+      empfaengerZeilen: angebot.optionen?.empfaengerZeilen,
     },
     `Angebot ${angebot.titel || ""}`.trim(),
     meta,
@@ -913,6 +919,7 @@ export async function generateRechnungPdf(
       zeigeObjektname: rechnung.optionen?.objektnameImEmpfaenger ?? true,
       zeigeAnsprechpartner: rechnung.optionen?.ansprechpartnerImEmpfaenger ?? true,
       eigeneAnrede: rechnung.optionen?.eigeneAnrede,
+      empfaengerZeilen: rechnung.optionen?.empfaengerZeilen,
     },
     "Rechnung",
     meta,
