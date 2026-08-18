@@ -364,8 +364,7 @@ const PROTOKOLL_ART_LABEL: Record<ProtokollArt, string> = {
   beides: "Übergabe- und Abnahmeprotokoll",
 };
 
-export const DEFAULT_DIENSTLEISTER_SATZ =
-  "handschriftlich im Augenschein genommen.";
+export const DEFAULT_DIENSTLEISTER_SATZ = "im Augenschein genommen.";
 export const DEFAULT_ABNAHME_SATZ =
   "Die Leistung wird mit den oben genannten Vorbehalten abgenommen.";
 
@@ -391,9 +390,9 @@ export function auftragsAdresseAusStamm(k?: Kunde, o?: Objekt): string {
 
 /**
  * Gezeichnetes Ankreuzkästchen (kein Sonderzeichen — Roboto hat ☐/☒ nicht und
- * zeigt sonst Platzhalter). Quadrat, bei `checked` zusätzlich ein X.
+ * zeigt sonst Platzhalter). Immer leer: angekreuzt wird handschriftlich.
  */
-function checkboxCanvas(checked: boolean, size = 9) {
+function checkboxCanvas(size = 9) {
   const c: unknown[] = [
     {
       type: "rect",
@@ -405,22 +404,15 @@ function checkboxCanvas(checked: boolean, size = 9) {
       lineColor: COLOR_TEXT,
     },
   ];
-  if (checked) {
-    const p = 1.8;
-    c.push(
-      { type: "line", x1: p, y1: p, x2: size - p, y2: size - p, lineWidth: 0.9, lineColor: COLOR_TEXT },
-      { type: "line", x1: size - p, y1: p, x2: p, y2: size - p, lineWidth: 0.9, lineColor: COLOR_TEXT },
-    );
-  }
   return { width: size + 2, canvas: c, margin: [0, 2, 0, 0] as [number, number, number, number] };
 }
 
 /** Kästchen + Beschriftung als Spaltenzeile. */
-function checkboxZeile(checked: boolean, label: string, fs: number, marginTop = 0) {
+function checkboxZeile(label: string, fs: number, marginTop = 0) {
   return {
     margin: [0, marginTop, 0, 0] as [number, number, number, number],
     columns: [
-      checkboxCanvas(checked),
+      checkboxCanvas(),
       { width: "*", text: label, fontSize: fs },
     ],
     columnGap: 6,
