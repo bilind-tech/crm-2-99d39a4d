@@ -139,10 +139,13 @@ function header(firma: Firmendaten | undefined, logo: string | null, logoSichtba
   const logoNode = logo && logoSichtbar
     ? {
         image: logo,
-        fit: [260, 110],
-        absolutePosition: { x: 335, y: 22 },
+        fit: [210, 88],
+        absolutePosition: { x: 385, y: 22 },
       }
     : null;
+  const absender = absenderzeile(firma);
+  // Absenderzeile muss immer einzeilig bleiben: bei langen Firmendaten kleiner setzen.
+  const absenderFs = absender.length > 78 ? 6.5 : absender.length > 64 ? 7 : absender.length > 54 ? 7.5 : 8;
   return {
     margin: [55, 30, 55, 0] as [number, number, number, number],
     stack: [
@@ -153,15 +156,16 @@ function header(firma: Firmendaten | undefined, logo: string | null, logoSichtba
             width: "*",
             stack: [
               {
-                text: absenderzeile(firma),
-                fontSize: 8,
+                text: absender,
+                fontSize: absenderFs,
+                noWrap: true,
                 color: COLOR_TEXT,
                 decoration: "underline",
                 margin: [0, 70, 0, 0],
               },
             ],
           },
-          { width: 270, text: "" },
+          { width: 200, text: "" },
         ],
       },
     ],
