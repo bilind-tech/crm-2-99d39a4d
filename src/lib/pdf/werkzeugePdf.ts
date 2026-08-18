@@ -828,11 +828,18 @@ export async function generateProtokollPdf(
     art: u.art,
     nummer: u.nummer,
     datum: u.datum,
-    uhrzeit: u.uhrzeit,
     vertreterAuftraggeber: u.vertreterAuftraggeber,
     vertreterAuftragnehmer: u.vertreterAuftragnehmer,
+    auftragsAdresse:
+      u.adresseVomKunden === false && u.auftragsAdresse !== undefined
+        ? u.auftragsAdresse
+        : auftragsAdresseAusStamm(kunde, objekt),
     leistungsumfang: u.leistungsumfang,
     bemerkungen: u.bemerkungen,
+    maengelVorhanden: u.maengelVorhanden ?? false,
+    maengelText: u.maengelText ?? "",
+    abnahmeAnrede: u.abnahmeAnrede,
+    abnahmeName: u.abnahmeName ?? "",
     ohneVorbehalt: u.ohneVorbehalt,
     kunde,
     objekt,
