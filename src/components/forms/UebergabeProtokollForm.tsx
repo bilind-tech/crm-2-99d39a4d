@@ -14,9 +14,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { DateInput } from "@/components/ui/date-input";
+import { Switch } from "@/components/ui/switch";
 import { PrimaryAction } from "@/components/layout/PrimaryAction";
 import { useKunden, useObjekte, useCreateProtokoll } from "@/hooks/useApi";
 import { todayISO } from "@/lib/format";
+import { auftragsAdresseAusStamm } from "@/lib/pdf/werkzeugePdf";
 import type { UebergabeArt } from "@/lib/api/types";
 
 interface Props {
@@ -38,11 +40,23 @@ export function UebergabeProtokollForm({ onClose, defaultKundeId, defaultObjektI
   const [leistungsumfang, setLeistungsumfang] = useState("Endreinigung gemäß Auftrag.");
   const [bemerkungen, setBemerkungen] = useState("");
   const [vertreterAuftraggeber, setVertreterAuftraggeber] = useState("");
+  const [adresseVomKunden, setAdresseVomKunden] = useState(true);
+  const [auftragsAdresse, setAuftragsAdresse] = useState("");
+  const [maengelVorhanden, setMaengelVorhanden] = useState(false);
+  const [maengelText, setMaengelText] = useState("");
+  const [abnahmeAnrede, setAbnahmeAnrede] = useState<"frau" | "herr">("herr");
+  const [abnahmeName, setAbnahmeName] = useState("");
 
   const objekteVonKunde = useMemo(
     () => objekteAlle.filter((o) => o.kundeId === kundeId),
     [objekteAlle, kundeId],
   );
+
+  const autoAdresse = useMemo(() => {
+    const k = kunden.find((x) => x.id === kundeId);
+    const o = objekteAlle.find((x) => x.id === objektId);
+    return auftragsAdresseAusStamm(k, o);
+  }, [kunden, objekteAlle, kundeId, objektId]);
 
   async function submit() {
     if (!kundeId) return toast.error("Bitte Kunde wählen");
@@ -56,6 +70,12 @@ export function UebergabeProtokollForm({ onClose, defaultKundeId, defaultObjektI
         leistungsumfang,
         bemerkungen,
         vertreterAuftraggeber,
+        adresseVomKunden,
+        auftragsAdresse: adresseVomKunden ? autoAdresse : auftragsAdresse,
+        maengelVorhanden,
+        maengelText,
+        abnahmeAnrede,
+        abnahmeName,
         ohneVorbehalt: true,
       });
       toast.success("Protokoll angelegt", { description: `${p.nummer} • Editor wird geöffnet.` });
@@ -137,6 +157,28 @@ export function UebergabeProtokollForm({ onClose, defaultKundeId, defaultObjektI
         />
       </Field>
 
+      <div className="space-y-2 rounded-lg border border-border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <Label className="text-xs font-medium text-muted-foreground">
+            Auftragsadresse vom Kunden/Objekt übernehmen
+          </Label>
+          <Switch
+            checked={adresseVomKunden}
+            onCheckedChange={(v) => {
+              setAdresseVomKunden(v);
+              if (!v && !auftragsAdresse) setAuftragsAdresse(autoAdresse);
+            }}
+          />
+        </div>
+        <Textarea
+          rows={3}
+          value={adresseVomKunden ? autoAdresse : auftragsAdresse}
+          onChange={(e) => setAuftragsAdresse(e.target.value)}
+          disabled={adresseVomKunden}
+          placeholder="Straße, PLZ Ort"
+        />
+      </div>
+
       <Field label="Leistungsumfang">
         <Textarea
           value={leistungsumfang}
@@ -148,6 +190,47 @@ export function UebergabeProtokollForm({ onClose, defaultKundeId, defaultObjektI
       <Field label="Bemerkungen (optional)">
         <Textarea value={bemerkungen} onChange={(e) => setBemerkungen(e.target.value)} rows={2} />
       </Field>
+
+      <div className="space-y-2">
+        <Label className="text-xs font-medium text-muted-foreground">Mängel</Label>
+        <Select
+          value={maengelVorhanden ? "ja" : "nein"}
+          onValueChange={(v) => setMaengelVorhanden(v === "ja")}
+        >
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="nein">Es liegen keine Mängel vor</SelectItem>
+            <SelectItem value="ja">Es liegen folgende Mängel vor</SelectItem>
+          </SelectContent>
+        </Select>
+        {maengelVorhanden ? (
+          <Textarea
+            rows={2}
+            value={maengelText}
+            onChange={(e) => setMaengelText(e.target.value)}
+            placeholder="Mängel beschreiben"
+          />
+        ) : null}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Anrede (Augenschein)">
+          <Select value={abnahmeAnrede} onValueChange={(v) => setAbnahmeAnrede(v as "frau" | "herr")}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="frau">Frau</SelectItem>
+              <SelectItem value="herr">Herr</SelectItem>
+            </SelectContent>
+          </Select>
+        </Field>
+        <Field label="Name (Augenschein)">
+          <Input value={abnahmeName} onChange={(e) => setAbnahmeName(e.target.value)} />
+        </Field>
+      </div>
 
       <div className="sticky bottom-0 -mx-4 -mb-6 mt-2 flex flex-col-reverse items-stretch gap-2 border-t border-border bg-background px-4 py-3 sm:-mx-8 sm:px-8 sm:flex-row sm:items-center sm:justify-end">
         <Button variant="outline" onClick={onClose}>
