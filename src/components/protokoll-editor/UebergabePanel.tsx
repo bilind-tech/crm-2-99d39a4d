@@ -2,9 +2,10 @@
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { KundenObjektPicker } from "@/components/werkzeuge/KundenObjektPicker";
+import { auftragsAdresseAusStamm } from "@/lib/pdf/werkzeugePdf";
 import type { Kunde, Objekt, UebergabeProtokoll, UebergabeArt } from "@/lib/api/types";
 
 interface Props {
@@ -24,6 +25,8 @@ export function UebergabePanel({
   onKundeChange,
   onObjektChange,
 }: Props) {
+  const vomKunden = draft.adresseVomKunden !== false;
+  const autoAdresse = auftragsAdresseAusStamm(kunde, objekt);
   return (
     <div className="space-y-5">
       <KundenObjektPicker
@@ -62,14 +65,25 @@ export function UebergabePanel({
           <Label>Datum</Label>
           <Input type="date" value={draft.datum} onChange={(e) => set("datum", e.target.value)} />
         </div>
-        <div className="space-y-1.5">
-          <Label>Uhrzeit</Label>
-          <Input
-            type="time"
-            value={draft.uhrzeit}
-            onChange={(e) => set("uhrzeit", e.target.value)}
+      </div>
+      <div className="space-y-2 rounded-lg border border-border p-3">
+        <div className="flex items-center justify-between gap-3">
+          <Label className="text-sm">Auftragsadresse vom Kunden/Objekt übernehmen</Label>
+          <Switch
+            checked={vomKunden}
+            onCheckedChange={(v) => {
+              set("adresseVomKunden", v);
+              if (!v && !draft.auftragsAdresse) set("auftragsAdresse", autoAdresse);
+            }}
           />
         </div>
+        <Textarea
+          rows={4}
+          value={vomKunden ? autoAdresse : (draft.auftragsAdresse ?? "")}
+          onChange={(e) => set("auftragsAdresse", e.target.value)}
+          disabled={vomKunden}
+          placeholder="Straße, PLZ Ort"
+        />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
@@ -98,21 +112,81 @@ export function UebergabePanel({
         />
       </div>
       <div className="space-y-1.5">
-        <Label>Mängel / Bemerkungen</Label>
+        <Label>Bemerkungen</Label>
         <Textarea
           rows={3}
           value={draft.bemerkungen}
           onChange={(e) => set("bemerkungen", e.target.value)}
-          placeholder="Keine."
+          placeholder="Optionaler Text über den Ankreuzfeldern"
         />
       </div>
-      <label className="flex items-center gap-2 text-sm">
-        <Checkbox
-          checked={draft.ohneVorbehalt}
-          onCheckedChange={(v) => set("ohneVorbehalt", v === true)}
+      <div className="space-y-2">
+        <Label>Mängel</Label>
+        <RadioGroup
+          value={draft.maengelVorhanden ? "ja" : "nein"}
+          onValueChange={(v) => set("maengelVorhanden", v === "ja")}
+          className="flex flex-col gap-2"
+        >
+          <label className="flex items-center gap-2 text-sm">
+            <RadioGroupItem value="nein" /> Es liegen keine Mängel vor
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <RadioGroupItem value="ja" /> Es liegen folgende Mängel vor
+          </label>
+        </RadioGroup>
+        {draft.maengelVorhanden ? (
+          <Textarea
+            rows={3}
+            value={draft.maengelText ?? ""}
+            onChange={(e) => set("maengelText", e.target.value)}
+            placeholder="Mängel beschreiben (leer = Schreiblinien im PDF)"
+          />
+        ) : null}
+      </div>
+      <div className="space-y-2">
+        <Label>Leistung des Dienstleisters</Label>
+        <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
+          <RadioGroup
+            value={draft.abnahmeAnrede ?? ""}
+            onValueChange={(v) => set("abnahmeAnrede", v as "frau" | "herr")}
+            className="flex gap-4"
+          >
+            <label className="flex items-center gap-2 text-sm">
+              <RadioGroupItem value="frau" /> Frau
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <RadioGroupItem value="herr" /> Herr
+            </label>
+          </RadioGroup>
+          <Input
+            value={draft.abnahmeName ?? ""}
+            onChange={(e) => set("abnahmeName", e.target.value)}
+            placeholder="Name"
+          />
+        </div>
+        <Textarea
+          rows={2}
+          value={draft.optionen?.dienstleisterSatz ?? ""}
+          onChange={(e) =>
+            set("optionen", {
+              ...(draft.optionen ?? {}),
+              dienstleisterSatz: e.target.value || undefined,
+            })
+          }
+          placeholder="handschriftlich im Augenschein genommen."
         />
-        Abnahme erfolgt ohne Vorbehalt
-      </label>
+        <Textarea
+          rows={2}
+          value={draft.optionen?.abnahmeSatz ?? ""}
+          onChange={(e) =>
+            set("optionen", {
+              ...(draft.optionen ?? {}),
+              abnahmeSatz: e.target.value || undefined,
+            })
+          }
+          placeholder="Die Leistung wird mit den oben genannten Vorbehalten abgenommen."
+        />
+      </div>
     </div>
   );
 }

@@ -374,8 +374,15 @@ export interface ProtokollOptionen {
   druckfreundlich?: boolean;
   /** Eigene Sektions-Überschriften. Leere Strings = Default. */
   sektionsTitel?: Partial<
-    Record<"leistung" | "bemerkungen" | "ergebnis" | "schluessel" | "bestaetigung", string>
+    Record<
+      "adresse" | "leistung" | "bemerkungen" | "dienstleister" | "ergebnis" | "schluessel" | "bestaetigung",
+      string
+    >
   >;
+  /** Standardsatz „Es wurden gemeinsam mit … im Augenschein genommen." */
+  dienstleisterSatz?: string;
+  /** Standardsatz „Die Leistung wird mit den oben genannten Vorbehalten abgenommen." */
+  abnahmeSatz?: string;
 }
 
 export interface ProtokollBase {
@@ -400,6 +407,18 @@ export interface UebergabeProtokoll extends ProtokollBase {
   leistungsumfang: string;
   bemerkungen: string;
   ohneVorbehalt: boolean;
+  /** Adresse des Auftrags (mehrzeilig, frei editierbar). */
+  auftragsAdresse?: string;
+  /** true = Adresse automatisch aus Kunde/Objekt übernehmen. */
+  adresseVomKunden?: boolean;
+  /** Ankreuzfeld: Mängel vorhanden? */
+  maengelVorhanden?: boolean;
+  /** Beschreibung der Mängel (nur relevant wenn maengelVorhanden). */
+  maengelText?: string;
+  /** Anrede für „Es wurden gemeinsam mit …". */
+  abnahmeAnrede?: "frau" | "herr";
+  /** Name der Person auf der Schreiblinie. */
+  abnahmeName?: string;
 }
 
 export interface SchluesselProtokoll extends ProtokollBase {

@@ -338,11 +338,15 @@ export interface UebergabeprotokollData {
   art: ProtokollArt;
   nummer?: string;
   datum: string; // YYYY-MM-DD
-  uhrzeit: string; // HH:MM
   vertreterAuftraggeber: string;
   vertreterAuftragnehmer: string;
+  auftragsAdresse?: string;
   leistungsumfang: string;
   bemerkungen: string;
+  maengelVorhanden?: boolean;
+  maengelText?: string;
+  abnahmeAnrede?: "frau" | "herr";
+  abnahmeName?: string;
   ohneVorbehalt: boolean;
   kunde?: Kunde;
   objekt?: Objekt;
@@ -356,6 +360,46 @@ const PROTOKOLL_ART_LABEL: Record<ProtokollArt, string> = {
   beides: "Übergabe- und Abnahmeprotokoll",
 };
 
+export const DEFAULT_DIENSTLEISTER_SATZ =
+  "handschriftlich im Augenschein genommen.";
+export const DEFAULT_ABNAHME_SATZ =
+  "Die Leistung wird mit den oben genannten Vorbehalten abgenommen.";
+
+/** Adresszeilen aus Kunde/Objekt für das Feld „Auftragsadresse". */
+export function auftragsAdresseAusStamm(k?: Kunde, o?: Objekt): string {
+  if (!k && !o) return "";
+  const lines: string[] = [];
+  if (o) {
+    if (o.name) lines.push(o.name);
+    if (o.strasse) lines.push(o.strasse);
+    const plzOrt = [o.plz, o.ort].filter(Boolean).join(" ");
+    if (plzOrt) lines.push(plzOrt);
+  } else if (k) {
+    if (k.firmenname) lines.push(k.firmenname);
+    const person = [k.vorname, k.nachname].filter(Boolean).join(" ");
+    if (person) lines.push(person);
+    if (k.strasse) lines.push(k.strasse);
+    const plzOrt = [k.plz, k.ort].filter(Boolean).join(" ");
+    if (plzOrt) lines.push(plzOrt);
+  }
+  return lines.join("\n");
+}
+
+/** Kästchen ☐ / ☒ als Textfragment. */
+function checkbox(checked: boolean, label: string) {
+  return { text: `${checked ? "\u2612" : "\u2610"}  ${label}`, fontSize: 10 };
+}
+
+/** Leere Schreiblinie. */
+function schreiblinie(breite = 485, marginTop = 10) {
+  return {
+    margin: [0, marginTop, 0, 0] as [number, number, number, number],
+    canvas: [
+      { type: "line", x1: 0, y1: 0, x2: breite, y2: 0, lineWidth: 0.5, lineColor: COLOR_TEXT },
+    ],
+  };
+}
+
 export async function generateUebergabeprotokollPdf(
   data: UebergabeprotokollData,
 ): Promise<PdfBuildResult> {
@@ -363,16 +407,26 @@ export async function generateUebergabeprotokollPdf(
   const titel = (opt.titelOverride && opt.titelOverride.trim()) || PROTOKOLL_ART_LABEL[data.art];
   const logo = await resolveLogo(data.firma);
   const tracker = createHotspotTracker(A4);
-  const sektTitel = (key: "leistung" | "bemerkungen" | "ergebnis", fb: string) =>
+  const sektTitel = (
+    key: "adresse" | "leistung" | "bemerkungen" | "dienstleister" | "ergebnis",
+    fb: string,
+  ) =>
     (opt.sektionsTitel?.[key] && opt.sektionsTitel[key]!.trim()) || fb;
 
   const meta: { label: string; wert: string }[] = [];
   if (data.nummer) meta.push({ label: "Protokoll-Nr.", wert: data.nummer });
   meta.push({ label: "Datum", wert: formatDatum(data.datum) });
-  meta.push({ label: "Uhrzeit", wert: data.uhrzeit });
   if (data.kunde?.nummer) meta.push({ label: "Kunden-Nr.", wert: data.kunde.nummer });
 
   const adresse = data.kunde ? kundeAdresse(data.kunde, data.objekt) : ["—"];
+  const auftragsAdresse =
+    (data.auftragsAdresse && data.auftragsAdresse.trim()) ||
+    auftragsAdresseAusStamm(data.kunde, data.objekt) ||
+    "—";
+  const maengel = data.maengelVorhanden === true;
+  const dlSatz =
+    (opt.dienstleisterSatz && opt.dienstleisterSatz.trim()) || DEFAULT_DIENSTLEISTER_SATZ;
+  const abSatz = (opt.abnahmeSatz && opt.abnahmeSatz.trim()) || DEFAULT_ABNAHME_SATZ;
 
   const doc = {
     pageSize: "A4" as const,
@@ -405,33 +459,72 @@ export async function generateUebergabeprotokollPdf(
       },
 
       {
+        id: "adresse",
+        stack: [
+          sectionTitle(sektTitel("adresse", "Auftragsadresse")),
+          thinLine(),
+          { text: auftragsAdresse, fontSize: 10, margin: [0, 8, 0, 0] },
+        ],
+      },
+      {
         id: "leistungsumfang",
         stack: [
           sectionTitle(sektTitel("leistung", "Leistungsumfang")),
           thinLine(),
-          { text: data.leistungsumfang || "—", fontSize: 10, margin: [0, 6, 0, 0] },
+          { text: data.leistungsumfang || "—", fontSize: 10, margin: [0, 8, 0, 0] },
         ],
       },
       {
         id: "bemerkungen",
         stack: [
-          sectionTitle(sektTitel("bemerkungen", "Mängel / Bemerkungen")),
+          sectionTitle(sektTitel("bemerkungen", "Bemerkungen")),
           thinLine(),
-          { text: data.bemerkungen || "Keine.", fontSize: 10, margin: [0, 6, 0, 0] },
+          ...(data.bemerkungen && data.bemerkungen.trim()
+            ? [{ text: data.bemerkungen, fontSize: 10, margin: [0, 8, 0, 0] as [number, number, number, number] }]
+            : []),
+          {
+            margin: [0, 10, 0, 0] as [number, number, number, number],
+            stack: [checkbox(!maengel, "Es liegen keine Mängel vor")],
+          },
+          {
+            margin: [0, 6, 0, 0] as [number, number, number, number],
+            stack: [checkbox(maengel, "Es liegen folgende Mängel vor:")],
+          },
+          ...(maengel && data.maengelText && data.maengelText.trim()
+            ? [{ text: data.maengelText, fontSize: 10, margin: [0, 8, 0, 0] as [number, number, number, number] }]
+            : [schreiblinie(485, 22), schreiblinie(485, 22)]),
         ],
       },
       {
-        id: "ergebnis",
+        id: "dienstleister",
         stack: [
-          sectionTitle(sektTitel("ergebnis", "Ergebnis")),
+          sectionTitle(sektTitel("dienstleister", "Leistung des Dienstleisters")),
           thinLine(),
           {
-            text: data.ohneVorbehalt
-              ? "Die Leistung wird ohne Vorbehalt abgenommen."
-              : "Die Leistung wird mit den oben genannten Vorbehalten / Mängeln abgenommen.",
-            fontSize: 10,
-            margin: [0, 6, 0, 0],
+            margin: [0, 10, 0, 0] as [number, number, number, number],
+            columns: [
+              { width: "auto", text: "Es wurden gemeinsam mit", fontSize: 10 },
+              {
+                width: "auto",
+                text: `\u2003${data.abnahmeAnrede === "frau" ? "\u2612" : "\u2610"} Frau\u2003${data.abnahmeAnrede === "herr" ? "\u2612" : "\u2610"} Herr\u2003`,
+                fontSize: 10,
+              },
+              {
+                width: "*",
+                stack: [
+                  { text: data.abnahmeName || " ", fontSize: 10, margin: [0, 0, 0, 2] },
+                  {
+                    canvas: [
+                      { type: "line", x1: 0, y1: 0, x2: 170, y2: 0, lineWidth: 0.5, lineColor: COLOR_TEXT },
+                    ],
+                  },
+                ],
+              },
+            ],
+            columnGap: 0,
           },
+          { text: dlSatz, fontSize: 10, margin: [0, 8, 0, 0] },
+          { text: abSatz, fontSize: 10, margin: [0, 14, 0, 0] },
         ],
       },
       ...(opt.zusatzKlausel && opt.zusatzKlausel.trim()
@@ -735,11 +828,18 @@ export async function generateProtokollPdf(
     art: u.art,
     nummer: u.nummer,
     datum: u.datum,
-    uhrzeit: u.uhrzeit,
     vertreterAuftraggeber: u.vertreterAuftraggeber,
     vertreterAuftragnehmer: u.vertreterAuftragnehmer,
+    auftragsAdresse:
+      u.adresseVomKunden === false && u.auftragsAdresse !== undefined
+        ? u.auftragsAdresse
+        : auftragsAdresseAusStamm(kunde, objekt),
     leistungsumfang: u.leistungsumfang,
     bemerkungen: u.bemerkungen,
+    maengelVorhanden: u.maengelVorhanden ?? false,
+    maengelText: u.maengelText ?? "",
+    abnahmeAnrede: u.abnahmeAnrede,
+    abnahmeName: u.abnahmeName ?? "",
     ohneVorbehalt: u.ohneVorbehalt,
     kunde,
     objekt,
