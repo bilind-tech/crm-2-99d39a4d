@@ -42,3 +42,20 @@ handschriftlichen Eintrag. Das bisherige Mängel-Textfeld entfällt aus der Ober
 ## Prüfung
 Test-PDF erzeugen, als Bild rendern und prüfen: eine Seite, alle vier Kästchen leer,
 Satz vollständig lesbar, eine Schreiblinie bei Mängeln. Zusätzlich Typecheck.
+
+## Nachtrag (Kopfbereich & Überschrift)
+
+### 5. Überschrift
+„ÜBERGABE- UND ABNAHMEPROTOKOLL" ohne Unterstreichung, etwas größer (ca. +3 pt gegenüber
+jetzt) und mit mehr Abstand nach oben, damit sie deutlich unter dem Logo sitzt.
+
+### 6. Absenderzeile immer einzeilig
+Die kleine unterstrichene Absenderzeile oben links (Firmenname · Straße · PLZ Ort) darf nie
+umbrechen:
+- Logo etwas kleiner (`fit` von 260x110 auf ca. 210x88) und leicht nach rechts/oben gesetzt,
+  damit links mehr Platz entsteht.
+- Die Absenderspalte wird breiter (rechte Platzhalterspalte entsprechend schmaler) und auf
+  `noWrap` gestellt; bei sehr langen Firmendaten wird die Schriftgröße automatisch von 8 auf bis
+  zu 6,5 pt reduziert, statt in eine zweite Zeile zu rutschen.
+- Gilt einheitlich für alle PDFs aus `werkzeugePdf.ts` (Protokolle) — Rechnungen/Angebote nutzen
+  denselben Header-Aufbau in `belegPdf.ts`/Backend-Layout und werden gleich mitgezogen.
