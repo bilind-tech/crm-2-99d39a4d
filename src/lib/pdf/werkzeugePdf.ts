@@ -407,7 +407,10 @@ export async function generateUebergabeprotokollPdf(
   const titel = (opt.titelOverride && opt.titelOverride.trim()) || PROTOKOLL_ART_LABEL[data.art];
   const logo = await resolveLogo(data.firma);
   const tracker = createHotspotTracker(A4);
-  const sektTitel = (key: "leistung" | "bemerkungen" | "ergebnis", fb: string) =>
+  const sektTitel = (
+    key: "adresse" | "leistung" | "bemerkungen" | "dienstleister" | "ergebnis",
+    fb: string,
+  ) =>
     (opt.sektionsTitel?.[key] && opt.sektionsTitel[key]!.trim()) || fb;
 
   const meta: { label: string; wert: string }[] = [];
