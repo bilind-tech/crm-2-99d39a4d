@@ -139,8 +139,8 @@ function header(firma: Firmendaten | undefined, logo: string | null, logoSichtba
   const logoNode = logo && logoSichtbar
     ? {
         image: logo,
-        fit: [210, 88],
-        absolutePosition: { x: 385, y: 22 },
+        fit: [230, 96],
+        absolutePosition: { x: 360, y: 22 },
       }
     : null;
   const absender = absenderzeile(firma);
@@ -165,7 +165,7 @@ function header(firma: Firmendaten | undefined, logo: string | null, logoSichtba
               },
             ],
           },
-          { width: 200, text: "" },
+          { width: 125, text: "" },
         ],
       },
     ],
