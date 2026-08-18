@@ -527,12 +527,11 @@ export async function generateUebergabeprotokollPdf(
         stack: [
           {
             text: titel.toUpperCase(),
-            fontSize: fs + 3,
+            fontSize: fs + 6,
             bold: true,
             alignment: "center",
-            decoration: "underline",
             color: COLOR_TEXT,
-            margin: [0, 0, 0, 0],
+            margin: [0, 18, 0, 0],
           },
           ...(opt.untertitel && opt.untertitel.trim()
             ? [{ text: opt.untertitel, fontSize: fs, color: COLOR_MUTED, alignment: "center", margin: [0, 4, 0, 0] }]
@@ -568,11 +567,9 @@ export async function generateUebergabeprotokollPdf(
           ...(data.bemerkungen && data.bemerkungen.trim()
             ? [{ text: data.bemerkungen, fontSize: fs, margin: [0, 0, 0, 6] as [number, number, number, number] }]
             : []),
-          checkboxZeile(!maengel, "Die Leistung wurde wie vereinbart durchgeführt — es liegen keine Mängel vor.", fs),
-          checkboxZeile(maengel, "Es liegen folgende Mängel vor:", fs, 5),
-          ...(maengel && data.maengelText && data.maengelText.trim()
-            ? [{ text: data.maengelText, fontSize: fs, margin: [15, 4, 0, 0] as [number, number, number, number] }]
-            : [schreiblinie(470, 14)]),
+          checkboxZeile("Die Leistung wurde wie vereinbart durchgeführt — es liegen keine Mängel vor.", fs),
+          checkboxZeile("Es liegen folgende Mängel vor:", fs, 5),
+          schreiblinie(470, 14),
         ],
       },
       {
@@ -581,10 +578,10 @@ export async function generateUebergabeprotokollPdf(
           {
             margin: [0, gap, 0, 0] as [number, number, number, number],
             columns: [
-              { width: "auto", text: "Es wurden gemeinsam mit", fontSize: fs },
-              checkboxCanvas(data.abnahmeAnrede === "frau"),
+              { width: "auto", text: "Die Leistung des Dienstleisters wurde gemeinsam mit", fontSize: fs },
+              checkboxCanvas(),
               { width: "auto", text: "Frau", fontSize: fs },
-              checkboxCanvas(data.abnahmeAnrede === "herr"),
+              checkboxCanvas(),
               { width: "auto", text: "Herr", fontSize: fs },
               {
                 width: "*",
