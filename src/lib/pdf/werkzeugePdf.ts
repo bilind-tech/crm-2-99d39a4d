@@ -455,7 +455,7 @@ function kompakteUnterschriften(
     ],
   });
   return {
-    margin: [0, gap + 6, 0, 0] as [number, number, number, number],
+    margin: [0, gap + 14, 0, 0] as [number, number, number, number],
     columns: [spalte(linksLabel, linksName), spalte(rechtsLabel, rechtsName)],
     columnGap: 24,
   };
@@ -514,7 +514,7 @@ export async function generateUebergabeprotokollPdf(
     (maengel ? (data.maengelText?.length ?? 0) : 0) +
     auftragsAdresse.length;
   const fs = textMenge > 700 ? 8.5 : textMenge > 380 ? 9 : 10;
-  const gap = textMenge > 380 ? 12 : 18;
+  const gap = textMenge > 700 ? 12 : textMenge > 380 ? 16 : 24;
   const auftragnehmer = data.firma?.firmenname?.trim() || "My Clean Center GmbH";
   const auftraggeber = adresse.filter((l) => l !== "—").join(", ");
 
