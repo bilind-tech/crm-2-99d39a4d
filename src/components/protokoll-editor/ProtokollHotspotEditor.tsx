@@ -207,28 +207,9 @@ export function ProtokollHotspotEditor({ fieldId, draft, set, onOpenAdvanced, on
           placeholder="Optionaler Text über den Ankreuzfeldern"
           autoFocus
         />
-        <div className="mt-3 space-y-2">
-          <RadioGroup
-            value={u.maengelVorhanden ? "ja" : "nein"}
-            onValueChange={(v) => set("maengelVorhanden", v === "ja")}
-            className="flex flex-col gap-1.5"
-          >
-            <label className="flex items-center gap-2 text-xs">
-              <RadioGroupItem value="nein" /> Es liegen keine Mängel vor
-            </label>
-            <label className="flex items-center gap-2 text-xs">
-              <RadioGroupItem value="ja" /> Es liegen folgende Mängel vor
-            </label>
-          </RadioGroup>
-          {u.maengelVorhanden ? (
-            <Textarea
-              rows={3}
-              value={u.maengelText ?? ""}
-              onChange={(e) => set("maengelText", e.target.value)}
-              placeholder="Mängel beschreiben"
-            />
-          ) : null}
-        </div>
+        <p className="mt-3 text-xs text-muted-foreground">
+          Die Ankreuzfelder werden handschriftlich ausgefüllt.
+        </p>
         <div className="mt-2 flex justify-end">
           <Button size="sm" onClick={onClose}>
             Fertig
@@ -243,18 +224,6 @@ export function ProtokollHotspotEditor({ fieldId, draft, set, onOpenAdvanced, on
       <div className="w-[380px]">
         {Header}
         <div className="space-y-2">
-          <RadioGroup
-            value={u.abnahmeAnrede ?? ""}
-            onValueChange={(v) => set("abnahmeAnrede", v as "frau" | "herr")}
-            className="flex gap-4"
-          >
-            <label className="flex items-center gap-2 text-xs">
-              <RadioGroupItem value="frau" /> Frau
-            </label>
-            <label className="flex items-center gap-2 text-xs">
-              <RadioGroupItem value="herr" /> Herr
-            </label>
-          </RadioGroup>
           <Input
             value={u.abnahmeName ?? ""}
             onChange={(e) => set("abnahmeName", e.target.value)}
@@ -264,7 +233,7 @@ export function ProtokollHotspotEditor({ fieldId, draft, set, onOpenAdvanced, on
             rows={2}
             value={opt.dienstleisterSatz ?? ""}
             onChange={(e) => setOpt("dienstleisterSatz", e.target.value || undefined)}
-            placeholder="handschriftlich im Augenschein genommen."
+            placeholder="im Augenschein genommen."
           />
           <Textarea
             rows={2}

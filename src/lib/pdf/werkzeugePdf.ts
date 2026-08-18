@@ -139,10 +139,13 @@ function header(firma: Firmendaten | undefined, logo: string | null, logoSichtba
   const logoNode = logo && logoSichtbar
     ? {
         image: logo,
-        fit: [260, 110],
-        absolutePosition: { x: 335, y: 22 },
+        fit: [210, 88],
+        absolutePosition: { x: 385, y: 22 },
       }
     : null;
+  const absender = absenderzeile(firma);
+  // Absenderzeile muss immer einzeilig bleiben: bei langen Firmendaten kleiner setzen.
+  const absenderFs = absender.length > 78 ? 6.5 : absender.length > 64 ? 7 : absender.length > 54 ? 7.5 : 8;
   return {
     margin: [55, 30, 55, 0] as [number, number, number, number],
     stack: [
@@ -153,15 +156,16 @@ function header(firma: Firmendaten | undefined, logo: string | null, logoSichtba
             width: "*",
             stack: [
               {
-                text: absenderzeile(firma),
-                fontSize: 8,
+                text: absender,
+                fontSize: absenderFs,
+                noWrap: true,
                 color: COLOR_TEXT,
                 decoration: "underline",
                 margin: [0, 70, 0, 0],
               },
             ],
           },
-          { width: 270, text: "" },
+          { width: 200, text: "" },
         ],
       },
     ],
@@ -360,8 +364,7 @@ const PROTOKOLL_ART_LABEL: Record<ProtokollArt, string> = {
   beides: "Übergabe- und Abnahmeprotokoll",
 };
 
-export const DEFAULT_DIENSTLEISTER_SATZ =
-  "handschriftlich im Augenschein genommen.";
+export const DEFAULT_DIENSTLEISTER_SATZ = "im Augenschein genommen.";
 export const DEFAULT_ABNAHME_SATZ =
   "Die Leistung wird mit den oben genannten Vorbehalten abgenommen.";
 
@@ -387,9 +390,9 @@ export function auftragsAdresseAusStamm(k?: Kunde, o?: Objekt): string {
 
 /**
  * Gezeichnetes Ankreuzkästchen (kein Sonderzeichen — Roboto hat ☐/☒ nicht und
- * zeigt sonst Platzhalter). Quadrat, bei `checked` zusätzlich ein X.
+ * zeigt sonst Platzhalter). Immer leer: angekreuzt wird handschriftlich.
  */
-function checkboxCanvas(checked: boolean, size = 9) {
+function checkboxCanvas(size = 9) {
   const c: unknown[] = [
     {
       type: "rect",
@@ -401,22 +404,15 @@ function checkboxCanvas(checked: boolean, size = 9) {
       lineColor: COLOR_TEXT,
     },
   ];
-  if (checked) {
-    const p = 1.8;
-    c.push(
-      { type: "line", x1: p, y1: p, x2: size - p, y2: size - p, lineWidth: 0.9, lineColor: COLOR_TEXT },
-      { type: "line", x1: size - p, y1: p, x2: p, y2: size - p, lineWidth: 0.9, lineColor: COLOR_TEXT },
-    );
-  }
   return { width: size + 2, canvas: c, margin: [0, 2, 0, 0] as [number, number, number, number] };
 }
 
 /** Kästchen + Beschriftung als Spaltenzeile. */
-function checkboxZeile(checked: boolean, label: string, fs: number, marginTop = 0) {
+function checkboxZeile(label: string, fs: number, marginTop = 0) {
   return {
     margin: [0, marginTop, 0, 0] as [number, number, number, number],
     columns: [
-      checkboxCanvas(checked),
+      checkboxCanvas(),
       { width: "*", text: label, fontSize: fs },
     ],
     columnGap: 6,
@@ -531,12 +527,11 @@ export async function generateUebergabeprotokollPdf(
         stack: [
           {
             text: titel.toUpperCase(),
-            fontSize: fs + 3,
+            fontSize: fs + 6,
             bold: true,
             alignment: "center",
-            decoration: "underline",
             color: COLOR_TEXT,
-            margin: [0, 0, 0, 0],
+            margin: [0, 18, 0, 0],
           },
           ...(opt.untertitel && opt.untertitel.trim()
             ? [{ text: opt.untertitel, fontSize: fs, color: COLOR_MUTED, alignment: "center", margin: [0, 4, 0, 0] }]
@@ -572,11 +567,9 @@ export async function generateUebergabeprotokollPdf(
           ...(data.bemerkungen && data.bemerkungen.trim()
             ? [{ text: data.bemerkungen, fontSize: fs, margin: [0, 0, 0, 6] as [number, number, number, number] }]
             : []),
-          checkboxZeile(!maengel, "Die Leistung wurde wie vereinbart durchgeführt — es liegen keine Mängel vor.", fs),
-          checkboxZeile(maengel, "Es liegen folgende Mängel vor:", fs, 5),
-          ...(maengel && data.maengelText && data.maengelText.trim()
-            ? [{ text: data.maengelText, fontSize: fs, margin: [15, 4, 0, 0] as [number, number, number, number] }]
-            : [schreiblinie(470, 14)]),
+          checkboxZeile("Die Leistung wurde wie vereinbart durchgeführt — es liegen keine Mängel vor.", fs),
+          checkboxZeile("Es liegen folgende Mängel vor:", fs, 5),
+          schreiblinie(470, 14),
         ],
       },
       {
@@ -585,10 +578,10 @@ export async function generateUebergabeprotokollPdf(
           {
             margin: [0, gap, 0, 0] as [number, number, number, number],
             columns: [
-              { width: "auto", text: "Es wurden gemeinsam mit", fontSize: fs },
-              checkboxCanvas(data.abnahmeAnrede === "frau"),
+              { width: "auto", text: "Die Leistung des Dienstleisters wurde gemeinsam mit", fontSize: fs },
+              checkboxCanvas(),
               { width: "auto", text: "Frau", fontSize: fs },
-              checkboxCanvas(data.abnahmeAnrede === "herr"),
+              checkboxCanvas(),
               { width: "auto", text: "Herr", fontSize: fs },
               {
                 width: "*",

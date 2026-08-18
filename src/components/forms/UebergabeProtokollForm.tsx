@@ -42,9 +42,6 @@ export function UebergabeProtokollForm({ onClose, defaultKundeId, defaultObjektI
   const [vertreterAuftraggeber, setVertreterAuftraggeber] = useState("");
   const [adresseVomKunden, setAdresseVomKunden] = useState(true);
   const [auftragsAdresse, setAuftragsAdresse] = useState("");
-  const [maengelVorhanden, setMaengelVorhanden] = useState(false);
-  const [maengelText, setMaengelText] = useState("");
-  const [abnahmeAnrede, setAbnahmeAnrede] = useState<"frau" | "herr">("herr");
   const [abnahmeName, setAbnahmeName] = useState("");
 
   const objekteVonKunde = useMemo(
@@ -72,9 +69,6 @@ export function UebergabeProtokollForm({ onClose, defaultKundeId, defaultObjektI
         vertreterAuftraggeber,
         adresseVomKunden,
         auftragsAdresse: adresseVomKunden ? autoAdresse : auftragsAdresse,
-        maengelVorhanden,
-        maengelText,
-        abnahmeAnrede,
         abnahmeName,
         ohneVorbehalt: true,
       });
@@ -191,46 +185,13 @@ export function UebergabeProtokollForm({ onClose, defaultKundeId, defaultObjektI
         <Textarea value={bemerkungen} onChange={(e) => setBemerkungen(e.target.value)} rows={2} />
       </Field>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-medium text-muted-foreground">Mängel</Label>
-        <Select
-          value={maengelVorhanden ? "ja" : "nein"}
-          onValueChange={(v) => setMaengelVorhanden(v === "ja")}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="nein">Es liegen keine Mängel vor</SelectItem>
-            <SelectItem value="ja">Es liegen folgende Mängel vor</SelectItem>
-          </SelectContent>
-        </Select>
-        {maengelVorhanden ? (
-          <Textarea
-            rows={2}
-            value={maengelText}
-            onChange={(e) => setMaengelText(e.target.value)}
-            placeholder="Mängel beschreiben"
-          />
-        ) : null}
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Anrede (Augenschein)">
-          <Select value={abnahmeAnrede} onValueChange={(v) => setAbnahmeAnrede(v as "frau" | "herr")}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="frau">Frau</SelectItem>
-              <SelectItem value="herr">Herr</SelectItem>
-            </SelectContent>
-          </Select>
-        </Field>
-        <Field label="Name (Augenschein)">
-          <Input value={abnahmeName} onChange={(e) => setAbnahmeName(e.target.value)} />
-        </Field>
-      </div>
+      <Field label="Name (Augenschein)">
+        <Input
+          value={abnahmeName}
+          onChange={(e) => setAbnahmeName(e.target.value)}
+          placeholder="Frau/Herr wird handschriftlich angekreuzt"
+        />
+      </Field>
 
       <div className="sticky bottom-0 -mx-4 -mb-6 mt-2 flex flex-col-reverse items-stretch gap-2 border-t border-border bg-background px-4 py-3 sm:-mx-8 sm:px-8 sm:flex-row sm:items-center sm:justify-end">
         <Button variant="outline" onClick={onClose}>
