@@ -434,6 +434,34 @@ function schreiblinie(breite = 485, marginTop = 10) {
 }
 
 /** Label links, Wert rechts auf einer Schreiblinie (wie im Referenzblatt). */
+function kompakteUnterschriften(
+  linksLabel: string,
+  linksName: string,
+  rechtsLabel: string,
+  rechtsName: string,
+  fs: number,
+  gap: number,
+) {
+  const spalte = (label: string, name: string) => ({
+    width: "*",
+    stack: [
+      { text: name || " ", fontSize: fs, margin: [0, 0, 0, 20] as [number, number, number, number] },
+      {
+        canvas: [
+          { type: "line", x1: 0, y1: 0, x2: 200, y2: 0, lineWidth: 0.5, lineColor: COLOR_TEXT },
+        ],
+      },
+      { text: label, fontSize: fs - 1.5, color: COLOR_MUTED, margin: [0, 3, 0, 0] as [number, number, number, number] },
+    ],
+  });
+  return {
+    margin: [0, gap + 6, 0, 0] as [number, number, number, number],
+    columns: [spalte(linksLabel, linksName), spalte(rechtsLabel, rechtsName)],
+    columnGap: 24,
+  };
+}
+
+/** Label links, Wert rechts auf einer Schreiblinie (wie im Referenzblatt). */
 function feldZeile(label: string, wert: string, fs: number, labelBreite = 150) {
   const linienBreite = 485 - labelBreite - 10;
   return {
