@@ -46,10 +46,12 @@ export interface ProtokollHotspotMeta {
 
 export const PROTOKOLL_FIELD_META: Record<string, ProtokollHotspotMeta> = {
   kunde: { label: "Empfänger-Adresse", tab: "inhalt", fieldId: "kunde" },
-  meta: { label: "Datum / Uhrzeit / Nummer", tab: "inhalt", fieldId: "datum" },
+  meta: { label: "Datum / Nummer", tab: "inhalt", fieldId: "datum" },
   titel: { label: "Titel & Untertitel", tab: "optionen", fieldId: "titel" },
+  adresse: { label: "Auftragsadresse", tab: "inhalt", fieldId: "adresse" },
   leistungsumfang: { label: "Leistungsumfang", tab: "inhalt", fieldId: "leistungsumfang" },
-  bemerkungen: { label: "Mängel / Bemerkungen", tab: "inhalt", fieldId: "bemerkungen" },
+  bemerkungen: { label: "Bemerkungen", tab: "inhalt", fieldId: "bemerkungen" },
+  dienstleister: { label: "Leistung des Dienstleisters", tab: "inhalt", fieldId: "dienstleister" },
   ergebnis: { label: "Ergebnis (Vorbehalt)", tab: "unterschriften", fieldId: "ergebnis" },
   klausel: { label: "Zusatzklausel", tab: "optionen", fieldId: "zusatzKlausel" },
   unterschriften: { label: "Unterschriften", tab: "unterschriften", fieldId: "vertreter" },
@@ -67,9 +69,10 @@ export const FALLBACK_HOTSPOTS_PROTOKOLL_SEITE_1: FallbackHotspot[] = [
   { id: "kunde", page: 1, box: { x: 0.04, y: 0.13, w: 0.45, h: 0.1 } },
   { id: "meta", page: 1, box: { x: 0.55, y: 0.13, w: 0.41, h: 0.1 } },
   { id: "titel", page: 1, box: { x: 0.04, y: 0.25, w: 0.92, h: 0.05 } },
-  { id: "leistungsumfang", page: 1, box: { x: 0.04, y: 0.33, w: 0.92, h: 0.12 } },
-  { id: "bemerkungen", page: 1, box: { x: 0.04, y: 0.46, w: 0.92, h: 0.12 } },
-  { id: "ergebnis", page: 1, box: { x: 0.04, y: 0.6, w: 0.92, h: 0.08 } },
+  { id: "adresse", page: 1, box: { x: 0.04, y: 0.32, w: 0.92, h: 0.1 } },
+  { id: "leistungsumfang", page: 1, box: { x: 0.04, y: 0.43, w: 0.92, h: 0.1 } },
+  { id: "bemerkungen", page: 1, box: { x: 0.04, y: 0.54, w: 0.92, h: 0.14 } },
+  { id: "dienstleister", page: 1, box: { x: 0.04, y: 0.69, w: 0.92, h: 0.09 } },
   { id: "unterschriften", page: 1, box: { x: 0.04, y: 0.78, w: 0.92, h: 0.14 } },
 ];
 
