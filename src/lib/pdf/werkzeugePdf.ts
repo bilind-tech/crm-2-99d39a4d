@@ -385,9 +385,42 @@ export function auftragsAdresseAusStamm(k?: Kunde, o?: Objekt): string {
   return lines.join("\n");
 }
 
-/** Kästchen ☐ / ☒ als Textfragment. */
-function checkbox(checked: boolean, label: string) {
-  return { text: `${checked ? "\u2612" : "\u2610"}  ${label}`, fontSize: 10 };
+/**
+ * Gezeichnetes Ankreuzkästchen (kein Sonderzeichen — Roboto hat ☐/☒ nicht und
+ * zeigt sonst Platzhalter). Quadrat, bei `checked` zusätzlich ein X.
+ */
+function checkboxCanvas(checked: boolean, size = 9) {
+  const c: unknown[] = [
+    {
+      type: "rect",
+      x: 0,
+      y: 0,
+      w: size,
+      h: size,
+      lineWidth: 0.7,
+      lineColor: COLOR_TEXT,
+    },
+  ];
+  if (checked) {
+    const p = 1.8;
+    c.push(
+      { type: "line", x1: p, y1: p, x2: size - p, y2: size - p, lineWidth: 0.9, lineColor: COLOR_TEXT },
+      { type: "line", x1: size - p, y1: p, x2: p, y2: size - p, lineWidth: 0.9, lineColor: COLOR_TEXT },
+    );
+  }
+  return { width: size + 2, canvas: c, margin: [0, 2, 0, 0] as [number, number, number, number] };
+}
+
+/** Kästchen + Beschriftung als Spaltenzeile. */
+function checkboxZeile(checked: boolean, label: string, fs: number, marginTop = 0) {
+  return {
+    margin: [0, marginTop, 0, 0] as [number, number, number, number],
+    columns: [
+      checkboxCanvas(checked),
+      { width: "*", text: label, fontSize: fs },
+    ],
+    columnGap: 6,
+  };
 }
 
 /** Leere Schreiblinie. */
@@ -397,6 +430,29 @@ function schreiblinie(breite = 485, marginTop = 10) {
     canvas: [
       { type: "line", x1: 0, y1: 0, x2: breite, y2: 0, lineWidth: 0.5, lineColor: COLOR_TEXT },
     ],
+  };
+}
+
+/** Label links, Wert rechts auf einer Schreiblinie (wie im Referenzblatt). */
+function feldZeile(label: string, wert: string, fs: number, labelBreite = 150) {
+  const linienBreite = 485 - labelBreite - 10;
+  return {
+    margin: [0, 0, 0, 12] as [number, number, number, number],
+    columns: [
+      { width: labelBreite, text: label, fontSize: fs },
+      {
+        width: "*",
+        stack: [
+          { text: wert || " ", fontSize: fs, margin: [2, 0, 0, 1] as [number, number, number, number] },
+          {
+            canvas: [
+              { type: "line", x1: 0, y1: 0, x2: linienBreite, y2: 0, lineWidth: 0.5, lineColor: COLOR_TEXT },
+            ],
+          },
+        ],
+      },
+    ],
+    columnGap: 10,
   };
 }
 
@@ -428,127 +484,125 @@ export async function generateUebergabeprotokollPdf(
     (opt.dienstleisterSatz && opt.dienstleisterSatz.trim()) || DEFAULT_DIENSTLEISTER_SATZ;
   const abSatz = (opt.abnahmeSatz && opt.abnahmeSatz.trim()) || DEFAULT_ABNAHME_SATZ;
 
+  // Einseitigkeit absichern: bei viel Text etwas kleiner setzen.
+  const textMenge =
+    (data.leistungsumfang?.length ?? 0) +
+    (data.bemerkungen?.length ?? 0) +
+    (maengel ? (data.maengelText?.length ?? 0) : 0) +
+    auftragsAdresse.length;
+  const fs = textMenge > 700 ? 8.5 : textMenge > 380 ? 9 : 10;
+  const gap = textMenge > 380 ? 12 : 18;
+  const auftragnehmer = data.firma?.firmenname?.trim() || "My Clean Center GmbH";
+  const auftraggeber = adresse.filter((l) => l !== "—").join(", ");
+
   const doc = {
     pageSize: "A4" as const,
-    pageMargins: [55, 155, 55, 100] as [number, number, number, number],
-    defaultStyle: { font: "Roboto", fontSize: 10, color: COLOR_TEXT, lineHeight: 1.25 },
+    pageMargins: [55, 150, 55, 95] as [number, number, number, number],
+    defaultStyle: { font: "Roboto", fontSize: fs, color: COLOR_TEXT, lineHeight: 1.2 },
     header: header(data.firma, logo, opt.logoSichtbar !== false),
     footer: opt.footerSichtbar === false ? undefined : footer(data.firma),
     pageBreakBefore: tracker.pageBreakBefore,
     content: [
       {
-        columns: [
-          {
-            id: "kunde",
-            width: "*",
-            stack: adresse.map((l) => ({ text: l, fontSize: 10 })),
-          },
-          metaBox(meta),
-        ],
-        columnGap: 20,
-      },
-      {
         id: "titel",
         stack: [
-          { text: titel, fontSize: 22, bold: true, color: COLOR_TEXT, margin: [0, 30, 0, 0] },
+          {
+            text: titel.toUpperCase(),
+            fontSize: fs + 3,
+            bold: true,
+            alignment: "center",
+            decoration: "underline",
+            color: COLOR_TEXT,
+            margin: [0, 0, 0, 0],
+          },
           ...(opt.untertitel && opt.untertitel.trim()
-            ? [{ text: opt.untertitel, fontSize: 11, color: COLOR_MUTED, margin: [0, 4, 0, 0] }]
+            ? [{ text: opt.untertitel, fontSize: fs, color: COLOR_MUTED, alignment: "center", margin: [0, 4, 0, 0] }]
             : []),
-          { text: "", margin: [0, 0, 0, 14] },
+          { text: "", margin: [0, 0, 0, gap] },
         ],
       },
-
+      {
+        id: "kunde",
+        stack: [
+          { text: `Auftragnehmer: ${auftragnehmer}`, fontSize: fs, margin: [0, 0, 0, gap] },
+          feldZeile("Auftraggeber:", auftraggeber, fs),
+        ],
+      },
       {
         id: "adresse",
-        stack: [
-          sectionTitle(sektTitel("adresse", "Auftragsadresse")),
-          thinLine(),
-          { text: auftragsAdresse, fontSize: 10, margin: [0, 8, 0, 0] },
-        ],
+        stack: [feldZeile(`${sektTitel("adresse", "Auftrag Adresse")}:`, auftragsAdresse.replace(/\n/g, ", "), fs)],
       },
       {
         id: "leistungsumfang",
+        stack: [feldZeile(`${sektTitel("leistung", "Leistung")}:`, data.leistungsumfang || "", fs)],
+      },
+      {
+        id: "datum",
         stack: [
-          sectionTitle(sektTitel("leistung", "Leistungsumfang")),
-          thinLine(),
-          { text: data.leistungsumfang || "—", fontSize: 10, margin: [0, 8, 0, 0] },
+          feldZeile("Tag und Datum (Ende Ausführung der Leistung):", formatDatum(data.datum), fs, 230),
         ],
       },
       {
         id: "bemerkungen",
         stack: [
-          sectionTitle(sektTitel("bemerkungen", "Bemerkungen")),
-          thinLine(),
+          { text: sektTitel("bemerkungen", "Bemerkungen"), fontSize: fs, bold: true, margin: [0, gap - 6, 0, 6] },
           ...(data.bemerkungen && data.bemerkungen.trim()
-            ? [{ text: data.bemerkungen, fontSize: 10, margin: [0, 8, 0, 0] as [number, number, number, number] }]
+            ? [{ text: data.bemerkungen, fontSize: fs, margin: [0, 0, 0, 6] as [number, number, number, number] }]
             : []),
-          {
-            margin: [0, 10, 0, 0] as [number, number, number, number],
-            stack: [checkbox(!maengel, "Es liegen keine Mängel vor")],
-          },
-          {
-            margin: [0, 6, 0, 0] as [number, number, number, number],
-            stack: [checkbox(maengel, "Es liegen folgende Mängel vor:")],
-          },
+          checkboxZeile(!maengel, "Die Leistung wurde wie vereinbart durchgeführt — es liegen keine Mängel vor.", fs),
+          checkboxZeile(maengel, "Es liegen folgende Mängel vor:", fs, 5),
           ...(maengel && data.maengelText && data.maengelText.trim()
-            ? [{ text: data.maengelText, fontSize: 10, margin: [0, 8, 0, 0] as [number, number, number, number] }]
-            : [schreiblinie(485, 22), schreiblinie(485, 22)]),
+            ? [{ text: data.maengelText, fontSize: fs, margin: [15, 4, 0, 0] as [number, number, number, number] }]
+            : [schreiblinie(470, 14)]),
         ],
       },
       {
         id: "dienstleister",
         stack: [
-          sectionTitle(sektTitel("dienstleister", "Leistung des Dienstleisters")),
-          thinLine(),
           {
-            margin: [0, 10, 0, 0] as [number, number, number, number],
+            margin: [0, gap, 0, 0] as [number, number, number, number],
             columns: [
-              { width: "auto", text: "Es wurden gemeinsam mit", fontSize: 10 },
-              {
-                width: "auto",
-                text: `\u2003${data.abnahmeAnrede === "frau" ? "\u2612" : "\u2610"} Frau\u2003${data.abnahmeAnrede === "herr" ? "\u2612" : "\u2610"} Herr\u2003`,
-                fontSize: 10,
-              },
+              { width: "auto", text: "Es wurden gemeinsam mit", fontSize: fs },
+              checkboxCanvas(data.abnahmeAnrede === "frau"),
+              { width: "auto", text: "Frau", fontSize: fs },
+              checkboxCanvas(data.abnahmeAnrede === "herr"),
+              { width: "auto", text: "Herr", fontSize: fs },
               {
                 width: "*",
                 stack: [
-                  { text: data.abnahmeName || " ", fontSize: 10, margin: [0, 0, 0, 2] },
+                  { text: data.abnahmeName || " ", fontSize: fs, margin: [2, 0, 0, 1] },
                   {
                     canvas: [
-                      { type: "line", x1: 0, y1: 0, x2: 170, y2: 0, lineWidth: 0.5, lineColor: COLOR_TEXT },
+                      { type: "line", x1: 0, y1: 0, x2: 150, y2: 0, lineWidth: 0.5, lineColor: COLOR_TEXT },
                     ],
                   },
                 ],
               },
             ],
-            columnGap: 0,
+            columnGap: 6,
           },
-          { text: dlSatz, fontSize: 10, margin: [0, 8, 0, 0] },
-          { text: abSatz, fontSize: 10, margin: [0, 14, 0, 0] },
+          { text: dlSatz, fontSize: fs, margin: [0, 4, 0, 0] },
+          { text: abSatz, fontSize: fs, margin: [0, 8, 0, 0] },
         ],
       },
       ...(opt.zusatzKlausel && opt.zusatzKlausel.trim()
         ? [
             {
               id: "klausel",
-              stack: [
-                sectionTitle("Zusatzklausel"),
-                thinLine(),
-                { text: opt.zusatzKlausel, fontSize: 10, margin: [0, 6, 0, 0] },
-              ],
+              stack: [{ text: opt.zusatzKlausel, fontSize: fs, margin: [0, 8, 0, 0] }],
             },
           ]
         : []),
       {
         id: "unterschriften",
         stack: [
-          sectionTitle("Anwesende Personen / Unterschriften"),
-          thinLine(),
-          unterschriftenBlock(
+          kompakteUnterschriften(
             "Unterschrift Auftraggeber",
             data.vertreterAuftraggeber,
             "Unterschrift Auftragnehmer",
-            data.vertreterAuftragnehmer,
+            data.vertreterAuftragnehmer || auftragnehmer,
+            fs,
+            gap,
           ),
         ],
       },
