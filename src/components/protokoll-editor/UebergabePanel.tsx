@@ -122,48 +122,18 @@ export function UebergabePanel({
       </div>
       <div className="space-y-2">
         <Label>Mängel</Label>
-        <RadioGroup
-          value={draft.maengelVorhanden ? "ja" : "nein"}
-          onValueChange={(v) => set("maengelVorhanden", v === "ja")}
-          className="flex flex-col gap-2"
-        >
-          <label className="flex items-center gap-2 text-sm">
-            <RadioGroupItem value="nein" /> Es liegen keine Mängel vor
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <RadioGroupItem value="ja" /> Es liegen folgende Mängel vor
-          </label>
-        </RadioGroup>
-        {draft.maengelVorhanden ? (
-          <Textarea
-            rows={3}
-            value={draft.maengelText ?? ""}
-            onChange={(e) => set("maengelText", e.target.value)}
-            placeholder="Mängel beschreiben (leer = Schreiblinien im PDF)"
-          />
-        ) : null}
+        <p className="text-sm text-muted-foreground">
+          Die beiden Kästchen im PDF bleiben leer und werden handschriftlich angekreuzt; darunter
+          steht eine Schreiblinie für die Mängel.
+        </p>
       </div>
       <div className="space-y-2">
         <Label>Leistung des Dienstleisters</Label>
-        <div className="grid gap-3 sm:grid-cols-[160px_1fr]">
-          <RadioGroup
-            value={draft.abnahmeAnrede ?? ""}
-            onValueChange={(v) => set("abnahmeAnrede", v as "frau" | "herr")}
-            className="flex gap-4"
-          >
-            <label className="flex items-center gap-2 text-sm">
-              <RadioGroupItem value="frau" /> Frau
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <RadioGroupItem value="herr" /> Herr
-            </label>
-          </RadioGroup>
-          <Input
-            value={draft.abnahmeName ?? ""}
-            onChange={(e) => set("abnahmeName", e.target.value)}
-            placeholder="Name"
-          />
-        </div>
+        <Input
+          value={draft.abnahmeName ?? ""}
+          onChange={(e) => set("abnahmeName", e.target.value)}
+          placeholder="Name (Frau/Herr wird handschriftlich angekreuzt)"
+        />
         <Textarea
           rows={2}
           value={draft.optionen?.dienstleisterSatz ?? ""}
@@ -173,7 +143,7 @@ export function UebergabePanel({
               dienstleisterSatz: e.target.value || undefined,
             })
           }
-          placeholder="handschriftlich im Augenschein genommen."
+          placeholder="im Augenschein genommen."
         />
         <Textarea
           rows={2}
