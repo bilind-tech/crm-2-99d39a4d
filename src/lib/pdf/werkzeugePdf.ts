@@ -469,11 +469,6 @@ export async function generateUebergabeprotokollPdf(
   ) =>
     (opt.sektionsTitel?.[key] && opt.sektionsTitel[key]!.trim()) || fb;
 
-  const meta: { label: string; wert: string }[] = [];
-  if (data.nummer) meta.push({ label: "Protokoll-Nr.", wert: data.nummer });
-  meta.push({ label: "Datum", wert: formatDatum(data.datum) });
-  if (data.kunde?.nummer) meta.push({ label: "Kunden-Nr.", wert: data.kunde.nummer });
-
   const adresse = data.kunde ? kundeAdresse(data.kunde, data.objekt) : ["—"];
   const auftragsAdresse =
     (data.auftragsAdresse && data.auftragsAdresse.trim()) ||
