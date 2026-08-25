@@ -227,8 +227,8 @@ function htmlToMarkdown(root: HTMLElement): string {
     underline: false,
   });
   return out
-    .replace(/[​﻿]/g, "")
-    .replace(/ /g, " ")
+    .replace(/[\u200b\ufeff]/g, "")
+    .replace(/\u00a0/g, " ")
     .replace(/\r\n?/g, "\n");
 }
 
