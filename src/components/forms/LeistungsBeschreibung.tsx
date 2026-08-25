@@ -252,7 +252,7 @@ function serializeNode(node: Node, marks: Marks): string {
 
   const el = node as HTMLElement;
   const tag = el.tagName;
-  if (tag === "BR") return "\n";
+  if (tag === "BR") return el.dataset.sentinel === "1" ? "" : "\n";
 
   const style = el.style;
   const next: Marks = {
