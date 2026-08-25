@@ -94,11 +94,35 @@ export function LeistungsBeschreibung({
     emit();
   }
 
+  /**
+   * Fügt Text über die Range-API ein — bewusst NICHT über
+   * execCommand("insertText"): Chromium wandelt darin enthaltene "\n"
+   * in <div>-Absätze um, wodurch Zeilenumbrüche verloren gehen.
+   * Ein echter Textknoten mit "\n" + pre-wrap bleibt 1:1 erhalten.
+   */
   function insertPlain(text: string) {
     const el = ref.current;
-    if (!el) return;
+    if (!el || !text) return;
     el.focus();
-    document.execCommand("insertText", false, text);
+    let sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !el.contains(sel.anchorNode)) {
+      el.focus();
+      sel = window.getSelection();
+      if (!sel) return;
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const node = document.createTextNode(text);
+    range.insertNode(node);
+    range.setStartAfter(node);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
     emit();
   }
 
