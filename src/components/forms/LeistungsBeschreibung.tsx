@@ -194,7 +194,7 @@ function markdownToHtml(md: string): string {
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/&amp;/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
 /**
