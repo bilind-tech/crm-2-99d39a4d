@@ -82,6 +82,7 @@ export function LeistungsBeschreibung({
     const md = htmlToMarkdown(el);
     lastEmitted.current = md;
     onChange(md);
+    ensureTrailingBr(el);
     resize();
   }
 
