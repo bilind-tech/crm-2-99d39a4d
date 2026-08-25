@@ -194,7 +194,29 @@ function markdownToHtml(md: string): string {
 }
 
 function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return s.replace(/&amp;/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Chrome zeigt ein "\n" am Ende eines contentEditable (pre-wrap) nicht als
+ * eigene Zeile an — der Caret bleibt scheinbar stehen. Ein Sentinel-<br>
+ * am Ende gibt der letzten Zeile eine Box. Der Serializer ignoriert ihn.
+ */
+function ensureTrailingBr(el: HTMLElement) {
+  const last = el.lastChild;
+  const isSentinel =
+    last &&
+    last.nodeType === Node.ELEMENT_NODE &&
+    (last as HTMLElement).tagName === "BR" &&
+    (last as HTMLElement).dataset.sentinel === "1";
+  const endsWithNewline = (el.textContent ?? "").endsWith("\n");
+  if (endsWithNewline && !isSentinel) {
+    const br = document.createElement("br");
+    br.dataset.sentinel = "1";
+    el.appendChild(br);
+  } else if (!endsWithNewline && isSentinel) {
+    el.removeChild(last as Node);
+  }
 }
 
 /** HTML aus dem contentEditable → Markdown-String. */
