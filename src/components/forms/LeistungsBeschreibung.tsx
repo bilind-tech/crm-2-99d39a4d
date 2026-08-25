@@ -22,10 +22,14 @@ const LINE_HEIGHT_PX = 22; // entspricht text-sm + leading-relaxed
 
 /**
  * WYSIWYG-Feld für Leistungsbeschreibungen.
- * - Zeigt Fett / Kursiv / Unterstrichen direkt an — keine sichtbaren Marker.
- * - Gespeichert wird weiterhin Markdown (`**fett**`, `*kursiv*`, `__unterstrichen__`),
+ *
+ * Zeilenmodell (deterministisch):
+ * - Das Element hat `white-space: pre-wrap`; Zeilenumbrüche sind echte
+ *   "\n"-Zeichen in den Textknoten — keine Browser-<div>/<br>-Strukturen.
+ * - Enter wird per keydown abgefangen und als "\n" via insertText eingefügt,
+ *   dadurch baut der Browser nie eigene Block-Elemente auf.
+ * - Gespeichert wird Markdown (`**fett**`, `*kursiv*`, `__unterstrichen__`),
  *   das die PDF-Renderer (`src/lib/pdf/inlineFormat.ts`) interpretieren.
- * - Wächst automatisch zwischen min/max Zeilen.
  */
 export function LeistungsBeschreibung({
   value,
@@ -56,6 +60,11 @@ export function LeistungsBeschreibung({
 
   // Auto-Resize
   useEffect(() => {
+    resize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, minRows, maxRows]);
+
+  function resize() {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
@@ -64,16 +73,6 @@ export function LeistungsBeschreibung({
     const max = maxRows * LINE_HEIGHT_PX + 16;
     el.style.height = `${Math.max(min, Math.min(max, scroll + 2))}px`;
     el.style.overflowY = scroll > max ? "auto" : "hidden";
-  }, [value, minRows, maxRows]);
-
-  function resize() {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    const min = minRows * LINE_HEIGHT_PX + 16;
-    const max = maxRows * LINE_HEIGHT_PX + 16;
-    el.style.height = `${Math.max(min, Math.min(max, el.scrollHeight + 2))}px`;
-    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
   }
 
   function emit() {
@@ -93,7 +92,22 @@ export function LeistungsBeschreibung({
     emit();
   }
 
+  function insertPlain(text: string) {
+    const el = ref.current;
+    if (!el) return;
+    el.focus();
+    document.execCommand("insertText", false, text);
+    emit();
+  }
+
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Enter") {
+      // Browser-Default (<div>/<br>-Chaos) komplett unterbinden — Zeilenumbruch
+      // ist bei uns immer ein echtes "\n" im Textknoten.
+      e.preventDefault();
+      insertPlain("\n");
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
       const k = e.key.toLowerCase();
       if (k === "b" || k === "i" || k === "u") {
@@ -106,16 +120,11 @@ export function LeistungsBeschreibung({
   function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text.replace(/\r\n?/g, "\n"));
-    emit();
+    insertPlain(text.replace(/\r\n?/g, "\n"));
   }
 
   function bulletEinfuegen() {
-    const el = ref.current;
-    if (!el) return;
-    el.focus();
-    document.execCommand("insertText", false, "• ");
-    emit();
+    insertPlain("• ");
   }
 
   const isEmpty = !value || !value.trim();
@@ -163,15 +172,23 @@ export function LeistungsBeschreibung({
   );
 }
 
-/** Markdown → HTML für die Anzeige im contentEditable. */
+/**
+ * Markdown → HTML für die Anzeige im contentEditable.
+ * Zeilenumbrüche bleiben echte "\n"-Zeichen (Rendering via pre-wrap),
+ * Formatierungen werden zu <b>/<i>/<u>-Tags.
+ */
 function markdownToHtml(md: string): string {
-  const escaped = escapeHtml(md ?? "");
-  const withMarks = escaped
-    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-    .replace(/__([^_]+)__/g, "<u>$1</u>")
-    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<i>$2</i>")
-    .replace(/(^|[^_])_([^_\n]+)_/g, "$1<i>$2</i>");
-  return withMarks.replace(/\n/g, "<br>");
+  const lines = (md ?? "").replace(/\r\n?/g, "\n").split("\n");
+  return lines
+    .map((line) => {
+      const escaped = escapeHtml(line);
+      return escaped
+        .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+        .replace(/__([^_]+)__/g, "<u>$1</u>")
+        .replace(/(^|[^*])\*([^*]+)\*/g, "$1<i>$2</i>")
+        .replace(/(^|[^_])_([^_]+)_/g, "$1<i>$2</i>");
+    })
+    .join("\n");
 }
 
 function escapeHtml(s: string): string {
@@ -185,10 +202,10 @@ function htmlToMarkdown(root: HTMLElement): string {
     italic: false,
     underline: false,
   });
-  // Keine Leerzeilen oder abschließenden Zeilenumbrüche weg-normalisieren:
-  // Sie gehören zum aktuellen Bearbeitungszustand und müssen einen
-  // Parent-Rerender unverändert überstehen.
-  return out.replace(/[\u200b\ufeff]/g, "").replace(/\u00a0/g, " ").replace(/\r\n?/g, "\n");
+  return out
+    .replace(/[​﻿]/g, "")
+    .replace(/ /g, " ")
+    .replace(/\r\n?/g, "\n");
 }
 
 interface Marks {
@@ -196,8 +213,6 @@ interface Marks {
   italic: boolean;
   underline: boolean;
 }
-
-const BLOCK_TAGS = new Set(["DIV", "P", "LI", "TR", "H1", "H2", "H3", "H4", "H5", "H6"]);
 
 function serializeNodes(nodes: Node[], marks: Marks): string {
   let out = "";
@@ -228,14 +243,23 @@ function serializeNode(node: Node, marks: Marks): string {
       marks.underline || tag === "U" || (style.textDecoration || "").includes("underline"),
   };
 
-  const inner = serializeNodes(Array.from(el.childNodes), next);
-  if (BLOCK_TAGS.has(tag)) {
-    return inner.endsWith("\n") ? inner : `${inner}\n`;
-  }
-  return inner;
+  return serializeNodes(Array.from(el.childNodes), next);
 }
 
+/**
+ * Hüllt formatierten Text in Markdown-Marker — zeilenweise, damit Marker
+ * niemals über einen Zeilenumbruch hinweg aufgespannt werden (der PDF-Parser
+ * arbeitet zeilenbasiert).
+ */
 function wrap(text: string, marks: Marks): string {
+  if (!text) return "";
+  return text
+    .split("\n")
+    .map((line) => wrapLine(line, marks))
+    .join("\n");
+}
+
+function wrapLine(text: string, marks: Marks): string {
   if (!text) return "";
   // Führende/abschließende Leerzeichen bleiben außerhalb der Marker.
   const match = text.match(/^(\s*)([\s\S]*?)(\s*)$/);
@@ -273,4 +297,3 @@ function ToolbarBtn({
     </Button>
   );
 }
-
