@@ -22,10 +22,14 @@ const LINE_HEIGHT_PX = 22; // entspricht text-sm + leading-relaxed
 
 /**
  * WYSIWYG-Feld für Leistungsbeschreibungen.
- * - Zeigt Fett / Kursiv / Unterstrichen direkt an — keine sichtbaren Marker.
- * - Gespeichert wird weiterhin Markdown (`**fett**`, `*kursiv*`, `__unterstrichen__`),
+ *
+ * Zeilenmodell (deterministisch):
+ * - Das Element hat `white-space: pre-wrap`; Zeilenumbrüche sind echte
+ *   "\n"-Zeichen in den Textknoten — keine Browser-<div>/<br>-Strukturen.
+ * - Enter wird per keydown abgefangen und als "\n" via insertText eingefügt,
+ *   dadurch baut der Browser nie eigene Block-Elemente auf.
+ * - Gespeichert wird Markdown (`**fett**`, `*kursiv*`, `__unterstrichen__`),
  *   das die PDF-Renderer (`src/lib/pdf/inlineFormat.ts`) interpretieren.
- * - Wächst automatisch zwischen min/max Zeilen.
  */
 export function LeistungsBeschreibung({
   value,
@@ -47,6 +51,7 @@ export function LeistungsBeschreibung({
     if (!el) return;
     if (value === lastEmitted.current || document.activeElement === el) return;
     el.innerHTML = markdownToHtml(value);
+    ensureTrailingBr(el);
     lastEmitted.current = value;
   }, [value]);
 
@@ -56,6 +61,11 @@ export function LeistungsBeschreibung({
 
   // Auto-Resize
   useEffect(() => {
+    resize();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, minRows, maxRows]);
+
+  function resize() {
     const el = ref.current;
     if (!el) return;
     el.style.height = "auto";
@@ -64,16 +74,6 @@ export function LeistungsBeschreibung({
     const max = maxRows * LINE_HEIGHT_PX + 16;
     el.style.height = `${Math.max(min, Math.min(max, scroll + 2))}px`;
     el.style.overflowY = scroll > max ? "auto" : "hidden";
-  }, [value, minRows, maxRows]);
-
-  function resize() {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    const min = minRows * LINE_HEIGHT_PX + 16;
-    const max = maxRows * LINE_HEIGHT_PX + 16;
-    el.style.height = `${Math.max(min, Math.min(max, el.scrollHeight + 2))}px`;
-    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
   }
 
   function emit() {
@@ -82,6 +82,7 @@ export function LeistungsBeschreibung({
     const md = htmlToMarkdown(el);
     lastEmitted.current = md;
     onChange(md);
+    ensureTrailingBr(el);
     resize();
   }
 
@@ -93,7 +94,46 @@ export function LeistungsBeschreibung({
     emit();
   }
 
+  /**
+   * Fügt Text über die Range-API ein — bewusst NICHT über
+   * execCommand("insertText"): Chromium wandelt darin enthaltene "\n"
+   * in <div>-Absätze um, wodurch Zeilenumbrüche verloren gehen.
+   * Ein echter Textknoten mit "\n" + pre-wrap bleibt 1:1 erhalten.
+   */
+  function insertPlain(text: string) {
+    const el = ref.current;
+    if (!el || !text) return;
+    el.focus();
+    let sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || !el.contains(sel.anchorNode)) {
+      el.focus();
+      sel = window.getSelection();
+      if (!sel) return;
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      r.collapse(false);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    }
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    const node = document.createTextNode(text);
+    range.insertNode(node);
+    range.setStartAfter(node);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    emit();
+  }
+
   function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === "Enter") {
+      // Browser-Default (<div>/<br>-Chaos) komplett unterbinden — Zeilenumbruch
+      // ist bei uns immer ein echtes "\n" im Textknoten.
+      e.preventDefault();
+      insertPlain("\n");
+      return;
+    }
     if ((e.metaKey || e.ctrlKey) && !e.shiftKey && !e.altKey) {
       const k = e.key.toLowerCase();
       if (k === "b" || k === "i" || k === "u") {
@@ -106,16 +146,11 @@ export function LeistungsBeschreibung({
   function handlePaste(e: ClipboardEvent<HTMLDivElement>) {
     e.preventDefault();
     const text = e.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text.replace(/\r\n?/g, "\n"));
-    emit();
+    insertPlain(text.replace(/\r\n?/g, "\n"));
   }
 
   function bulletEinfuegen() {
-    const el = ref.current;
-    if (!el) return;
-    el.focus();
-    document.execCommand("insertText", false, "• ");
-    emit();
+    insertPlain("• ");
   }
 
   const isEmpty = !value || !value.trim();
@@ -163,19 +198,49 @@ export function LeistungsBeschreibung({
   );
 }
 
-/** Markdown → HTML für die Anzeige im contentEditable. */
+/**
+ * Markdown → HTML für die Anzeige im contentEditable.
+ * Zeilenumbrüche bleiben echte "\n"-Zeichen (Rendering via pre-wrap),
+ * Formatierungen werden zu <b>/<i>/<u>-Tags.
+ */
 function markdownToHtml(md: string): string {
-  const escaped = escapeHtml(md ?? "");
-  const withMarks = escaped
-    .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
-    .replace(/__([^_]+)__/g, "<u>$1</u>")
-    .replace(/(^|[^*])\*([^*\n]+)\*/g, "$1<i>$2</i>")
-    .replace(/(^|[^_])_([^_\n]+)_/g, "$1<i>$2</i>");
-  return withMarks.replace(/\n/g, "<br>");
+  const lines = (md ?? "").replace(/\r\n?/g, "\n").split("\n");
+  return lines
+    .map((line) => {
+      const escaped = escapeHtml(line);
+      return escaped
+        .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
+        .replace(/__([^_]+)__/g, "<u>$1</u>")
+        .replace(/(^|[^*])\*([^*]+)\*/g, "$1<i>$2</i>")
+        .replace(/(^|[^_])_([^_]+)_/g, "$1<i>$2</i>");
+    })
+    .join("\n");
 }
 
 function escapeHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/**
+ * Chrome zeigt ein "\n" am Ende eines contentEditable (pre-wrap) nicht als
+ * eigene Zeile an — der Caret bleibt scheinbar stehen. Ein Sentinel-<br>
+ * am Ende gibt der letzten Zeile eine Box. Der Serializer ignoriert ihn.
+ */
+function ensureTrailingBr(el: HTMLElement) {
+  const last = el.lastChild;
+  const isSentinel =
+    last &&
+    last.nodeType === Node.ELEMENT_NODE &&
+    (last as HTMLElement).tagName === "BR" &&
+    (last as HTMLElement).dataset.sentinel === "1";
+  const endsWithNewline = (el.textContent ?? "").endsWith("\n");
+  if (endsWithNewline && !isSentinel) {
+    const br = document.createElement("br");
+    br.dataset.sentinel = "1";
+    el.appendChild(br);
+  } else if (!endsWithNewline && isSentinel) {
+    el.removeChild(last as Node);
+  }
 }
 
 /** HTML aus dem contentEditable → Markdown-String. */
@@ -185,10 +250,10 @@ function htmlToMarkdown(root: HTMLElement): string {
     italic: false,
     underline: false,
   });
-  // Keine Leerzeilen oder abschließenden Zeilenumbrüche weg-normalisieren:
-  // Sie gehören zum aktuellen Bearbeitungszustand und müssen einen
-  // Parent-Rerender unverändert überstehen.
-  return out.replace(/[\u200b\ufeff]/g, "").replace(/\u00a0/g, " ").replace(/\r\n?/g, "\n");
+  return out
+    .replace(/[\u200b\ufeff]/g, "")
+    .replace(/\u00a0/g, " ")
+    .replace(/\r\n?/g, "\n");
 }
 
 interface Marks {
@@ -196,8 +261,6 @@ interface Marks {
   italic: boolean;
   underline: boolean;
 }
-
-const BLOCK_TAGS = new Set(["DIV", "P", "LI", "TR", "H1", "H2", "H3", "H4", "H5", "H6"]);
 
 function serializeNodes(nodes: Node[], marks: Marks): string {
   let out = "";
@@ -213,7 +276,7 @@ function serializeNode(node: Node, marks: Marks): string {
 
   const el = node as HTMLElement;
   const tag = el.tagName;
-  if (tag === "BR") return "\n";
+  if (tag === "BR") return el.dataset.sentinel === "1" ? "" : "\n";
 
   const style = el.style;
   const next: Marks = {
@@ -228,14 +291,23 @@ function serializeNode(node: Node, marks: Marks): string {
       marks.underline || tag === "U" || (style.textDecoration || "").includes("underline"),
   };
 
-  const inner = serializeNodes(Array.from(el.childNodes), next);
-  if (BLOCK_TAGS.has(tag)) {
-    return inner.endsWith("\n") ? inner : `${inner}\n`;
-  }
-  return inner;
+  return serializeNodes(Array.from(el.childNodes), next);
 }
 
+/**
+ * Hüllt formatierten Text in Markdown-Marker — zeilenweise, damit Marker
+ * niemals über einen Zeilenumbruch hinweg aufgespannt werden (der PDF-Parser
+ * arbeitet zeilenbasiert).
+ */
 function wrap(text: string, marks: Marks): string {
+  if (!text) return "";
+  return text
+    .split("\n")
+    .map((line) => wrapLine(line, marks))
+    .join("\n");
+}
+
+function wrapLine(text: string, marks: Marks): string {
   if (!text) return "";
   // Führende/abschließende Leerzeichen bleiben außerhalb der Marker.
   const match = text.match(/^(\s*)([\s\S]*?)(\s*)$/);
@@ -273,4 +345,3 @@ function ToolbarBtn({
     </Button>
   );
 }
-
