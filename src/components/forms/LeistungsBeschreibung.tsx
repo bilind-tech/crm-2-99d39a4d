@@ -51,6 +51,7 @@ export function LeistungsBeschreibung({
     if (!el) return;
     if (value === lastEmitted.current || document.activeElement === el) return;
     el.innerHTML = markdownToHtml(value);
+    ensureTrailingBr(el);
     lastEmitted.current = value;
   }, [value]);
 
