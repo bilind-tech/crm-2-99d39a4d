@@ -388,9 +388,12 @@ function defaultIntroAngebot(a: ApiAngebot, intro?: string): string {
   const suffix = einsatz ? ` für die Reinigung ${einsatz}` : "";
   return `gerne unterbreiten wir Ihnen ein Angebot für „${a.titel}"${suffix} und folgende Leistungen:`;
 }
-function defaultOutroAngebot(a: ApiAngebot, outro?: string): string {
+function defaultOutroAngebot(a: ApiAngebot, outro?: string, materialBereitgestellt = true): string {
   if (outro) return outro;
   return [
+    materialBereitgestellt
+      ? "Zugunsten der Reinigung werden Reinigungswerkzeuge und Reinigungsmittel von uns zur Verfügung gestellt."
+      : null,
     a.gueltigBis ? `Dieses Angebot ist gültig bis ${dt(a.gueltigBis)}.` : null,
     "Sofern Sie Interesse an dem Angebot haben, bestätigen Sie uns dies.",
     "Über eine Rückmeldung Ihrerseits würden wir uns freuen. Sollten Sie zu diesem Angebot noch Fragen haben, sind wir für Sie jederzeit telefonisch oder auch per E-Mail zu erreichen.",
