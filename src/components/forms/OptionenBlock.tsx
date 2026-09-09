@@ -35,9 +35,11 @@ export const defaultOptionen: OptionenState = {
 interface Props {
   value: OptionenState;
   onChange: (next: OptionenState) => void;
+  /** Bei Rechnungen ausblenden — der Material-Satz gehört nur ins Angebot. */
+  zeigeMaterial?: boolean;
 }
 
-export function OptionenBlock({ value, onChange }: Props) {
+export function OptionenBlock({ value, onChange, zeigeMaterial = true }: Props) {
   const set = <K extends keyof OptionenState>(k: K, v: OptionenState[K]) =>
     onChange({ ...value, [k]: v });
 
@@ -47,12 +49,14 @@ export function OptionenBlock({ value, onChange }: Props) {
         Optionen
       </p>
 
-      <Row
-        checked={value.materialBereitgestellt}
-        onChange={(v) => set("materialBereitgestellt", v)}
-        label="Wir stellen Reinigungsmittel & Werkzeuge bereit"
-        hint='Fügt den Standardsatz "… werden Reinigungswerkzeuge und Reinigungsmittel von uns zur Verfügung gestellt." ins PDF ein.'
-      />
+      {zeigeMaterial && (
+        <Row
+          checked={value.materialBereitgestellt}
+          onChange={(v) => set("materialBereitgestellt", v)}
+          label="Wir stellen Reinigungsmittel & Werkzeuge bereit"
+          hint='Fügt den Standardsatz "… werden Reinigungswerkzeuge und Reinigungsmittel von uns zur Verfügung gestellt." ins PDF ein.'
+        />
+      )}
       <Row
         checked={value.standardAnschreiben}
         onChange={(v) => set("standardAnschreiben", v)}
