@@ -141,6 +141,24 @@ function Page() {
     };
   }, [alle, heute, monat]);
 
+  // Umsatzsteuer im gewählten Zeitraum (ohne stornierte Rechnungen).
+  const ustZeitraum = useMemo(() => {
+    const liste = alle.filter(
+      (r) => r.status !== "storniert" && passtInZeitraum(r.rechnungsdatum, zeitraum),
+    );
+    return {
+      summe: liste.reduce((a, r) => a + umsatzsteuer(r), 0),
+      anzahl: liste.length,
+    };
+  }, [alle, zeitraum]);
+
+  const zeitraumLabel =
+    zeitraum.jahr === "alle"
+      ? "Alle Zeiträume"
+      : zeitraum.monat === "alle"
+        ? zeitraum.jahr
+        : `${MONATE_DE[Number(zeitraum.monat) - 1]} ${zeitraum.jahr}`;
+
   const filtered = useMemo(() => {
     let list = alle;
     if (filter !== "alle") {
