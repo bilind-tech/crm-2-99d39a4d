@@ -146,10 +146,10 @@ function Page() {
       />
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
-        <KpiCard label="Offenes Volumen" value={formatEUR(counts.offenesVolumen)} tone="success" />
         <KpiCard label="Gesamt" value={counts.gesamt} tone="primary" />
         <KpiCard label="Entwürfe" value={counts.entwurf} />
         <KpiCard label="Versendet" value={counts.versendet} />
+        <KpiCard label="Angenommen" value={counts.angenommen} tone="success" />
       </div>
 
       <FilterBar
