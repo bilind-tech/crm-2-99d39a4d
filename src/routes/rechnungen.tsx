@@ -79,6 +79,18 @@ function brutto(r: Rechnung) {
   const faktor = 1 - r.rabattGesamt / 100;
   return (netto + steuer) * faktor;
 }
+/** Umsatzsteuer einer Rechnung (Positions-Steuersätze, inkl. Gesamtrabatt). */
+function umsatzsteuer(r: Rechnung) {
+  let steuer = 0;
+  for (const p of r.positionen) {
+    const linie =
+      p.modus === "pauschal"
+        ? (p.pauschalpreisNetto ?? 0) * (1 - p.rabatt / 100)
+        : p.menge * p.einzelpreisNetto * (1 - p.rabatt / 100);
+    steuer += linie * (p.steuersatz / 100);
+  }
+  return steuer * (1 - r.rabattGesamt / 100);
+}
 function bezahlt(r: Rechnung) {
   return r.zahlungen.reduce((a, z) => a + z.betrag, 0);
 }
