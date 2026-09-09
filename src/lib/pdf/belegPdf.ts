@@ -719,7 +719,7 @@ async function buildDoc(
   meta: { label: string; wert: string }[],
   metaVariant: "box" | "plain",
   metaNote: string | undefined,
-  beleg: { positionen: Position[]; rabattGesamt: number; steuersatz: number },
+  beleg: { positionen: Position[]; rabattGesamt: number; steuersatz: number; nurNetto?: boolean },
   intro: string,
   outro: string,
   signatur: string[],
@@ -782,7 +782,7 @@ async function buildDoc(
           { id: "intro", text: inlineText(intro), margin: [0, 0, 0, 14] },
         ],
       },
-      leistungstabelle(beleg.positionen, t, beleg.steuersatz),
+      leistungstabelle(beleg.positionen, t, beleg.steuersatz, beleg.nurNetto === true),
       {
         id: "outro",
         stack: [
