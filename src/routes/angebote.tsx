@@ -86,15 +86,15 @@ function statusBadge(status: string) {
   );
 }
 
+// Angebote werden netto ausgewiesen (keine Umsatzsteuer im Angebot).
 function summe(a: Angebot) {
-  const netto = a.positionen.reduce((acc, p) => {
+  return a.positionen.reduce((acc, p) => {
     const linie =
       p.modus === "pauschal"
         ? (p.pauschalpreisNetto ?? 0) * (1 - p.rabatt / 100)
         : p.menge * p.einzelpreisNetto * (1 - p.rabatt / 100);
     return acc + linie;
-  }, 0);
-  return netto * (1 + a.steuersatz / 100);
+  }, 0) * (1 - (a.rabattGesamt ?? 0) / 100);
 }
 
 function Page() {
@@ -120,9 +120,6 @@ function Page() {
       entwurf: alle.filter((a) => a.status === "entwurf").length,
       versendet: alle.filter((a) => a.status === "versendet").length,
       angenommen: alle.filter((a) => a.status === "angenommen").length,
-      offenesVolumen: alle
-        .filter((a) => a.status === "entwurf" || a.status === "versendet")
-        .reduce((acc, a) => acc + summe(a), 0),
     }),
     [alle],
   );
