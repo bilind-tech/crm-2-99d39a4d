@@ -465,6 +465,7 @@ interface BuildArgs {
   positionen: ApiPosition[];
   rabattGesamt: number;
   steuersatz: number;
+  nurNetto?: boolean;
   intro: string;
   outro: string;
   zeigeObjektname?: boolean;
@@ -513,7 +514,7 @@ function buildDoc(args: BuildArgs) {
           { text: inlineText(args.intro), margin: [0, 0, 0, 14] },
         ],
       },
-      leistungstabelle(args.positionen, t, args.steuersatz),
+      leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true),
       {
         stack: [
           { text: inlineText(args.outro), margin: [0, 16, 0, 0] },
