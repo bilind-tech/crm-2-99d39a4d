@@ -386,6 +386,7 @@ function leistungstabelle(
   positionen: Position[],
   totalsT: { netto: number; steuer: number; brutto: number },
   steuersatz: number,
+  nurNetto = false,
 ) {
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
@@ -439,16 +440,25 @@ function leistungstabelle(
 
   const spanCols = colCount - 1;
   const spanFiller = Array.from({ length: spanCols - 1 }, () => ({}));
-  body.push([
-    { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
-    ...spanFiller,
-    { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
-  ]);
-  body.push([
-    { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
-    ...spanFiller,
-    { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
-  ]);
+  if (nurNetto) {
+    // Angebot: keine Umsatzsteuer ausweisen — nur Netto-Gesamtbetrag.
+    body.push([
+      { text: "Gesamtbetrag (netto)", colSpan: spanCols, fontSize: 10, bold: true },
+      ...spanFiller,
+      { text: eur(totalsT.netto), fontSize: 10, alignment: "right", bold: true },
+    ]);
+  } else {
+    body.push([
+      { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
+      ...spanFiller,
+      { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
+    ]);
+    body.push([
+      { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
+      ...spanFiller,
+      { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
+    ]);
+  }
 
   const widths = showStunden
     ? [...TABLE_COL_WIDTHS_STUNDEN]
@@ -457,9 +467,10 @@ function leistungstabelle(
   // Positionszeilen — werden vor den Summen abgetrennt. Lange
   // Pauschal-Beschreibungen dürfen über Seiten umbrechen (dontBreakRows:false),
   // sonst „verschluckt" pdfmake die ganze Tabelle auf Seite 1.
-  // Body OHNE die letzten beiden Summenzeilen.
-  const positionsBody = body.slice(0, body.length - 2);
-  const summenBody = body.slice(body.length - 2);
+  // Body OHNE die Summenzeilen.
+  const summenZeilen = nurNetto ? 1 : 2;
+  const positionsBody = body.slice(0, body.length - summenZeilen);
+  const summenBody = body.slice(body.length - summenZeilen);
 
   const tableLayout = {
     hLineWidth: () => 0.6,
