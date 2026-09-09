@@ -141,7 +141,7 @@ export function RechnungForm({ onClose, defaultKundeId, defaultObjektId }: Props
       introText: optionen.eigenesIntroAktiv ? optionen.eigenesIntro : undefined,
       outroText: optionen.eigenesOutroAktiv ? optionen.eigenesOutro : undefined,
       optionen: {
-        materialBereitgestellt: optionen.materialBereitgestellt,
+        materialBereitgestellt: false,
         standardAnschreiben: optionen.standardAnschreiben,
         objektnameImEmpfaenger: optionen.objektnameImEmpfaenger,
         ansprechpartnerImEmpfaenger: optionen.ansprechpartnerImEmpfaenger,
@@ -340,7 +340,7 @@ export function RechnungForm({ onClose, defaultKundeId, defaultObjektId }: Props
         </div>
       )}
 
-      <OptionenBlock value={optionen} onChange={setOptionen} />
+      <OptionenBlock value={optionen} onChange={setOptionen} zeigeMaterial={false} />
 
       <div>
         <Field label="Gesamtrabatt (%)">

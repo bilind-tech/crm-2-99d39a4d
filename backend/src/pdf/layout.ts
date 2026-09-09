@@ -209,7 +209,7 @@ function vertikalMittigMargin(text: string, charsPerLine: number): [number, numb
   return [0, Math.max(0, Math.round(((anzahl - 1) * 12.5) / 2)), 0, 0];
 }
 
-function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number) {
+function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false) {
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
 
@@ -263,18 +263,26 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
     },
   };
 
-  const summenBody: unknown[][] = [
-    [
-      { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
-      ...spanFiller,
-      { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
-    ],
-    [
-      { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
-      ...spanFiller,
-      { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
-    ],
-  ];
+  const summenBody: unknown[][] = nurNetto
+    ? [
+        [
+          { text: "Gesamtbetrag (netto)", colSpan: spanCols, fontSize: 10, bold: true },
+          ...spanFiller,
+          { text: eur(totalsT.netto), fontSize: 10, alignment: "right", bold: true },
+        ],
+      ]
+    : [
+        [
+          { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
+          ...spanFiller,
+          { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
+        ],
+        [
+          { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
+          ...spanFiller,
+          { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
+        ],
+      ];
 
   const summenTabelle = {
     table: {
@@ -380,9 +388,12 @@ function defaultIntroAngebot(a: ApiAngebot, intro?: string): string {
   const suffix = einsatz ? ` für die Reinigung ${einsatz}` : "";
   return `gerne unterbreiten wir Ihnen ein Angebot für „${a.titel}"${suffix} und folgende Leistungen:`;
 }
-function defaultOutroAngebot(a: ApiAngebot, outro?: string): string {
+function defaultOutroAngebot(a: ApiAngebot, outro?: string, materialBereitgestellt = true): string {
   if (outro) return outro;
   return [
+    materialBereitgestellt
+      ? "Zugunsten der Reinigung werden Reinigungswerkzeuge und Reinigungsmittel von uns zur Verfügung gestellt."
+      : null,
     a.gueltigBis ? `Dieses Angebot ist gültig bis ${dt(a.gueltigBis)}.` : null,
     "Sofern Sie Interesse an dem Angebot haben, bestätigen Sie uns dies.",
     "Über eine Rückmeldung Ihrerseits würden wir uns freuen. Sollten Sie zu diesem Angebot noch Fragen haben, sind wir für Sie jederzeit telefonisch oder auch per E-Mail zu erreichen.",
@@ -457,6 +468,7 @@ interface BuildArgs {
   positionen: ApiPosition[];
   rabattGesamt: number;
   steuersatz: number;
+  nurNetto?: boolean;
   intro: string;
   outro: string;
   zeigeObjektname?: boolean;
@@ -505,7 +517,7 @@ function buildDoc(args: BuildArgs) {
           { text: inlineText(args.intro), margin: [0, 0, 0, 14] },
         ],
       },
-      leistungstabelle(args.positionen, t, args.steuersatz),
+      leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true),
       {
         stack: [
           { text: inlineText(args.outro), margin: [0, 16, 0, 0] },
@@ -534,9 +546,14 @@ export function angebotDocDef(args: {
     ansprechpartnerImEmpfaenger?: boolean;
     eigeneAnrede?: string;
     empfaengerZeilen?: string[];
+    materialBereitgestellt?: boolean;
   };
   const intro = defaultIntroAngebot(angebot, opts.eigenesIntro || angebot.introText);
-  const outro = defaultOutroAngebot(angebot, opts.eigenesOutro || angebot.outroText);
+  const outro = defaultOutroAngebot(
+    angebot,
+    opts.eigenesOutro || angebot.outroText,
+    opts.materialBereitgestellt ?? true,
+  );
   const meta: { label: string; wert: string }[] = [
     { label: "Angebot-Nr.", wert: angebot.nummer },
     { label: "Angebotsdatum", wert: dt(angebot.erstelltAm) },
@@ -554,6 +571,7 @@ export function angebotDocDef(args: {
     positionen: angebot.positionen,
     rabattGesamt: angebot.rabattGesamt,
     steuersatz: angebot.steuersatz,
+    nurNetto: true,
     intro, outro,
   });
 }

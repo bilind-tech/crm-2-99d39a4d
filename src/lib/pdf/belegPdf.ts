@@ -386,6 +386,7 @@ function leistungstabelle(
   positionen: Position[],
   totalsT: { netto: number; steuer: number; brutto: number },
   steuersatz: number,
+  nurNetto = false,
 ) {
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
@@ -439,16 +440,25 @@ function leistungstabelle(
 
   const spanCols = colCount - 1;
   const spanFiller = Array.from({ length: spanCols - 1 }, () => ({}));
-  body.push([
-    { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
-    ...spanFiller,
-    { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
-  ]);
-  body.push([
-    { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
-    ...spanFiller,
-    { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
-  ]);
+  if (nurNetto) {
+    // Angebot: keine Umsatzsteuer ausweisen — nur Netto-Gesamtbetrag.
+    body.push([
+      { text: "Gesamtbetrag (netto)", colSpan: spanCols, fontSize: 10, bold: true },
+      ...spanFiller,
+      { text: eur(totalsT.netto), fontSize: 10, alignment: "right", bold: true },
+    ]);
+  } else {
+    body.push([
+      { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
+      ...spanFiller,
+      { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
+    ]);
+    body.push([
+      { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
+      ...spanFiller,
+      { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
+    ]);
+  }
 
   const widths = showStunden
     ? [...TABLE_COL_WIDTHS_STUNDEN]
@@ -457,9 +467,10 @@ function leistungstabelle(
   // Positionszeilen — werden vor den Summen abgetrennt. Lange
   // Pauschal-Beschreibungen dürfen über Seiten umbrechen (dontBreakRows:false),
   // sonst „verschluckt" pdfmake die ganze Tabelle auf Seite 1.
-  // Body OHNE die letzten beiden Summenzeilen.
-  const positionsBody = body.slice(0, body.length - 2);
-  const summenBody = body.slice(body.length - 2);
+  // Body OHNE die Summenzeilen.
+  const summenZeilen = nurNetto ? 1 : 2;
+  const positionsBody = body.slice(0, body.length - summenZeilen);
+  const summenBody = body.slice(body.length - summenZeilen);
 
   const tableLayout = {
     hLineWidth: () => 0.6,
@@ -653,13 +664,7 @@ function formatEinsatzClient(von?: string, bis?: string): string {
 }
 export function defaultOutroRechnung(_r: Rechnung, opts: BuildOptions = {}) {
   if (opts.outro) return opts.outro;
-  const teile = [
-    "Vielen Dank für Ihren Auftrag.",
-    opts.materialBereitgestellt
-      ? "Zugunsten der Reinigung werden Reinigungswerkzeuge und Reinigungsmittel von uns zur Verfügung gestellt."
-      : null,
-  ].filter(Boolean);
-  return teile.join("\n\n");
+  return "Vielen Dank für Ihren Auftrag.";
 }
 
 interface PdfContext {
@@ -708,7 +713,7 @@ async function buildDoc(
   meta: { label: string; wert: string }[],
   metaVariant: "box" | "plain",
   metaNote: string | undefined,
-  beleg: { positionen: Position[]; rabattGesamt: number; steuersatz: number },
+  beleg: { positionen: Position[]; rabattGesamt: number; steuersatz: number; nurNetto?: boolean },
   intro: string,
   outro: string,
   signatur: string[],
@@ -771,7 +776,7 @@ async function buildDoc(
           { id: "intro", text: inlineText(intro), margin: [0, 0, 0, 14] },
         ],
       },
-      leistungstabelle(beleg.positionen, t, beleg.steuersatz),
+      leistungstabelle(beleg.positionen, t, beleg.steuersatz, beleg.nurNetto === true),
       {
         id: "outro",
         stack: [
@@ -856,6 +861,7 @@ export async function generateAngebotPdf(
       positionen: angebot.positionen,
       rabattGesamt: angebot.rabattGesamt,
       steuersatz: angebot.steuersatz,
+      nurNetto: true,
     },
     defaultIntroAngebot(angebot, opts),
     defaultOutroAngebot(angebot, opts),
@@ -898,17 +904,8 @@ export async function generateRechnungPdf(
     if (diff > 0) tage = diff;
   }
   const zahlungsSatz = `Wir möchten Sie bitten, den Rechnungsbetrag in Höhe von ${eur(t.brutto)} innerhalb von ${tage} Tagen nach Rechnungszustellung auf unser unten genanntes Bankkonto zu überweisen.`;
-  const baseOutro = opts.outro ? opts.outro : zahlungsSatz;
-  const fullOutro = opts.outro
-    ? baseOutro
-    : [
-        zahlungsSatz,
-        opts.materialBereitgestellt
-          ? "Zugunsten der Reinigung werden Reinigungswerkzeuge und Reinigungsmittel von uns zur Verfügung gestellt."
-          : null,
-      ]
-        .filter(Boolean)
-        .join("\n\n");
+  // Rechnung: kein Material-Standardsatz (nur im Angebot).
+  const fullOutro = opts.outro ? opts.outro : zahlungsSatz;
   const headerNote = "Bei Zahlung bitte\ndie Rechnungs-Nr. angeben";
   const doc = await buildDoc(
     {

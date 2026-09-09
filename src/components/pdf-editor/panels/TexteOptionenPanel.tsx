@@ -46,11 +46,13 @@ export function TexteOptionenPanel({ draft, setOption }: Props) {
         <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
           Optionen
         </p>
-        <CheckRow
-          checked={o.materialBereitgestellt}
-          onChange={(v) => setOption("materialBereitgestellt", v)}
-          label="Reinigungsmittel & Werkzeuge werden bereitgestellt"
-        />
+        {!("rechnungsdatum" in draft) && (
+          <CheckRow
+            checked={o.materialBereitgestellt}
+            onChange={(v) => setOption("materialBereitgestellt", v)}
+            label="Reinigungsmittel & Werkzeuge werden bereitgestellt"
+          />
+        )}
         <CheckRow
           checked={o.standardAnschreiben}
           onChange={(v) => setOption("standardAnschreiben", v)}
