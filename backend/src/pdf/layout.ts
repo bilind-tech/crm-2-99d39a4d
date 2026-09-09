@@ -546,9 +546,14 @@ export function angebotDocDef(args: {
     ansprechpartnerImEmpfaenger?: boolean;
     eigeneAnrede?: string;
     empfaengerZeilen?: string[];
+    materialBereitgestellt?: boolean;
   };
   const intro = defaultIntroAngebot(angebot, opts.eigenesIntro || angebot.introText);
-  const outro = defaultOutroAngebot(angebot, opts.eigenesOutro || angebot.outroText);
+  const outro = defaultOutroAngebot(
+    angebot,
+    opts.eigenesOutro || angebot.outroText,
+    opts.materialBereitgestellt ?? true,
+  );
   const meta: { label: string; wert: string }[] = [
     { label: "Angebot-Nr.", wert: angebot.nummer },
     { label: "Angebotsdatum", wert: dt(angebot.erstelltAm) },
@@ -566,6 +571,7 @@ export function angebotDocDef(args: {
     positionen: angebot.positionen,
     rabattGesamt: angebot.rabattGesamt,
     steuersatz: angebot.steuersatz,
+    nurNetto: true,
     intro, outro,
   });
 }
