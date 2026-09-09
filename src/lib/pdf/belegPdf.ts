@@ -664,13 +664,7 @@ function formatEinsatzClient(von?: string, bis?: string): string {
 }
 export function defaultOutroRechnung(_r: Rechnung, opts: BuildOptions = {}) {
   if (opts.outro) return opts.outro;
-  const teile = [
-    "Vielen Dank für Ihren Auftrag.",
-    opts.materialBereitgestellt
-      ? "Zugunsten der Reinigung werden Reinigungswerkzeuge und Reinigungsmittel von uns zur Verfügung gestellt."
-      : null,
-  ].filter(Boolean);
-  return teile.join("\n\n");
+  return "Vielen Dank für Ihren Auftrag.";
 }
 
 interface PdfContext {
@@ -867,6 +861,7 @@ export async function generateAngebotPdf(
       positionen: angebot.positionen,
       rabattGesamt: angebot.rabattGesamt,
       steuersatz: angebot.steuersatz,
+      nurNetto: true,
     },
     defaultIntroAngebot(angebot, opts),
     defaultOutroAngebot(angebot, opts),
