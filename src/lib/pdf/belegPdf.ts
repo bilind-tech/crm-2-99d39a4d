@@ -904,17 +904,8 @@ export async function generateRechnungPdf(
     if (diff > 0) tage = diff;
   }
   const zahlungsSatz = `Wir möchten Sie bitten, den Rechnungsbetrag in Höhe von ${eur(t.brutto)} innerhalb von ${tage} Tagen nach Rechnungszustellung auf unser unten genanntes Bankkonto zu überweisen.`;
-  const baseOutro = opts.outro ? opts.outro : zahlungsSatz;
-  const fullOutro = opts.outro
-    ? baseOutro
-    : [
-        zahlungsSatz,
-        opts.materialBereitgestellt
-          ? "Zugunsten der Reinigung werden Reinigungswerkzeuge und Reinigungsmittel von uns zur Verfügung gestellt."
-          : null,
-      ]
-        .filter(Boolean)
-        .join("\n\n");
+  // Rechnung: kein Material-Standardsatz (nur im Angebot).
+  const fullOutro = opts.outro ? opts.outro : zahlungsSatz;
   const headerNote = "Bei Zahlung bitte\ndie Rechnungs-Nr. angeben";
   const doc = await buildDoc(
     {
