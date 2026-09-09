@@ -209,7 +209,7 @@ function vertikalMittigMargin(text: string, charsPerLine: number): [number, numb
   return [0, Math.max(0, Math.round(((anzahl - 1) * 12.5) / 2)), 0, 0];
 }
 
-function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number) {
+function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false) {
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
 
@@ -263,18 +263,26 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
     },
   };
 
-  const summenBody: unknown[][] = [
-    [
-      { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
-      ...spanFiller,
-      { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
-    ],
-    [
-      { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
-      ...spanFiller,
-      { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
-    ],
-  ];
+  const summenBody: unknown[][] = nurNetto
+    ? [
+        [
+          { text: "Gesamtbetrag (netto)", colSpan: spanCols, fontSize: 10, bold: true },
+          ...spanFiller,
+          { text: eur(totalsT.netto), fontSize: 10, alignment: "right", bold: true },
+        ],
+      ]
+    : [
+        [
+          { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
+          ...spanFiller,
+          { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
+        ],
+        [
+          { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
+          ...spanFiller,
+          { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
+        ],
+      ];
 
   const summenTabelle = {
     table: {
