@@ -23,6 +23,7 @@ import { FlowBar } from "@/components/flow/FlowBar";
 import { rechnungFlow } from "@/lib/flow/flows";
 import {
   ZEITRAUM_ALLE,
+  MONATE_DE,
   passtInZeitraum,
   zeitraumAktuellesJahr,
   type ZeitraumState,
