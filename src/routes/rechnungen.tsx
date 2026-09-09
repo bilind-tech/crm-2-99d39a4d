@@ -198,7 +198,13 @@ function Page() {
         }
       />
 
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
+        <KpiCard
+          label="Umsatzsteuer"
+          value={formatEUR(ustZeitraum.summe)}
+          sublabel={`${zeitraumLabel} · ${ustZeitraum.anzahl} Rechnung(en)`}
+          tone="primary"
+        />
         <KpiCard
           label="Eingang diesen Monat"
           value={formatEUR(counts.eingangMonat)}
