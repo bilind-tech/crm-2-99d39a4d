@@ -11,7 +11,7 @@ export const DEFAULT_CROP:CropState={zoom:1,x:0,y:0};
 // Maße 1:1 aus der Beispiel-Story (900x1600) hochskaliert auf 1080x1920.
 const PHOTO={x:202,y:558,w:678,h:1146,r:26};
 const TITLE_BASELINE=1800;
-const CARD={w:430,margin:40,radius:22,pad:26,nameBaseline:150,textBaseline:180,lineHeight:30,bottom:20,topY:528};
+const CARD={w:430,margin:40,radius:22,pad:30,logo:66,nameBaseline:134,textBaseline:166,lineHeight:30,bottom:36,topY:528};
 const GOOGLE_LOGO_URL="/whatsapp-story/google-g.png";
 const REVIEW_STAR_URL="/whatsapp-story/review-star.svg";
 // Vorlage liegt lokal im Programm, damit die Vorschau auch offline auf dem Pi funktioniert.
@@ -28,7 +28,7 @@ async function drawTemplate(ctx:CanvasRenderingContext2D,url:string){
 let fontsReady:Promise<void>|undefined;
 export function ensureStoryFonts(){
   if(!fontsReady){
-    const faces=["400 20px Montserrat","700 24px Montserrat","700 48px Montserrat"];
+    const faces=["400 20px Montserrat","700 24px Montserrat","400 48px Montserrat","700 48px Montserrat"];
     fontsReady=(async()=>{
       try{ await Promise.all(faces.map(f=>document.fonts.load(f,"Mg"))); await document.fonts.ready; }catch{ /* Fallback-Schrift */ }
     })();
@@ -72,10 +72,10 @@ export async function drawReviewCard(ctx:CanvasRenderingContext2D,review:StoryRe
   ctx.shadowColor="rgba(0,0,0,.30)";ctx.shadowBlur=30;ctx.shadowOffsetY=8;
   ctx.fillStyle="#ffffff";ctx.beginPath();ctx.roundRect(x,y,width,height,CARD.radius);ctx.fill();
   ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetY=0;
-  await drawGoogleG(ctx,x+CARD.pad,y+41,66);
+  await drawGoogleG(ctx,x+CARD.pad,y+CARD.pad,CARD.logo);
   const stars=Math.max(1,Math.min(5,review.stars||5));
-  const starOuter=25,gapX=53,startX=x+CARD.pad+66+30+starOuter;
-  for(let i=0;i<stars;i++)await drawStar(ctx,startX+i*gapX,y+74,starOuter*2);
+  const starOuter=25,gapX=53,startX=x+CARD.pad+CARD.logo+30+starOuter;
+  for(let i=0;i<stars;i++)await drawStar(ctx,startX+i*gapX,y+CARD.pad+CARD.logo/2,starOuter*2);
   ctx.fillStyle="#202124";ctx.font=font(700,23);
   ctx.fillText(review.name.toUpperCase(),x+CARD.pad,y+CARD.nameBaseline,width-CARD.pad*2);
   ctx.fillStyle="#3c4043";ctx.font=font(400,20);
@@ -111,7 +111,7 @@ export async function renderStory(canvas:HTMLCanvasElement,templateUrl:string=ST
     ctx.fillText("NACHHER",70+w+30+w/2,PHOTO.y+PHOTO.h+52);
     ctx.restore();
   } else await drawCover(ctx,photo.url,PHOTO.x,PHOTO.y,PHOTO.w,PHOTO.h,photo.crop);
-  if(photo.title){ctx.save();ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font=font(600,48);ctx.fillText(photo.title,540,TITLE_BASELINE,980);ctx.restore();}
+  if(photo.title){ctx.save();ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font=font(400,48);ctx.fillText(photo.title,540,TITLE_BASELINE,980);ctx.restore();}
   if(review){const {x,y}=cardPosition(ctx,review,photo.reviewPosition,photo.reviewOffset);await drawReviewCard(ctx,review,x,y);}
 }
 
