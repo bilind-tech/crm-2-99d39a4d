@@ -65,7 +65,7 @@ export function WhatsappStoryEditor(){
     if(rejected.length)toast.error(`${rejected.map(f=>f.name||"Datei").join(", ")}: nur JPG, PNG oder WebP möglich.`);
     if(!images.length)return;
     const added=images.map((file,index):StoryPhoto=>({id:id(),file,url:URL.createObjectURL(file),name:file.name||`Bild ${index+1}`,layout:"einzel",crop:{...DEFAULT_CROP},title:"",reviewPosition:index%2?"oben-rechts":"oben-links",reviewOffset:0}));
-    setPhotos(old=>{const next=[...old,...added];if(!old.length)setStep("order");return next;});
+    setPhotos(old=>[...old,...added]);
     setSelectedId(current=>current??added[0]?.id);
     toast.success(added.length===1?"1 Bild hinzugefügt.":`${added.length} Bilder hinzugefügt.`);
     try{const p=await ensureProject();for(const photo of added){const form=new FormData();form.append("file",photo.file as File);await piApi.post(`/whatsapp-story/projekte/${p.id}/bilder`,form);}}catch{/* Entwurf bleibt lokal */}
