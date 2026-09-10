@@ -14,9 +14,16 @@ const TITLE_BASELINE=1800;
 const CARD={w:430,margin:40,radius:22,pad:26,nameBaseline:150,textBaseline:180,lineHeight:30,bottom:20,topY:528};
 const GOOGLE_LOGO_URL="/whatsapp-story/google-g.png";
 const REVIEW_STAR_URL="/whatsapp-story/review-star.svg";
+// Vorlage liegt lokal im Programm, damit die Vorschau auch offline auf dem Pi funktioniert.
+export const STORY_TEMPLATE_URL="/whatsapp-story/template.png";
+const TEMPLATE_FALLBACK_BG="#0b1f33";
 
 const imageCache=new Map<string,Promise<HTMLImageElement>>();
-function loadImage(src:string){let cached=imageCache.get(src);if(!cached){cached=new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=reject;image.src=src;});imageCache.set(src,cached);}return cached;}
+function loadImage(src:string){let cached=imageCache.get(src);if(!cached){cached=new Promise<HTMLImageElement>((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(new Error(`Grafik konnte nicht geladen werden: ${src}`));image.src=src;});cached.catch(()=>{if(imageCache.get(src)===cached)imageCache.delete(src);});imageCache.set(src,cached);}return cached;}
+async function drawTemplate(ctx:CanvasRenderingContext2D,url:string){
+  try{ ctx.drawImage(await loadImage(url),0,0,STORY_WIDTH,STORY_HEIGHT); }
+  catch{ ctx.fillStyle=TEMPLATE_FALLBACK_BG; ctx.fillRect(0,0,STORY_WIDTH,STORY_HEIGHT); }
+}
 
 let fontsReady:Promise<void>|undefined;
 export function ensureStoryFonts(){
