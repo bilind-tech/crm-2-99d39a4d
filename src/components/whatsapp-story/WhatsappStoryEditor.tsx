@@ -58,7 +58,10 @@ export function WhatsappStoryEditor(){
   const updatePhoto=useCallback((photoId:string,patch:Partial<StoryPhoto>)=>setPhotos(all=>all.map(p=>p.id===photoId?{...p,...patch}:p)),[]);
   const ensureProject=async()=>{if(project)return project;if(isLocalPreviewFallbackAllowed())throw new Error("preview");const created=await piApi.post<ServerProject>("/whatsapp-story/projekte",{name:`Story ${new Date().toLocaleDateString("de-DE")}`});setProject(created);return created;};
   const loadDraft=async(draft:ServerProject)=>{setSaving(true);try{const full=await piApi.get<ServerProject>(`/whatsapp-story/projekte/${draft.id}`);const configs=full.konfiguration?.photos??[];const loaded=await Promise.all((full.bilder??[]).sort((a,b)=>a.sortierung-b.sortierung).map(async(image,index)=>{const response=await fetch(`${getBackendUrl()}/whatsapp-story/bilder/${image.id}/datei`,{credentials:"include"});if(!response.ok)throw new Error("Bild fehlt");const blob=await response.blob();const config=configs[index];return {id:image.id,file:new File([blob],image.dateiname,{type:image.mimeType}),url:URL.createObjectURL(blob),name:image.dateiname,layout:config?.layout??"einzel",pairId:config?.pairId,crop:config?.crop??{...DEFAULT_CROP},title:config?.title??"",reviewId:config?.reviewId,reviewPosition:config?.reviewPosition??(index%2?"oben-rechts":"oben-links"),reviewOffset:config?.reviewOffset??0} satisfies StoryPhoto;}));photos.forEach(photo=>URL.revokeObjectURL(photo.url));setPhotos(loaded);setOptions(full.konfiguration?.options??defaultOptions);setProject(full);setSelectedId(loaded[0]?.id);setStep(loaded.length?"edit":"import");setDraftDialog(false);toast.success("Entwurf geöffnet.");}catch{toast.error("Entwurf konnte nicht geladen werden.");}finally{setSaving(false);}};
-  const addFiles=useCallback(async(files:File[])=>{
+  const persistAddedFiles=useCallback(async(added:StoryPhoto[])=>{try{const p=await ensureProject();for(const photo of added){const form=new FormData();form.append("file",photo.file);await piApi.post(`/whatsapp-story/projekte/${p.id}/bilder`,form);}}catch{/* Entwurf bleibt lokal und vollständig bearbeitbar */}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[]);
+  const addFiles=useCallback((files:File[])=>{
     const accepted=["image/jpeg","image/png","image/webp"];
     const images=files.filter(f=>accepted.includes(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name));
     const rejected=files.filter(f=>!images.includes(f));
@@ -68,10 +71,9 @@ export function WhatsappStoryEditor(){
     setPhotos(old=>[...old,...added]);
     setSelectedId(current=>current??added[0]?.id);
     toast.success(added.length===1?"1 Bild hinzugefügt.":`${added.length} Bilder hinzugefügt.`);
-    try{const p=await ensureProject();for(const photo of added){const form=new FormData();form.append("file",photo.file as File);await piApi.post(`/whatsapp-story/projekte/${p.id}/bilder`,form);}}catch{/* Entwurf bleibt lokal */}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  },[]);
-  const handleFileSelection=(event:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(event.currentTarget.files??[]);event.currentTarget.value="";if(!files.length)return;void addFiles(files);};
+    void persistAddedFiles(added);
+  },[persistAddedFiles]);
+  const handleFileSelection=(event:React.ChangeEvent<HTMLInputElement>)=>{const files=Array.from(event.currentTarget.files??[]);event.currentTarget.value="";if(!files.length)return;addFiles(files);};
   useEffect(()=>{const onPaste=(event:ClipboardEvent)=>{const items=Array.from(event.clipboardData?.items??[]);const files=Array.from(event.clipboardData?.files??[]);const fromItems=items.filter(i=>i.kind==="file"&&i.type.startsWith("image/")).map(i=>i.getAsFile()).filter((f):f is File=>!!f);const all=files.length?files:fromItems;if(all.length){event.preventDefault();void addFiles(all.map(f=>f.name?f:new File([f],`eingefuegt-${Date.now()}.png`,{type:f.type})));}};window.addEventListener("paste",onPaste);return()=>window.removeEventListener("paste",onPaste);},[addFiles]);
   const reorder=(from:number,to:number)=>{if(to<0||to>=photos.length)return;setPhotos(all=>{const next=[...all];const moved=next.splice(from,1)[0];if(!moved)return all;next.splice(to,0,moved);return next;});};
   const assignReviews=()=>{if(!options.useReviews||!reviews.length){setPhotos(all=>all.map(p=>({...p,reviewId:undefined})));return;}const shuffled=[...reviews].sort(()=>Math.random()-.5);setPhotos(all=>all.map((p,i)=>({...p,reviewId:shuffled[i]?.id,reviewPosition:i%2?"oben-rechts":"oben-links"})));if(photos.length>reviews.length)toast.info("Für weitere Bilder wird keine Bewertung gesetzt, damit sich keine wiederholt.");};
