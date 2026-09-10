@@ -90,12 +90,12 @@ function cardPosition(ctx:CanvasRenderingContext2D,review:StoryReview,pos:Review
   return {x,y};
 }
 
-export async function renderStory(canvas:HTMLCanvasElement,templateUrl:string,photo:StoryPhoto,photos:StoryPhoto[],review?:StoryReview){
+export async function renderStory(canvas:HTMLCanvasElement,templateUrl:string=STORY_TEMPLATE_URL,photo:StoryPhoto,photos:StoryPhoto[],review?:StoryReview){
   await ensureStoryFonts();
   canvas.width=STORY_WIDTH;canvas.height=STORY_HEIGHT;
   const ctx=canvas.getContext("2d");if(!ctx)return;
   ctx.textAlign="start";ctx.textBaseline="alphabetic";
-  ctx.drawImage(await loadImage(templateUrl),0,0,STORY_WIDTH,STORY_HEIGHT);
+  await drawTemplate(ctx,templateUrl);
   if(photo.layout==="landschaft"){
     const h=(PHOTO.h-34)/2;
     await drawCover(ctx,photo.url,70,PHOTO.y,940,h,photo.crop);
@@ -115,11 +115,11 @@ export async function renderStory(canvas:HTMLCanvasElement,templateUrl:string,ph
   if(review){const {x,y}=cardPosition(ctx,review,photo.reviewPosition,photo.reviewOffset);await drawReviewCard(ctx,review,x,y);}
 }
 
-export async function renderReviewEnding(canvas:HTMLCanvasElement,templateUrl:string,reviews:StoryReview[]){
+export async function renderReviewEnding(canvas:HTMLCanvasElement,templateUrl:string=STORY_TEMPLATE_URL,reviews:StoryReview[]){
   await ensureStoryFonts();
   canvas.width=STORY_WIDTH;canvas.height=STORY_HEIGHT;
   const ctx=canvas.getContext("2d");if(!ctx)return;
-  ctx.drawImage(await loadImage(templateUrl),0,0,STORY_WIDTH,STORY_HEIGHT);
+  await drawTemplate(ctx,templateUrl);
   ctx.save();ctx.fillStyle="#fff";ctx.font=font(600,52);ctx.textAlign="center";
   ctx.fillText("Das sagen unsere Kunden",540,640);ctx.restore();
   const width=STORY_WIDTH-CARD.margin*2;
@@ -132,11 +132,11 @@ export async function renderReviewEnding(canvas:HTMLCanvasElement,templateUrl:st
   }
 }
 
-export async function renderGoogleEnding(canvas:HTMLCanvasElement,templateUrl:string,qrDataUrl?:string){
+export async function renderGoogleEnding(canvas:HTMLCanvasElement,templateUrl:string=STORY_TEMPLATE_URL,qrDataUrl?:string){
   await ensureStoryFonts();
   canvas.width=STORY_WIDTH;canvas.height=STORY_HEIGHT;
   const ctx=canvas.getContext("2d");if(!ctx)return;
-  ctx.drawImage(await loadImage(templateUrl),0,0,STORY_WIDTH,STORY_HEIGHT);
+  await drawTemplate(ctx,templateUrl);
   ctx.save();ctx.textAlign="center";
   await drawGoogleG(ctx,540-55,660,110);
   ctx.fillStyle="#fff";ctx.font=font(600,54);
