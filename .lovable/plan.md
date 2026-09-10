@@ -3,7 +3,7 @@
 ## Ziel
 Unter **Werkzeuge** entsteht eine neue Seite **WhatsApp Story**. Sie erzeugt aus hochgeladenen Bildern einheitliche Story-Seiten im Format **1080 × 1920 Pixel**, speichert Entwürfe und Bewertungen dauerhaft auf dem Raspberry Pi und lädt fertige Seiten als einzeln nummerierte PNG-Dateien herunter.
 
-Die von dir noch hochgeladene **leere Vorlage** wird unverändert als feste Grundlage verwendet. Sie enthält nur Logo, Trennlinie und „20 Jahre Erfahrung“. Text, Bewertung und Arbeitsbilder werden ausschließlich in die dafür vorgesehenen Bereiche gesetzt.
+Die hochgeladene Datei **`Whatsapp_Story-4.png`** wird unverändert als feste Grundlage jeder Story-Seite verwendet. Sie ist bereits **1080 × 1920 Pixel** groß und enthält den dunklen Hintergrund, das MYCLEANCENTER-Logo mit Firmenschriftzug, den grünen Satz „Wir glänzen mit Zufriedenheit.“, die Trennlinie sowie „20+ Jahre Erfahrung“. Diese Elemente werden nicht nachgebaut, verschoben oder verändert. Arbeitsbilder, eigener Titel und optionale Google-Bewertung werden ausschließlich in den freien Bereich unterhalb der Trennlinie gesetzt.
 
 ## Bedienablauf
 1. **Bilder hinzufügen**
@@ -27,7 +27,9 @@ Die von dir noch hochgeladene **leere Vorlage** wird unverändert als feste Grun
    - Zusätzlich kann jede Seite einzeln erneut geladen werden.
 
 ## Layout-Regeln
-- Jede Seite verwendet exakt dieselbe 1080×1920-Grundfläche und dieselben festen Bildpositionen.
+- Jede Seite verwendet exakt die hochgeladene Vorlage und dieselbe 1080×1920-Grundfläche.
+- Der komplette obere Vorlagenbereich bis einschließlich Trennlinie bleibt immer sichtbar, unverdeckt und pixelgenau an seiner ursprünglichen Position.
+- Die festen Bildpositionen beginnen unterhalb der Trennlinie; weder Bilder noch Bewertungen dürfen Logo, Firmenschriftzug oder Jubiläumshinweis überdecken.
 - Hochformatbilder erhalten eine große, identische Bildfläche.
 - Querformatbilder werden in einer passenden Zwei-Bild-Anordnung dargestellt.
 - Vorher/Nachher bekommt klar getrennte, gleich große Bereiche und frei änderbare Beschriftungen.
@@ -57,7 +59,7 @@ Die von dir noch hochgeladene **leere Vorlage** wird unverändert als feste Grun
 - Keine Änderung an Paketversionen oder Lockdateien. Der bestehende `mcc-update`-Ablauf und die strikte Trennung von Code und Daten bleiben erhalten.
 
 ## Umsetzung in Etappen
-1. Leere Vorlage einbinden, Werkzeug-Seite und dauerhafte Datenstruktur anlegen.
+1. `Whatsapp_Story-4.png` update-sicher als feste Story-Vorlage einbinden, Werkzeug-Seite und dauerhafte Datenstruktur anlegen.
 2. Upload, Einfügen, Drag-and-drop, Sortierung und Seitentypen umsetzen.
 3. Präzisen Zuschnitt mit Verschieben/Zoom sowie einheitliche Story-Darstellung bauen.
 4. Bewertungen importieren, verwalten, zufällig ohne Duplikate verteilen und manuell positionieren.
@@ -73,5 +75,4 @@ Die von dir noch hochgeladene **leere Vorlage** wird unverändert als feste Grun
 - Frontend- und Backend-Prüfungen ohne Änderung der Paket- oder Lockdateien; abschließende Kontrolle des Update-Pfads.
 
 ## Noch benötigt
-- Die angekündigte leere 1080×1920-Vorlage als PNG oder JPG.
 - Falls einzelne Bewertungen in den Beispielbildern nicht vollständig lesbar sind, werden nur eindeutig erkennbare Texte übernommen; weitere können direkt im Werkzeug ergänzt werden.
