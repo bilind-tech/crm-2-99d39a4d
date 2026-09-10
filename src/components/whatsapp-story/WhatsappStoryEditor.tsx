@@ -65,7 +65,10 @@ export function WhatsappStoryEditor(){
     const accepted=["image/jpeg","image/png","image/webp"];
     const images=files.filter(f=>accepted.includes(f.type)||/\.(jpe?g|png|webp)$/i.test(f.name));
     const rejected=files.filter(f=>!images.includes(f));
-    if(rejected.length)toast.error(`${rejected.map(f=>f.name||"Datei").join(", ")}: nur JPG, PNG oder WebP möglich.`);
+    const heic=rejected.filter(f=>/heic|heif/i.test(f.type)||/\.(heic|heif)$/i.test(f.name));
+    const andere=rejected.filter(f=>!heic.includes(f));
+    if(heic.length)toast.error(`${heic.map(f=>f.name||"Foto").join(", ")}: iPhone-Fotos im Format HEIC bitte als JPG teilen.`);
+    if(andere.length)toast.error(`${andere.map(f=>f.name||"Datei").join(", ")}: nur JPG, PNG oder WebP möglich.`);
     if(!images.length)return;
     const added=images.map((file,index):StoryPhoto=>({id:id(),file,url:URL.createObjectURL(file),name:file.name||`Bild ${index+1}`,layout:"einzel",crop:{...DEFAULT_CROP},title:"",reviewPosition:index%2?"oben-rechts":"oben-links",reviewOffset:0}));
     setPhotos(old=>[...old,...added]);

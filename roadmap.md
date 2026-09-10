@@ -7,4 +7,7 @@
 - [x] Zuschnitt, Zoom, Verschieben, Titel und Bewertung positionieren
 - [x] Bewertungen verwalten und ohne Wiederholung zuordnen
 - [x] Abschlussseiten und nummerierte PNG-Downloads
-- [x] Desktop-/Handy-Sichtprüfung, Tests und Update-Sicherheitsprüfung
+- [x] Desktop-/Handy-Sichtprüfung (Bildauswahl, Kamera, gleiche Datei erneut, Löschen, Story-Vorschau)
+- [x] Schriften, Google-Logo und Sternmotiv liegen im gebauten Paket und werden offline geladen
+- [x] Update-Sicherheit: keine Änderung an Paketlisten, Sperrdateien oder Update-Skript
+- [ ] Abschlussprüfung direkt auf dem Raspberry Pi nach `mcc-update` (nur dort möglich)
