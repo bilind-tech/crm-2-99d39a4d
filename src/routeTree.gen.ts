@@ -22,6 +22,7 @@ import { Route as AngeboteRouteImport } from './routes/angebote'
 import { Route as AktivitaetRouteImport } from './routes/aktivitaet'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WerkzeugeIndexRouteImport } from './routes/werkzeuge.index'
+import { Route as WerkzeugeWhatsappStoryRouteImport } from './routes/werkzeuge.whatsapp-story'
 import { Route as WerkzeugeUebergabeprotokollRouteImport } from './routes/werkzeuge.uebergabeprotokoll'
 import { Route as WerkzeugeSchluesseluebergabeRouteImport } from './routes/werkzeuge.schluesseluebergabe'
 import { Route as RechnungenNeuRouteImport } from './routes/rechnungen.neu'
@@ -102,6 +103,11 @@ const IndexRoute = IndexRouteImport.update({
 const WerkzeugeIndexRoute = WerkzeugeIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => WerkzeugeRoute,
+} as any)
+const WerkzeugeWhatsappStoryRoute = WerkzeugeWhatsappStoryRouteImport.update({
+  id: '/whatsapp-story',
+  path: '/whatsapp-story',
   getParentRoute: () => WerkzeugeRoute,
 } as any)
 const WerkzeugeUebergabeprotokollRoute =
@@ -212,6 +218,7 @@ export interface FileRoutesByFullPath {
   '/rechnungen/neu': typeof RechnungenNeuRoute
   '/werkzeuge/schluesseluebergabe': typeof WerkzeugeSchluesseluebergabeRoute
   '/werkzeuge/uebergabeprotokoll': typeof WerkzeugeUebergabeprotokollRoute
+  '/werkzeuge/whatsapp-story': typeof WerkzeugeWhatsappStoryRoute
   '/werkzeuge/': typeof WerkzeugeIndexRoute
   '/angebote/$id/bearbeiten': typeof AngeboteIdBearbeitenRoute
   '/m/upload/$session': typeof MUploadSessionRoute
@@ -242,6 +249,7 @@ export interface FileRoutesByTo {
   '/rechnungen/neu': typeof RechnungenNeuRoute
   '/werkzeuge/schluesseluebergabe': typeof WerkzeugeSchluesseluebergabeRoute
   '/werkzeuge/uebergabeprotokoll': typeof WerkzeugeUebergabeprotokollRoute
+  '/werkzeuge/whatsapp-story': typeof WerkzeugeWhatsappStoryRoute
   '/werkzeuge': typeof WerkzeugeIndexRoute
   '/angebote/$id/bearbeiten': typeof AngeboteIdBearbeitenRoute
   '/m/upload/$session': typeof MUploadSessionRoute
@@ -274,6 +282,7 @@ export interface FileRoutesById {
   '/rechnungen/neu': typeof RechnungenNeuRoute
   '/werkzeuge/schluesseluebergabe': typeof WerkzeugeSchluesseluebergabeRoute
   '/werkzeuge/uebergabeprotokoll': typeof WerkzeugeUebergabeprotokollRoute
+  '/werkzeuge/whatsapp-story': typeof WerkzeugeWhatsappStoryRoute
   '/werkzeuge/': typeof WerkzeugeIndexRoute
   '/angebote/$id/bearbeiten': typeof AngeboteIdBearbeitenRoute
   '/m/upload/$session': typeof MUploadSessionRoute
@@ -307,6 +316,7 @@ export interface FileRouteTypes {
     | '/rechnungen/neu'
     | '/werkzeuge/schluesseluebergabe'
     | '/werkzeuge/uebergabeprotokoll'
+    | '/werkzeuge/whatsapp-story'
     | '/werkzeuge/'
     | '/angebote/$id/bearbeiten'
     | '/m/upload/$session'
@@ -337,6 +347,7 @@ export interface FileRouteTypes {
     | '/rechnungen/neu'
     | '/werkzeuge/schluesseluebergabe'
     | '/werkzeuge/uebergabeprotokoll'
+    | '/werkzeuge/whatsapp-story'
     | '/werkzeuge'
     | '/angebote/$id/bearbeiten'
     | '/m/upload/$session'
@@ -368,6 +379,7 @@ export interface FileRouteTypes {
     | '/rechnungen/neu'
     | '/werkzeuge/schluesseluebergabe'
     | '/werkzeuge/uebergabeprotokoll'
+    | '/werkzeuge/whatsapp-story'
     | '/werkzeuge/'
     | '/angebote/$id/bearbeiten'
     | '/m/upload/$session'
@@ -482,6 +494,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/werkzeuge/'
       preLoaderRoute: typeof WerkzeugeIndexRouteImport
+      parentRoute: typeof WerkzeugeRoute
+    }
+    '/werkzeuge/whatsapp-story': {
+      id: '/werkzeuge/whatsapp-story'
+      path: '/whatsapp-story'
+      fullPath: '/werkzeuge/whatsapp-story'
+      preLoaderRoute: typeof WerkzeugeWhatsappStoryRouteImport
       parentRoute: typeof WerkzeugeRoute
     }
     '/werkzeuge/uebergabeprotokoll': {
@@ -716,12 +735,14 @@ const RechnungenRouteWithChildren = RechnungenRoute._addFileChildren(
 interface WerkzeugeRouteChildren {
   WerkzeugeSchluesseluebergabeRoute: typeof WerkzeugeSchluesseluebergabeRoute
   WerkzeugeUebergabeprotokollRoute: typeof WerkzeugeUebergabeprotokollRoute
+  WerkzeugeWhatsappStoryRoute: typeof WerkzeugeWhatsappStoryRoute
   WerkzeugeIndexRoute: typeof WerkzeugeIndexRoute
 }
 
 const WerkzeugeRouteChildren: WerkzeugeRouteChildren = {
   WerkzeugeSchluesseluebergabeRoute: WerkzeugeSchluesseluebergabeRoute,
   WerkzeugeUebergabeprotokollRoute: WerkzeugeUebergabeprotokollRoute,
+  WerkzeugeWhatsappStoryRoute: WerkzeugeWhatsappStoryRoute,
   WerkzeugeIndexRoute: WerkzeugeIndexRoute,
 }
 
