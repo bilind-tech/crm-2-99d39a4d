@@ -40,7 +40,19 @@ export function WhatsappStoryEditor(){
   const [photos,setPhotos]=useState<StoryPhoto[]>([]);const [selectedId,setSelectedId]=useState<string>();const [step,setStep]=useState<"import"|"order"|"edit">("import");const [reviews,setReviews]=useState<StoryReview[]>(EXAMPLE_REVIEWS);const [options,setOptions]=useState(defaultOptions);const [reviewDialog,setReviewDialog]=useState(false);const [draftDialog,setDraftDialog]=useState(false);const [drafts,setDrafts]=useState<ServerProject[]>([]);const [cropDialog,setCropDialog]=useState(false);const [dragging,setDragging]=useState(false);const [saving,setSaving]=useState(false);const [project,setProject]=useState<ServerProject>();const [newReview,setNewReview]=useState({name:"",text:""});const fileRef=useRef<HTMLInputElement>(null);const qrRef=useRef<HTMLCanvasElement>(null);
   const selected=photos.find(p=>p.id===selectedId)??photos[0];
   const usedReviews=useMemo(()=>new Map(photos.filter(p=>p.reviewId).map((p,i)=>[p.reviewId as string,i+1])),[photos]);
-  useEffect(()=>{try{const raw=localStorage.getItem(REVIEW_KEY);if(raw)setReviews(JSON.parse(raw) as StoryReview[]);}catch{/* ignore */}if(!isLocalPreviewFallbackAllowed()){void piApi.get<{bewertungen:Array<{id:string;name:string;text:string;sterne:number}>}>("/whatsapp-story/bewertungen").then(data=>setReviews(EXAMPLE_REVIEWS.concat(data.bewertungen.map(r=>({id:r.id,name:r.name,text:r.text,stars:r.sterne})))).catch(()=>undefined);void piApi.get<{projekte:ServerProject[]}>("/whatsapp-story/projekte").then(data=>setDrafts(data.projekte)).catch(()=>undefined);}},[]);
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(REVIEW_KEY);
+      if (raw) setReviews(JSON.parse(raw) as StoryReview[]);
+    } catch { /* ignore */ }
+    if (isLocalPreviewFallbackAllowed()) return;
+    void piApi.get<{ bewertungen: Array<{ id:string; name:string; text:string; sterne:number }> }>("/whatsapp-story/bewertungen")
+      .then((data) => setReviews(EXAMPLE_REVIEWS.concat(data.bewertungen.map((r) => ({ id:r.id, name:r.name, text:r.text, stars:r.sterne })))))
+      .catch(() => undefined);
+    void piApi.get<{ projekte: ServerProject[] }>("/whatsapp-story/projekte")
+      .then((data) => setDrafts(data.projekte))
+      .catch(() => undefined);
+  }, []);
   const persistReviews=(next:StoryReview[])=>{setReviews(next);localStorage.setItem(REVIEW_KEY,JSON.stringify(next));};
   const updatePhoto=useCallback((photoId:string,patch:Partial<StoryPhoto>)=>setPhotos(all=>all.map(p=>p.id===photoId?{...p,...patch}:p)),[]);
   const ensureProject=async()=>{if(project)return project;if(isLocalPreviewFallbackAllowed())throw new Error("preview");const created=await piApi.post<ServerProject>("/whatsapp-story/projekte",{name:`Story ${new Date().toLocaleDateString("de-DE")}`});setProject(created);return created;};
