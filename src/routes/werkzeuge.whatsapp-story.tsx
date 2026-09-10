@@ -1,0 +1,3 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { WhatsappStoryEditor } from "@/components/whatsapp-story/WhatsappStoryEditor";
+export const Route=createFileRoute("/werkzeuge/whatsapp-story")({head:()=>({meta:[{title:"WhatsApp Story | My Clean Center"},{name:"description",content:"WhatsApp Stories aus eigenen Bildern gestalten und exportieren."},{property:"og:title",content:"WhatsApp Story | My Clean Center"},{property:"og:description",content:"WhatsApp Stories aus eigenen Bildern gestalten und exportieren."},{property:"og:type",content:"website"},{name:"twitter:card",content:"summary"}]}),component:WhatsappStoryEditor});

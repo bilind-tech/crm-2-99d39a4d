@@ -36,6 +36,7 @@ import { testdatenResetRoutes } from "./routes/testdaten-reset.js";
 import { dauerauftragRoutes } from "./routes/dauerauftrag.js";
 import { dashboardRoutes } from "./routes/dashboard.js";
 import { stundenzettelRoutes } from "./routes/stundenzettel.js";
+import { whatsappStoryRoutes } from "./routes/whatsapp-story.js";
 import { seedOrUpdateDefaultVorlagen } from "./email/templates.js";
 import { startDriveWorker } from "./drive/upload-worker.js";
 import { wireDriveAutoEnqueue } from "./drive/auto-enqueue.js";
@@ -262,6 +263,7 @@ async function main(): Promise<void> {
   await app.register(dauerauftragRoutes);
   await app.register(dashboardRoutes);
   await app.register(stundenzettelRoutes);
+  await app.register(whatsappStoryRoutes);
 
   // Frontend-Statics — nur wenn FRONTEND_DIR existiert (Prod / Pi-Bundle).
   // Im Dev läuft das Frontend separat über Vite, daher hier kein Fehler.
@@ -313,7 +315,8 @@ async function main(): Promise<void> {
       url.startsWith("/dashboard") ||
       url.startsWith("/mitarbeiter") ||
       url.startsWith("/feiertage") ||
-      url.startsWith("/stundenzettel");
+      url.startsWith("/stundenzettel") ||
+      url.startsWith("/whatsapp-story");
 
     app.setNotFoundHandler(async (req, reply) => {
       const url = req.raw.url ?? "/";
