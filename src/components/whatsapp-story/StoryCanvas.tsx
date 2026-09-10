@@ -1,0 +1,6 @@
+import { useEffect, useRef } from "react";
+import type { StoryPhoto, StoryReview } from "@/lib/werkzeuge/whatsappStory";
+import { renderStory } from "@/lib/werkzeuge/whatsappStory";
+import templateAsset from "@/assets/whatsapp-story-template.png.asset.json";
+interface Props { photo:StoryPhoto; photos:StoryPhoto[]; review?:StoryReview; onCropChange:(x:number,y:number)=>void }
+export function StoryCanvas({photo,photos,review,onCropChange}:Props){const ref=useRef<HTMLCanvasElement>(null);const drag=useRef<{x:number;y:number;cx:number;cy:number}|null>(null);useEffect(()=>{if(ref.current)void renderStory(ref.current,templateAsset.url,photo,photos,review);},[photo,photos,review]);return <canvas ref={ref} className="block h-auto max-h-[calc(100dvh-12rem)] w-auto max-w-full touch-none rounded-md shadow-2xl" aria-label="Story-Vorschau" onPointerDown={e=>{drag.current={x:e.clientX,y:e.clientY,cx:photo.crop.x,cy:photo.crop.y};e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(!drag.current)return;const scale=1080/e.currentTarget.getBoundingClientRect().width;onCropChange(drag.current.cx+(e.clientX-drag.current.x)*scale,drag.current.cy+(e.clientY-drag.current.y)*scale);}} onPointerUp={()=>{drag.current=null}}/>}
