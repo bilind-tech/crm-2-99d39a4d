@@ -1,0 +1,1 @@
+import{ai as t,j as e}from"./index-C2Qf0Gs8.js";import{O as o}from"./ObjektForm-YNs4yZeb.js";function n(){const s=t();return e.jsxs("div",{className:"mx-auto max-w-2xl space-y-4",children:[e.jsx("h1",{className:"text-2xl font-semibold",children:"Neues Objekt"}),e.jsx(o,{onClose:()=>s({to:"/objekte"})})]})}export{n as component};
