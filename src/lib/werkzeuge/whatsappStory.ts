@@ -38,10 +38,15 @@ export function ensureStoryFonts(){
 const font=(weight:number,size:number)=>`${weight} ${size}px Montserrat, "Helvetica Neue", Arial, sans-serif`;
 
 function clipRounded(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,r:number){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.clip();}
-async function drawCover(ctx:CanvasRenderingContext2D,src:string,x:number,y:number,w:number,h:number,crop:CropState,radius=PHOTO.r){const image=await loadImage(src);const base=Math.max(w/image.naturalWidth,h/image.naturalHeight)*crop.zoom;const dw=image.naturalWidth*base,dh=image.naturalHeight*base;ctx.save();clipRounded(ctx,x,y,w,h,radius);ctx.drawImage(image,x+(w-dw)/2+crop.x,y+(h-dh)/2+crop.y,dw,dh);ctx.restore();}
+async function drawCover(ctx:CanvasRenderingContext2D,src:string,x:number,y:number,w:number,h:number,crop:CropState,radius=PHOTO.r){
+  ctx.save();clipRounded(ctx,x,y,w,h,radius);
+  try{const image=await loadImage(src);const base=Math.max(w/image.naturalWidth,h/image.naturalHeight)*crop.zoom;const dw=image.naturalWidth*base,dh=image.naturalHeight*base;ctx.drawImage(image,x+(w-dw)/2+crop.x,y+(h-dh)/2+crop.y,dw,dh);}
+  catch{ctx.fillStyle="rgba(255,255,255,.12)";ctx.fillRect(x,y,w,h);}
+  ctx.restore();
+}
 
-async function drawGoogleG(ctx:CanvasRenderingContext2D,x:number,y:number,size:number){ctx.drawImage(await loadImage(GOOGLE_LOGO_URL),x,y,size,size);}
-async function drawStar(ctx:CanvasRenderingContext2D,cx:number,cy:number,size:number){ctx.drawImage(await loadImage(REVIEW_STAR_URL),cx-size/2,cy-size/2,size,size);}
+async function drawGoogleG(ctx:CanvasRenderingContext2D,x:number,y:number,size:number){try{ctx.drawImage(await loadImage(GOOGLE_LOGO_URL),x,y,size,size);}catch{/* Logo fehlt — Karte bleibt sichtbar */}}
+async function drawStar(ctx:CanvasRenderingContext2D,cx:number,cy:number,size:number){try{ctx.drawImage(await loadImage(REVIEW_STAR_URL),cx-size/2,cy-size/2,size,size);}catch{/* Stern fehlt — Karte bleibt sichtbar */}}
 function wrap(ctx:CanvasRenderingContext2D,text:string,maxWidth:number){
   const lines:string[]=[];
   for(const paragraph of text.split(/\n+/)){
