@@ -28,7 +28,7 @@ async function drawTemplate(ctx:CanvasRenderingContext2D,url:string){
 let fontsReady:Promise<void>|undefined;
 export function ensureStoryFonts(){
   if(!fontsReady){
-    const faces=["400 20px Montserrat","700 24px Montserrat","700 48px Montserrat"];
+    const faces=["400 20px Montserrat","700 24px Montserrat","400 48px Montserrat","700 48px Montserrat"];
     fontsReady=(async()=>{
       try{ await Promise.all(faces.map(f=>document.fonts.load(f,"Mg"))); await document.fonts.ready; }catch{ /* Fallback-Schrift */ }
     })();
