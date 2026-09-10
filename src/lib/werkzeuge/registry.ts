@@ -3,7 +3,7 @@
 // `src/routes/werkzeuge.<slug>.tsx` anlegen. Sonst nichts.
 
 import type { ComponentType } from "react";
-import { FileSignature, KeyRound } from "lucide-react";
+import { FileSignature, Images, KeyRound } from "lucide-react";
 
 export type WerkzeugGruppe = "PDF-Vorlagen" | "Sonstiges";
 
@@ -35,6 +35,14 @@ export const WERKZEUGE: WerkzeugDefinition[] = [
       "Quittung über ausgegebene oder zurückgenommene Schlüssel inklusive Liste und Pfand.",
     icon: KeyRound,
     route: "/werkzeuge/schluesseluebergabe",
+  },
+  {
+    id: "whatsapp-story",
+    gruppe: "Sonstiges",
+    titel: "WhatsApp Story",
+    beschreibung: "Bilder sortieren, zuschneiden und als einheitliche Story-Serie exportieren.",
+    icon: Images,
+    route: "/werkzeuge/whatsapp-story",
   },
 ];
 
