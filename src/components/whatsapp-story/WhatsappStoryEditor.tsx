@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { piApi } from "@/lib/api/piClient";
-import { isLocalPreviewFallbackAllowed } from "@/lib/api/backendUrl";
+import { getBackendUrl, isLocalPreviewFallbackAllowed } from "@/lib/api/backendUrl";
 import templateAsset from "@/assets/whatsapp-story-template.png.asset.json";
 import { StoryCanvas } from "./StoryCanvas";
 import { DEFAULT_CROP, canvasBlob, renderGoogleEnding, renderReviewEnding, renderStory, type ReviewPosition, type StoryLayout, type StoryOptions, type StoryPhoto, type StoryReview } from "@/lib/werkzeuge/whatsappStory";
