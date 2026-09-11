@@ -1,7 +1,9 @@
 export type StoryLayout = "einzel" | "landschaft" | "vorher-nachher";
 export type ReviewPosition = "oben-links" | "oben-rechts" | "unten-links" | "unten-rechts";
+export type StoryFontWeight = "light" | "regular" | "medium" | "bold" | "italic";
+export type StoryTextAlign = "left" | "center" | "right";
 export interface CropState { zoom:number; x:number; y:number }
-export interface StoryPhoto { id:string; file:File; url:string; name:string; layout:StoryLayout; pairId?:string; crop:CropState; title:string; reviewId?:string; reviewPosition:ReviewPosition; reviewOffset:number }
+export interface StoryPhoto { id:string; serverId?:string; file:File; url:string; name:string; layout:StoryLayout; pairId?:string; crop:CropState; title:string; titleWeight:StoryFontWeight; titleSize:number; titleAlign:StoryTextAlign; reviewId?:string; reviewPosition:ReviewPosition; reviewOffset:number }
 export interface StoryReview { id:string; name:string; text:string; stars:number }
 export interface StoryOptions { useReviews:boolean; reviewEnding:boolean; googleEnding:boolean; googleUrl:string }
 export const STORY_WIDTH=1080;
@@ -25,10 +27,11 @@ async function drawTemplate(ctx:CanvasRenderingContext2D,url:string){
   catch{ ctx.fillStyle=TEMPLATE_FALLBACK_BG; ctx.fillRect(0,0,STORY_WIDTH,STORY_HEIGHT); }
 }
 
+const TITLE_DEFAULTS={weight:"regular" as StoryFontWeight,size:48,align:"center" as StoryTextAlign};
 let fontsReady:Promise<void>|undefined;
 export function ensureStoryFonts(){
   if(!fontsReady){
-    const faces=["400 20px Montserrat","700 24px Montserrat","400 48px Montserrat","700 48px Montserrat"];
+    const faces=["300 48px Montserrat","400 20px Montserrat","500 48px Montserrat","700 24px Montserrat","italic 400 48px Montserrat"];
     fontsReady=(async()=>{
       try{ await Promise.all(faces.map(f=>document.fonts.load(f,"Mg"))); await document.fonts.ready; }catch{ /* Fallback-Schrift */ }
     })();
@@ -36,6 +39,7 @@ export function ensureStoryFonts(){
   return fontsReady;
 }
 const font=(weight:number,size:number)=>`${weight} ${size}px Montserrat, "Helvetica Neue", Arial, sans-serif`;
+const titleFont=(kind:StoryFontWeight,size:number)=>kind==="italic"?`italic 400 ${size}px Montserrat, "Helvetica Neue", Arial, sans-serif`:font(kind==="light"?300:kind==="medium"?500:kind==="bold"?700:400,size);
 
 function clipRounded(ctx:CanvasRenderingContext2D,x:number,y:number,w:number,h:number,r:number){ctx.beginPath();ctx.roundRect(x,y,w,h,r);ctx.clip();}
 async function drawCover(ctx:CanvasRenderingContext2D,src:string,x:number,y:number,w:number,h:number,crop:CropState,radius=PHOTO.r){
@@ -111,7 +115,16 @@ export async function renderStory(canvas:HTMLCanvasElement,templateUrl:string=ST
     ctx.fillText("NACHHER",70+w+30+w/2,PHOTO.y+PHOTO.h+52);
     ctx.restore();
   } else await drawCover(ctx,photo.url,PHOTO.x,PHOTO.y,PHOTO.w,PHOTO.h,photo.crop);
-  if(photo.title){ctx.save();ctx.fillStyle="#fff";ctx.textAlign="center";ctx.font=font(400,48);ctx.fillText(photo.title,540,TITLE_BASELINE,980);ctx.restore();}
+  if(photo.title){
+    ctx.save();ctx.fillStyle="#fff";
+    const size=Math.max(28,Math.min(72,photo.titleSize||TITLE_DEFAULTS.size));
+    const align=photo.titleAlign||TITLE_DEFAULTS.align;
+    ctx.textAlign=align;ctx.font=titleFont(photo.titleWeight||TITLE_DEFAULTS.weight,size);
+    const maxWidth=980;const lines=wrap(ctx,photo.title,maxWidth).slice(0,4);const lineHeight=size*1.18;
+    const x=align==="left"?50:align==="right"?1030:540;
+    const firstY=TITLE_BASELINE-(lines.length-1)*lineHeight;
+    lines.forEach((line,index)=>ctx.fillText(line,x,firstY+index*lineHeight,maxWidth));ctx.restore();
+  }
   if(review){const {x,y}=cardPosition(ctx,review,photo.reviewPosition,photo.reviewOffset);await drawReviewCard(ctx,review,x,y);}
 }
 
