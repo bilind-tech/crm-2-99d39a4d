@@ -48,7 +48,10 @@ export function WhatsappStoryEditor(){
   useEffect(() => {
     try {
       const raw = localStorage.getItem(REVIEW_KEY);
-      if (raw) setReviews(JSON.parse(raw) as StoryReview[]);
+      if (raw) {
+        const stored=JSON.parse(raw) as StoryReview[];
+        setReviews(EXAMPLE_REVIEWS.concat(stored.filter(review=>!review.id.startsWith("beispiel-"))));
+      }
     } catch { /* ignore */ }
     if (isLocalPreviewFallbackAllowed()) return;
     void piApi.get<{ bewertungen: Array<{ id:string; name:string; text:string; sterne:number }> }>("/whatsapp-story/bewertungen")
