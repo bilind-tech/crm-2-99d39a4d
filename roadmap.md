@@ -12,5 +12,6 @@
 - [x] Entwürfe serialisiert und vollständig speichern, mit Uhrzeit anzeigen, umbenennen und bestätigt löschen
 - [x] Sammeldownload als Safari-sichere ZIP-Datei mit allen nummerierten Story-Seiten
 - [x] Unteren Text mehrzeilig mit Light, Regular, Medium, Bold, Italic, Größe und Ausrichtung gestalten
+- [x] Mitgelieferte Google-QR-Seite vor der originalen Bewertungscollage in den ZIP-Download aufnehmen
 - [x] Update-Sicherheit: keine Änderung an Paketlisten, Sperrdateien oder Update-Skript
 - [ ] Abschlussprüfung direkt auf dem Raspberry Pi nach `mcc-update` (nur dort möglich)

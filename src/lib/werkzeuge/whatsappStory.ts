@@ -18,6 +18,8 @@ const GOOGLE_LOGO_URL="/whatsapp-story/google-g.png";
 const REVIEW_STAR_URL="/whatsapp-story/review-star.svg";
 // Vorlage liegt lokal im Programm, damit die Vorschau auch offline auf dem Pi funktioniert.
 export const STORY_TEMPLATE_URL="/whatsapp-story/template.png";
+export const GOOGLE_ENDING_URL="/whatsapp-story/google-bewertung-abschluss.jpeg";
+export const REVIEWS_ENDING_URL="/whatsapp-story/bewertungen-abschluss.jpeg";
 const TEMPLATE_FALLBACK_BG="#0b1f33";
 
 const imageCache=new Map<string,Promise<HTMLImageElement>>();
@@ -128,42 +130,16 @@ export async function renderStory(canvas:HTMLCanvasElement,templateUrl:string=ST
   if(review){const {x,y}=cardPosition(ctx,review,photo.reviewPosition,photo.reviewOffset);await drawReviewCard(ctx,review,x,y);}
 }
 
-export async function renderReviewEnding(canvas:HTMLCanvasElement,templateUrl:string=STORY_TEMPLATE_URL,reviews:StoryReview[]){
-  await ensureStoryFonts();
+async function renderFixedEnding(canvas:HTMLCanvasElement,url:string){
   canvas.width=STORY_WIDTH;canvas.height=STORY_HEIGHT;
-  const ctx=canvas.getContext("2d");if(!ctx)return;
-  await drawTemplate(ctx,templateUrl);
-  ctx.save();ctx.fillStyle="#fff";ctx.font=font(600,52);ctx.textAlign="center";
-  ctx.fillText("Das sagen unsere Kunden",540,640);ctx.restore();
-  const width=STORY_WIDTH-CARD.margin*2;
-  let y=700;
-  for(const review of reviews){
-    const height=reviewCardHeight(ctx,review,width);
-    if(y+height>1780)break;
-    await drawReviewCard(ctx,review,CARD.margin,y,width);
-    y+=height+28;
-  }
+  const ctx=canvas.getContext("2d");
+  if(!ctx)throw new Error("Canvas ist nicht verfügbar");
+  const image=await loadImage(url);
+  ctx.clearRect(0,0,STORY_WIDTH,STORY_HEIGHT);
+  ctx.drawImage(image,0,0,STORY_WIDTH,STORY_HEIGHT);
 }
 
-export async function renderGoogleEnding(canvas:HTMLCanvasElement,templateUrl:string=STORY_TEMPLATE_URL,qrDataUrl?:string){
-  await ensureStoryFonts();
-  canvas.width=STORY_WIDTH;canvas.height=STORY_HEIGHT;
-  const ctx=canvas.getContext("2d");if(!ctx)return;
-  await drawTemplate(ctx,templateUrl);
-  ctx.save();ctx.textAlign="center";
-  await drawGoogleG(ctx,540-55,660,110);
-  ctx.fillStyle="#fff";ctx.font=font(600,54);
-  ctx.fillText("Bewerten Sie uns",540,860);
-  ctx.fillText("auf Google",540,930);
-  for(let i=0;i<5;i++)await drawStar(ctx,540-4*36+i*72,1010,64);
-  if(qrDataUrl){
-    const qr=await loadImage(qrDataUrl);
-    ctx.fillStyle="#fff";ctx.beginPath();ctx.roundRect(340,1110,400,400,28);ctx.fill();
-    ctx.drawImage(qr,370,1140,340,340);
-    ctx.fillStyle="#fff";ctx.font=font(400,30);
-    ctx.fillText("QR-Code scannen und bewerten",540,1580);
-  }
-  ctx.restore();
-}
+export async function renderReviewEnding(canvas:HTMLCanvasElement){return renderFixedEnding(canvas,REVIEWS_ENDING_URL);}
+export async function renderGoogleEnding(canvas:HTMLCanvasElement){return renderFixedEnding(canvas,GOOGLE_ENDING_URL);}
 
 export function canvasBlob(canvas:HTMLCanvasElement){return new Promise<Blob>((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("Bild konnte nicht erstellt werden")),"image/png"));}
