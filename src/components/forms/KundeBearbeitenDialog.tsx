@@ -90,10 +90,6 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
     }
   }, [open, kunde]);
 
-  const periodeLabel = useMemo(() => {
-    const d = new Date();
-    return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
-  }, []);
 
   const vorschau = useMemo(() => {
     const k = kuerzel.trim().toUpperCase();
