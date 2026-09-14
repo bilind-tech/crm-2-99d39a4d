@@ -15,3 +15,5 @@
 - [x] Mitgelieferte Google-QR-Seite vor der originalen Bewertungscollage in den ZIP-Download aufnehmen
 - [x] Update-Sicherheit: keine Änderung an Paketlisten, Sperrdateien oder Update-Skript
 - [ ] Abschlussprüfung direkt auf dem Raspberry Pi nach `mcc-update` (nur dort möglich)
+- [x] Belegnummer läuft pro Kunde und Belegart durchgehend weiter (kein Monats-Reset, Migration 043)
+- [x] Rechnungen und Angebote öffnen sich mit dem aktuellen Monat als Filter
