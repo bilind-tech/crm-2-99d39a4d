@@ -30,9 +30,7 @@ import type { Kunde } from "@/lib/api/types";
 import { VertraegeTab } from "@/components/kunden/VertraegeTab";
 
 function sanitizeKuerzel(v: string): string {
-  return v
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "");
+  return v.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
 interface Props {
@@ -89,7 +87,6 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
       setStartNummerTouched(false);
     }
   }, [open, kunde]);
-
 
   const vorschau = useMemo(() => {
     const k = kuerzel.trim().toUpperCase();
@@ -254,7 +251,8 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
                   <span className="text-emerald-600 dark:text-emerald-400">✓ Kürzel frei</span>
                 ) : (
                   <span className="text-muted-foreground">
-                    Beliebige Länge (A–Z, 0–9). Wird allen neuen Belegen dieses Kunden vorangestellt.
+                    Beliebige Länge (A–Z, 0–9). Wird allen neuen Belegen dieses Kunden
+                    vorangestellt.
                   </span>
                 )}
               </div>
