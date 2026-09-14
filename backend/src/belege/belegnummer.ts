@@ -151,7 +151,8 @@ export function importScanZaehler(): {
     const rows = db
       .prepare(`SELECT kunde_id, nummer FROM ${art}`)
       .all() as { kunde_id: string; nummer: string }[];
-    // Group by kunde_id+periode → max nn
+    // Zähler läuft durchgehend: nur nach kunde_id gruppieren, die Periode im
+    // Nummernstring ist reine Anzeige (Belegmonat).
     const max = new Map<string, number>();
     for (const r of rows) {
       // Lazy-Parse hier statt Top-Level-Import-Loop, um den Test simpel zu halten
@@ -160,14 +161,11 @@ export function importScanZaehler(): {
         stats.unbekannt++;
         continue;
       }
-      const periode = m[1];
       const nn = Number(m[2]);
-      const key = `${r.kunde_id}|${periode}`;
-      max.set(key, Math.max(max.get(key) ?? 0, nn));
+      max.set(r.kunde_id, Math.max(max.get(r.kunde_id) ?? 0, nn));
     }
-    for (const [key, nn] of max.entries()) {
-      const [kundeId, periode] = key.split("|");
-      bumpBelegNummerMindestens(kundeId, art, periode, nn + 1);
+    for (const [kundeId, nn] of max.entries()) {
+      bumpBelegNummerMindestens(kundeId, art, undefined, nn + 1);
       stats[art]++;
     }
   }

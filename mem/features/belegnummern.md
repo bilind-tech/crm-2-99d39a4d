@@ -1,6 +1,6 @@
 ---
 name: Belegnummern
-description: Format {KÜRZEL}{MMYY}/{NN} pro Kunde+Monat+Belegart, atomare Vergabe + Reservierung + Retry + Import-Scan
+description: Format {KÜRZEL}{MMYY}/{NN}, Zähler läuft durchgehend pro Kunde+Belegart (kein Monats-Reset), atomare Vergabe + Reservierung + Retry + Import-Scan
 type: feature
 ---
 
@@ -12,7 +12,7 @@ type: feature
 - **PREFIX** = Kunden-Kürzel (z. B. `GFU`) wenn vorhanden
 - Ohne Kürzel: Fallback `AN-K001` / `RE-K001` (aus Kundennummer abgeleitet) — eindeutig pro Kunde, keine Kollisionen mehr.
 - **MMYY** = zweistelliger Monat + zweistelliges Jahr (richtige Reihenfolge!)
-- **NN** = laufender Zähler ab 01, **pro (Kunde, Belegart, Periode) getrennt**.
+- **NN** = laufender Zähler ab 01, **pro (Kunde, Belegart) durchlaufend** — KEIN Reset bei Monats-/Jahreswechsel (Migration 043). MMYY ist reine Anzeige des Belegmonats. Zähler-Tabelle nutzt die feste Periode `ALL`.
 
 Single Source of Truth: `backend/src/belege/nummer-format.ts` (`parseBelegnummer`, `formatBelegnummer`, `fallbackPrefix`, `periodeMMYY`).
 

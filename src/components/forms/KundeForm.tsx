@@ -412,7 +412,7 @@ export function KundeForm({ onClose, onCreated }: Props) {
           </Field>
 
           {f.kuerzel.length >= 1 && (
-            <Field label="Nächste Nummer (diesen Monat) startet bei">
+            <Field label="Nächste Belegnummer startet bei">
               <Input
                 type="number"
                 inputMode="numeric"

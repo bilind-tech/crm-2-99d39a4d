@@ -71,7 +71,7 @@ function neuerKunde(kuerzel: string | null = "GFU", zahlungsziel = 14) {
 
 // ---------------------------------------------------------------------------
 describe("Belegnummern", () => {
-  it("vergibt fortlaufende Nummern pro (Kunde, Periode)", () => {
+  it("vergibt fortlaufende Nummern pro (Kunde, Belegart)", () => {
     const k = neuerKunde("AAA");
     const datum = new Date(2026, 4, 15); // Mai 2026 → MMYY = 0526
     const n1 = vergebeBelegnummer(k.id, "rechnung", datum);
@@ -79,25 +79,26 @@ describe("Belegnummern", () => {
     const n3 = vergebeBelegnummer(k.id, "angebot", datum);
     const periode = periodeMMYY(datum);
     expect(periode).toBe("0526");
-    expect(n1).toBe(`AAA0526/01`);
-    expect(n2).toBe(`AAA0526/02`);
-    // Zähler ist gemeinsam pro (Kunde, Periode)
-    expect(n3).toBe(`AAA0526/03`);
+    expect(n1.nummer).toBe(`AAA0526/01`);
+    expect(n2.nummer).toBe(`AAA0526/02`);
+    // Angebote zählen getrennt
+    expect(n3.nummer).toBe(`AAA0526/01`);
   });
 
   it("nutzt Fallback-Präfix ohne Kürzel", () => {
     const k = neuerKunde(null);
     const datum = new Date(2026, 4, 15);
     const n = vergebeBelegnummer(k.id, "angebot", datum);
-    expect(n.startsWith("AN0526/")).toBe(true);
+    expect(n.nummer.startsWith("AN-K")).toBe(true);
+    expect(n.nummer).toContain("0526/");
   });
 
   it("Zähler sind pro Kunde isoliert", () => {
     const a = neuerKunde("BBB");
     const b = neuerKunde("CCC");
     const datum = new Date(2026, 5, 1);
-    expect(vergebeBelegnummer(a.id, "rechnung", datum)).toBe("BBB0626/01");
-    expect(vergebeBelegnummer(b.id, "rechnung", datum)).toBe("CCC0626/01");
+    expect(vergebeBelegnummer(a.id, "rechnung", datum).nummer).toBe("BBB0626/01");
+    expect(vergebeBelegnummer(b.id, "rechnung", datum).nummer).toBe("CCC0626/01");
   });
 });
 

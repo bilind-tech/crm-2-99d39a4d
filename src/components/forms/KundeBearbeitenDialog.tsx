@@ -30,9 +30,7 @@ import type { Kunde } from "@/lib/api/types";
 import { VertraegeTab } from "@/components/kunden/VertraegeTab";
 
 function sanitizeKuerzel(v: string): string {
-  return v
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "");
+  return v.toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
 interface Props {
@@ -89,11 +87,6 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
       setStartNummerTouched(false);
     }
   }, [open, kunde]);
-
-  const periodeLabel = useMemo(() => {
-    const d = new Date();
-    return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getFullYear()).slice(-2)}`;
-  }, []);
 
   const vorschau = useMemo(() => {
     const k = kuerzel.trim().toUpperCase();
@@ -258,13 +251,14 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
                   <span className="text-emerald-600 dark:text-emerald-400">✓ Kürzel frei</span>
                 ) : (
                   <span className="text-muted-foreground">
-                    Beliebige Länge (A–Z, 0–9). Wird allen neuen Belegen dieses Kunden vorangestellt.
+                    Beliebige Länge (A–Z, 0–9). Wird allen neuen Belegen dieses Kunden
+                    vorangestellt.
                   </span>
                 )}
               </div>
             </Field>
 
-            <Field label={`Nächste Nummer im Monat ${periodeLabel}`}>
+            <Field label="Nächste Belegnummer">
               <Input
                 type="number"
                 inputMode="numeric"
@@ -283,7 +277,7 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
                 <span className="font-mono font-semibold text-foreground">
                   {zaehlerQ.data?.naechsterStart ?? "…"}
                 </span>
-                . Ändert nur den Zähler für diesen Monat — bestehende Belege bleiben unverändert.
+                . Der Zähler läuft durchgehend weiter — bestehende Belege bleiben unverändert.
               </p>
             </Field>
 
