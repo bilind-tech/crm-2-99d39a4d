@@ -1241,7 +1241,10 @@ export const useVerschiebeGeplant = () => {
 export const useSendeGeplantJetzt = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => api.post<EmailGeplant>(`/email/geplant/${id}/jetzt-senden`),
+    mutationFn: (id: string) =>
+      api.post<EmailGeplant & { sendOk?: boolean; sendError?: string }>(
+        `/email/geplant/${id}/jetzt-senden`,
+      ),
     onSuccess: () => invalidateGeplant(qc),
   });
 };

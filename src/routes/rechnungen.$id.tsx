@@ -17,6 +17,7 @@ import { rechnungFlow } from "@/lib/flow/flows";
 import { ZahlungErfassenDialog } from "@/components/forms/ZahlungErfassenDialog";
 import { EmailVersandDialog } from "@/components/email/EmailVersandDialog";
 import { EmailVersandHistorie } from "@/components/email/EmailVersandHistorie";
+import { GeplanteMailKarte } from "@/components/email/GeplanteMailKarte";
 import { PdfViewButton } from "@/components/pdf/PdfViewButton";
 import { PdfPreviewCard } from "@/components/pdf/PdfPreviewCard";
 import { PrintButton } from "@/components/pdf/PrintButton";
@@ -335,6 +336,7 @@ function Page() {
             />
           )}
 
+          <GeplanteMailKarte belegId={r.id} belegTyp="rechnung" />
           <EmailVersandHistorie belegId={r.id} belegTyp="rechnung" />
         </div>
 

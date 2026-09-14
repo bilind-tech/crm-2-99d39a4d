@@ -124,7 +124,12 @@ export function GeplanteMailKarte({ belegId, belegTyp }: Props) {
                     res.sendOk === false
                       ? toast.error(`Versand fehlgeschlagen: ${res.sendError ?? ""}`)
                       : toast.success("E-Mail versendet"),
-                  onError: () => toast.error("Versand fehlgeschlagen."),
+                  onError: (e: unknown) => {
+                    const err = e as { body?: { sendError?: string } };
+                    toast.error("Versand fehlgeschlagen", {
+                      description: err?.body?.sendError ?? "",
+                    });
+                  },
                 })
               }
             >
