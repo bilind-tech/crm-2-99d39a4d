@@ -11,6 +11,7 @@ export type AppEvent =
   | { type: "zahlung:erfasst";         payload: { rechnungId: string; betrag: number; statusNachher: string } }
   | { type: "mahnung:erstellt";        payload: { rechnungId: string; stufe: number } }
   | { type: "email:versand-changed";   payload: { id: string; status: string; belegArt?: string | null; belegId?: string | null; fehlerText?: string | null } }
+  | { type: "email:geplant-changed";   payload: { id: string; status: string; belegArt?: string | null; belegId?: string | null; geplantFuer?: string | null } }
   | { type: "drive:upload-changed";    payload: { id: string; status: string; belegArt?: string | null; belegId?: string | null; fehlerText?: string | null } }
   | { type: "drive:hochgeladen";       payload: { id: string; belegArt?: string | null; belegId?: string | null; fileId: string; webLink?: string | null } }
   | { type: "drive:fehler";            payload: { id: string; belegArt?: string | null; belegId?: string | null; fehlerText: string; final: boolean } }

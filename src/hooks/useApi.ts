@@ -18,6 +18,7 @@ import type {
   UploadSession,
   EmailSignatur,
   EmailVersand,
+  EmailGeplant,
   EmailVorlage,
   FirmaLogoDebugInfo,
   Firmendaten,
@@ -85,6 +86,8 @@ export const qk = {
     signaturen: ["email", "signaturen"] as const,
     versand: (filter?: { belegId?: string; belegTyp?: string }) =>
       ["email", "versand", filter ?? {}] as const,
+    geplant: (filter?: { belegId?: string; belegTyp?: string }) =>
+      ["email", "geplant", filter ?? {}] as const,
   },
   search: (q: string) => ["search", q] as const,
 };
@@ -1191,6 +1194,63 @@ export const useSendEmail = () => {
         qc.invalidateQueries({ queryKey: ["rechnungen"] });
       }
     },
+  });
+};
+
+// ---------- Geplante E-Mails ----------
+// Zeigt/steuert Mails, die der User selbst mit Zeitpunkt angelegt hat.
+export const useGeplanteMails = (filter?: { belegId?: string; belegTyp?: string }) =>
+  useQuery({
+    queryKey: qk.email.geplant(filter),
+    queryFn: () => {
+      const q = new URLSearchParams();
+      if (filter?.belegId) q.set("beleg_id", filter.belegId);
+      if (filter?.belegTyp) q.set("beleg_art", filter.belegTyp);
+      const s = q.toString();
+      return api.get<EmailGeplant[]>(`/email/geplant${s ? `?${s}` : ""}`);
+    },
+    // Fällt der Zeitpunkt, verschwindet das Abzeichen von selbst.
+    refetchInterval: 60_000,
+  });
+
+const invalidateGeplant = (qc: ReturnType<typeof useQueryClient>) => {
+  qc.invalidateQueries({ queryKey: ["email"] });
+  qc.invalidateQueries({ queryKey: ["rechnungen"] });
+  qc.invalidateQueries({ queryKey: ["angebote"] });
+  qc.invalidateQueries({ queryKey: qk.aktivitaeten });
+};
+
+export const usePlaneEmail = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Record<string, unknown>) =>
+      api.post<EmailGeplant>("/email/versand/plan", data),
+    onSuccess: () => invalidateGeplant(qc),
+  });
+};
+
+export const useVerschiebeGeplant = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, geplantFuer }: { id: string; geplantFuer: string }) =>
+      api.patch<EmailGeplant>(`/email/geplant/${id}`, { geplantFuer }),
+    onSuccess: () => invalidateGeplant(qc),
+  });
+};
+
+export const useSendeGeplantJetzt = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.post<EmailGeplant>(`/email/geplant/${id}/jetzt-senden`),
+    onSuccess: () => invalidateGeplant(qc),
+  });
+};
+
+export const useAbbrechenGeplant = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<EmailGeplant>(`/email/geplant/${id}`),
+    onSuccess: () => invalidateGeplant(qc),
   });
 };
 

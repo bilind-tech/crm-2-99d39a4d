@@ -32,6 +32,7 @@ import { MobileListCard } from "@/components/ui/mobile-list-card";
 import { AngebotForm } from "@/components/forms/AngebotForm";
 import { FormErrorBoundary } from "@/components/layout/FormErrorBoundary";
 import { FlowBar } from "@/components/flow/FlowBar";
+import { GeplantBadge } from "@/components/email/GeplantBadge";
 import { angebotFlow } from "@/lib/flow/flows";
 import {
   ZEITRAUM_ALLE,
@@ -183,7 +184,7 @@ function Page() {
               </>
             }
             trailing={formatEUR(summe(a))}
-            badge={statusBadge(a.status)}
+            badge={<span className="flex flex-wrap items-center gap-1.5">{statusBadge(a.status)}<GeplantBadge belegArt="angebot" belegId={a.id} kompakt /></span>}
             footer={
               <FlowBar steps={angebotFlow(a, angebotMitRechnung.has(a.id)).steps} size="sm" />
             }
@@ -266,7 +267,7 @@ function Page() {
                   <td className="px-4 py-3 text-muted-foreground">—</td>
                   <td className="px-4 py-3 text-muted-foreground">{formatDate(a.gueltigBis)}</td>
                   <td className="px-4 py-3 text-right font-semibold">{formatEUR(summe(a))}</td>
-                  <td className="px-4 py-3">{statusBadge(a.status)}</td>
+                  <td className="px-4 py-3"><div className="flex flex-wrap items-center gap-1.5">{statusBadge(a.status)}<GeplantBadge belegArt="angebot" belegId={a.id} kompakt /></div></td>
                   <td className="px-4 py-3">
                     <FlowBar steps={angebotFlow(a, angebotMitRechnung.has(a.id)).steps} size="sm" />
                   </td>

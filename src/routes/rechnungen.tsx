@@ -20,6 +20,7 @@ import { ZahlungErfassenDialog } from "@/components/forms/ZahlungErfassenDialog"
 import { useConfirm } from "@/hooks/useConfirm";
 import { RechnungAusDauerauftragDialog } from "@/components/dauerauftrag/RechnungAusDauerauftragDialog";
 import { FlowBar } from "@/components/flow/FlowBar";
+import { GeplantBadge } from "@/components/email/GeplantBadge";
 import { rechnungFlow } from "@/lib/flow/flows";
 import {
   ZEITRAUM_ALLE,
@@ -313,7 +314,7 @@ function Page() {
                   )}
                 </div>
               }
-              badge={statusBadge(r.status)}
+              badge={<span className="flex flex-wrap items-center gap-1.5">{statusBadge(r.status)}<GeplantBadge belegArt="rechnung" belegId={r.id} kompakt /></span>}
               footer={<FlowBar steps={rechnungFlow(r).steps} size="sm" />}
               actions={
                 <>
@@ -470,7 +471,7 @@ function Page() {
                         </>
                       )}
                     </td>
-                    <td className="px-4 py-3">{statusBadge(r.status)}</td>
+                    <td className="px-4 py-3"><div className="flex flex-wrap items-center gap-1.5">{statusBadge(r.status)}<GeplantBadge belegArt="rechnung" belegId={r.id} kompakt /></div></td>
                     <td className="px-4 py-3">
                       <FlowBar steps={rechnungFlow(r).steps} size="sm" />
                     </td>

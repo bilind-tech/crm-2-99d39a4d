@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Send,
+  Clock,
   Mail,
   MailOpen,
   Paperclip,
@@ -54,6 +55,7 @@ import {
   useFirmendaten,
   useKunde,
   useSendEmail,
+  usePlaneEmail,
   useSmtp,
 } from "@/hooks/useApi";
 import {
@@ -62,6 +64,9 @@ import {
   type PlaceholderContext,
 } from "@/lib/email/placeholders";
 import { autoLinkifyImages } from "@/lib/email/signature";
+import {
+  ausDatumZeit, geplantKlartext, schnellwahlen, splitDatumZeit, toBackendZeit,
+} from "@/lib/email/geplant";
 import { PdfCanvasViewer } from "@/components/pdf/PdfCanvasViewer";
 import type { Angebot, EmailKontext, EmailVorlage, Kunde, Rechnung } from "@/lib/api/types";
 import { cn } from "@/lib/utils";
@@ -90,6 +95,8 @@ interface Props {
 
 type EditorMode = "visuell" | "html" | "vorschau";
 type SendPhase = "idle" | "sending" | "success";
+/** „Jetzt senden" oder „Später senden" (geplant). */
+type Wann = "jetzt" | "spaeter";
 
 export function EmailVersandDialog({
   open,
@@ -110,6 +117,7 @@ export function EmailVersandDialog({
   const { data: firma } = useFirmendaten();
   const { data: smtp } = useSmtp();
   const send = useSendEmail();
+  const plane = usePlaneEmail();
   // Ansprechpartner des Kunden laden, um die Empfänger-Mail
   // (falls auf Beleg ein Ansprechpartner ausgewählt ist) zu ermitteln.
   const { data: kundeDetail } = useKunde(kunde?.id ?? "");
@@ -151,6 +159,12 @@ export function EmailVersandDialog({
   const [mode, setMode] = useState<EditorMode>("visuell");
   const [zeigeCcBcc, setZeigeCcBcc] = useState(false);
   const [phase, setPhase] = useState<SendPhase>("idle");
+  // Zeitsteuerung: jetzt sofort raus oder zu einem Wunschzeitpunkt.
+  const [wann, setWann] = useState<Wann>("jetzt");
+  const vorschlaege = useMemo(() => schnellwahlen(), [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const startZeitpunkt = vorschlaege[0]?.date() ?? new Date(Date.now() + 3600_000);
+  const [planDatum, setPlanDatum] = useState(() => splitDatumZeit(startZeitpunkt).datum);
+  const [planZeit, setPlanZeit] = useState(() => splitDatumZeit(startZeitpunkt).zeit);
   const visuellRef = useRef<HTMLDivElement>(null);
   const [pdfPreviewOffen, setPdfPreviewOffen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -187,6 +201,10 @@ export function EmailVersandDialog({
     setPdfAnhangAktiv(true);
     setMode("visuell");
     setPhase("idle");
+    setWann("jetzt");
+    const start = schnellwahlen()[0]?.date() ?? new Date(Date.now() + 3600_000);
+    setPlanDatum(splitDatumZeit(start).datum);
+    setPlanZeit(splitDatumZeit(start).zeit);
 
     let standardVorlage: EmailVorlage | undefined;
     if (vorbelegteVorlageId) {
@@ -259,6 +277,67 @@ export function EmailVersandDialog({
   const bccChips = empfaengerListe(bcc);
 
   const istValide = an.trim().length > 0 && betreff.trim().length > 0;
+
+  // Gewählter Wunschzeitpunkt (lokale Zeit) + Klartext darunter.
+  const planZeitpunkt = ausDatumZeit(planDatum, planZeit);
+  const planInVergangenheit =
+    !!planZeitpunkt && planZeitpunkt.getTime() < Date.now() + 30_000;
+  const planKlartext = planZeitpunkt ? geplantKlartext(planZeitpunkt) : "";
+
+  const handlePlan = () => {
+    if (!smtpKonfiguriert) {
+      toast.error("SMTP nicht konfiguriert", {
+        description:
+          "Bitte unter Einstellungen → E-Mail Server, Benutzer und Passwort hinterlegen.",
+      });
+      return;
+    }
+    if (!planZeitpunkt) {
+      toast.error("Bitte Datum und Uhrzeit auswählen.");
+      return;
+    }
+    if (planInVergangenheit) {
+      toast.error("Der Zeitpunkt liegt in der Vergangenheit.");
+      return;
+    }
+    const empfaenger = empfaengerListe(an);
+    if (!empfaenger.length) {
+      toast.error("Bitte mindestens einen Empfänger angeben.");
+      return;
+    }
+    const belegArt =
+      kontext === "rechnung" ? "rechnung" : kontext === "angebot" ? "angebot" : undefined;
+
+    plane.mutate(
+      {
+        geplantFuer: toBackendZeit(planZeitpunkt),
+        empfaenger,
+        cc: empfaengerListe(cc),
+        bcc: empfaengerListe(bcc),
+        betreff: aufgelosterBetreff,
+        bodyHtml: finaleBody,
+        belegArt,
+        belegId: angebot?.id ?? rechnung?.id,
+        vorlageId: vorlageId || undefined,
+        signaturId: signaturId || undefined,
+        idempotenzKey: createClientId("plan"),
+      },
+      {
+        onSuccess: () => {
+          toast.success("E-Mail geplant", {
+            description: `Geht ${geplantKlartext(planZeitpunkt)} automatisch raus.`,
+          });
+          onOpenChange(false);
+        },
+        onError: (e: unknown) => {
+          const err = e as { body?: { message?: string; hint?: string }; message?: string };
+          toast.error("Planen nicht möglich", {
+            description: err?.body?.hint ?? err?.body?.message ?? err?.message ?? "",
+          });
+        },
+      },
+    );
+  };
 
   const handleSend = () => {
     if (!smtpKonfiguriert) {
@@ -669,6 +748,82 @@ export function EmailVersandDialog({
           )}
         </div>
 
+        {/* Zeitpunkt: sofort senden oder für später planen */}
+        <div
+          className={cn(
+            "space-y-3 border-t border-border px-6 py-4 transition-opacity",
+            phase !== "idle" && "pointer-events-none opacity-30",
+          )}
+        >
+          <div className="flex items-center gap-1 rounded-full border border-border bg-muted/30 p-0.5 w-fit">
+            <TabBtn active={wann === "jetzt"} onClick={() => setWann("jetzt")}>
+              <Send className="mr-1 h-3.5 w-3.5" /> Jetzt senden
+            </TabBtn>
+            <TabBtn active={wann === "spaeter"} onClick={() => setWann("spaeter")}>
+              <Clock className="mr-1 h-3.5 w-3.5" /> Später senden
+            </TabBtn>
+          </div>
+
+          {wann === "spaeter" && (
+            <div className="space-y-3 rounded-xl border border-warning/30 bg-warning/5 p-4">
+              <div className="flex flex-wrap gap-2">
+                {vorschlaege.map((v) => {
+                  const d = v.date();
+                  const aktiv =
+                    splitDatumZeit(d).datum === planDatum && splitDatumZeit(d).zeit === planZeit;
+                  return (
+                    <button
+                      key={v.label}
+                      type="button"
+                      onClick={() => {
+                        const sp = splitDatumZeit(d);
+                        setPlanDatum(sp.datum);
+                        setPlanZeit(sp.zeit);
+                      }}
+                      className={cn(
+                        "rounded-full border px-3 py-1 text-xs font-medium transition",
+                        aktiv
+                          ? "border-warning bg-warning/20 text-warning"
+                          : "border-border bg-card text-foreground hover:bg-muted",
+                      )}
+                    >
+                      {v.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Datum">
+                  <Input
+                    type="date"
+                    value={planDatum}
+                    onChange={(e) => setPlanDatum(e.target.value)}
+                    className="h-11"
+                  />
+                </Field>
+                <Field label="Uhrzeit">
+                  <Input
+                    type="time"
+                    value={planZeit}
+                    onChange={(e) => setPlanZeit(e.target.value)}
+                    className="h-11"
+                  />
+                </Field>
+              </div>
+              {planInVergangenheit ? (
+                <p className="text-sm font-medium text-destructive">
+                  Dieser Zeitpunkt ist schon vorbei — bitte einen späteren wählen.
+                </p>
+              ) : planKlartext ? (
+                <p className="text-sm text-foreground">
+                  Geht <span className="font-semibold">{planKlartext}</span> automatisch raus.
+                  Bis dahin können Sie die E-Mail jederzeit verschieben oder abbrechen.
+                </p>
+              ) : null}
+            </div>
+          )}
+        </div>
+
         <DialogFooter className="gap-2 border-t border-border bg-muted/20 px-6 py-4 sm:gap-2">
           <Button
             variant="outline"
@@ -679,12 +834,14 @@ export function EmailVersandDialog({
           </Button>
           <button
             type="button"
-            onClick={handleSend}
+            onClick={wann === "spaeter" ? handlePlan : handleSend}
             disabled={
               !istValide ||
               !smtpKonfiguriert ||
               send.isPending ||
+              plane.isPending ||
               phase !== "idle" ||
+              (wann === "spaeter" && (!planZeitpunkt || planInVergangenheit)) ||
               (pdfAnhangAktiv && pdfStatus === "loading")
             }
             className={cn(
@@ -702,9 +859,17 @@ export function EmailVersandDialog({
               <>
                 <Loader2 className="h-4 w-4 animate-spin" /> Wird gesendet …
               </>
+            ) : plane.isPending ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Wird geplant …
+              </>
             ) : pdfAnhangAktiv && pdfStatus === "loading" ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" /> PDF wird vorbereitet …
+              </>
+            ) : wann === "spaeter" ? (
+              <>
+                <Clock className="h-4 w-4" /> E-Mail planen
               </>
             ) : (
               <>
