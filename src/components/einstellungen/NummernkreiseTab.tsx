@@ -100,7 +100,7 @@ export function NummernkreiseTab() {
             </p>
           </Field>
 
-          <Field label="Start-Nummer (pro Kunde + Monat)" required error={errors.start}>
+          <Field label="Start-Nummer (pro Kunde, durchlaufend)" required error={errors.start}>
             <Input
               type="number"
               min={1}

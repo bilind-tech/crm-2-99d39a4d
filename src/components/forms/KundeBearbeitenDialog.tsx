@@ -264,7 +264,7 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
               </div>
             </Field>
 
-            <Field label={`Nächste Nummer im Monat ${periodeLabel}`}>
+            <Field label="Nächste Belegnummer">
               <Input
                 type="number"
                 inputMode="numeric"
@@ -283,7 +283,7 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
                 <span className="font-mono font-semibold text-foreground">
                   {zaehlerQ.data?.naechsterStart ?? "…"}
                 </span>
-                . Ändert nur den Zähler für diesen Monat — bestehende Belege bleiben unverändert.
+                . Der Zähler läuft durchgehend weiter — bestehende Belege bleiben unverändert.
               </p>
             </Field>
 
