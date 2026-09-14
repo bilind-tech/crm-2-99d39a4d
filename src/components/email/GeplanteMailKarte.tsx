@@ -19,7 +19,7 @@ import {
 } from "@/lib/email/geplant";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useConfirm } from "@/components/ui/confirm-dialog";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Props {
   belegId: string;
@@ -31,7 +31,7 @@ export function GeplanteMailKarte({ belegId, belegTyp }: Props) {
   const verschieben = useVerschiebeGeplant();
   const jetzt = useSendeGeplantJetzt();
   const abbrechen = useAbbrechenGeplant();
-  const confirm = useConfirm();
+  const [abbrechenOffen, setAbbrechenOffen] = useState(false);
   const [bearbeiten, setBearbeiten] = useState(false);
   const [datum, setDatum] = useState("");
   const [zeit, setZeit] = useState("");
@@ -136,26 +136,27 @@ export function GeplanteMailKarte({ belegId, belegTyp }: Props) {
               size="sm"
               variant="ghost"
               className="text-destructive hover:bg-destructive/10"
-              onClick={async () => {
-                const ok = await confirm({
-                  title: "Geplante E-Mail abbrechen?",
-                  description:
-                    "Die E-Mail wird dann nicht verschickt. Sie können jederzeit eine neue planen.",
-                  confirmText: "Ja, abbrechen",
-                  variant: "destructive",
-                });
-                if (!ok) return;
-                abbrechen.mutate(eintrag.id, {
-                  onSuccess: () => toast.success("Geplante E-Mail abgebrochen."),
-                  onError: () => toast.error("Abbrechen nicht möglich."),
-                });
-              }}
+              onClick={() => setAbbrechenOffen(true)}
             >
               <X className="mr-1.5 h-3.5 w-3.5" /> Nicht senden
             </Button>
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={abbrechenOffen}
+        onOpenChange={setAbbrechenOffen}
+        title="Geplante E-Mail abbrechen?"
+        description="Die E-Mail wird dann nicht verschickt. Sie können jederzeit eine neue planen."
+        confirmLabel="Ja, abbrechen"
+        variant="destructive"
+        onConfirm={() =>
+          abbrechen.mutate(eintrag.id, {
+            onSuccess: () => toast.success("Geplante E-Mail abgebrochen."),
+            onError: () => toast.error("Abbrechen nicht möglich."),
+          })
+        }
+      />
     </div>
   );
 }
