@@ -39,7 +39,7 @@ import {
   jahreAusDaten,
   passtInZeitraum,
   zeitraumIstAktiv,
-  zeitraumAktuellesJahr,
+  zeitraumAktuellerMonat,
   type ZeitraumState,
 } from "@/components/filters/ZeitraumFilter";
 import {
@@ -110,7 +110,7 @@ function Page() {
   );
   const [filter, setFilter] = useState<string>("alle");
   const [q, setQ] = useState("");
-  const [zeitraum, setZeitraum] = useState<ZeitraumState>(() => zeitraumAktuellesJahr());
+  const [zeitraum, setZeitraum] = useState<ZeitraumState>(() => zeitraumAktuellerMonat());
   const [open, setOpen] = useState(false);
   const [emailFuer, setEmailFuer] = useState<Angebot | null>(null);
 

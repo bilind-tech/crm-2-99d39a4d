@@ -9,12 +9,18 @@ import type { BelegArt } from "../belege/nummer-format.js";
 
 export { periodeMMYY } from "../belege/nummer-format.js";
 
-/** Liefert die nächste laufende Nummer für (kunde, belegart, periodeMMYY).
+/** Der Zähler läuft pro (Kunde, Belegart) durchgehend — kein monatlicher
+ *  Reset. Die Periode-Spalte bleibt aus Kompatibilitätsgründen bestehen und
+ *  trägt immer diesen festen Wert. Die übergebenen `periodeMMYY`-Argumente
+ *  werden bewusst ignoriert (Signaturen bleiben stabil). */
+const PERIODE_DURCHLAUFEND = "ALL";
+
+/** Liefert die nächste laufende Nummer für (kunde, belegart).
  *  Atomar: UPSERT + RETURNING in einer SQL-Anweisung. */
 export function nextBelegNummer(
   kundeId: string,
   belegart: BelegArt,
-  periodeMMYY: string,
+  _periodeMMYY?: string,
 ): number {
   const row = getDatabase()
     .prepare(
@@ -24,7 +30,7 @@ export function nextBelegNummer(
          DO UPDATE SET naechster_start = naechster_start + 1
        RETURNING naechster_start`,
     )
-    .get(kundeId, belegart, periodeMMYY) as { naechster_start: number };
+    .get(kundeId, belegart, PERIODE_DURCHLAUFEND) as { naechster_start: number };
   return row.naechster_start - 1;
 }
 
@@ -33,7 +39,7 @@ export function nextBelegNummer(
 export function bumpBelegNummerMindestens(
   kundeId: string,
   belegart: BelegArt,
-  periodeMMYY: string,
+  _periodeMMYY: string | undefined,
   mindestens: number,
 ): void {
   // mindestens = nächste freie NN, also "naechster_start" muss = mindestens sein.
@@ -44,7 +50,7 @@ export function bumpBelegNummerMindestens(
        ON CONFLICT(kunde_id, belegart, periode)
          DO UPDATE SET naechster_start = MAX(naechster_start, excluded.naechster_start)`,
     )
-    .run(kundeId, belegart, periodeMMYY, Math.max(1, mindestens));
+    .run(kundeId, belegart, PERIODE_DURCHLAUFEND, Math.max(1, mindestens));
 }
 
 /** Setzt den Zähler EXAKT auf den angegebenen Wert — auch nach unten.
@@ -53,7 +59,7 @@ export function bumpBelegNummerMindestens(
 export function setBelegNummerStart(
   kundeId: string,
   belegart: BelegArt,
-  periodeMMYY: string,
+  _periodeMMYY: string | undefined,
   naechsterStart: number,
 ): void {
   const v = Math.max(1, Math.floor(naechsterStart));
@@ -64,21 +70,21 @@ export function setBelegNummerStart(
        ON CONFLICT(kunde_id, belegart, periode)
          DO UPDATE SET naechster_start = excluded.naechster_start`,
     )
-    .run(kundeId, belegart, periodeMMYY, v);
+    .run(kundeId, belegart, PERIODE_DURCHLAUFEND, v);
 }
 
 /** Vorschau ohne Vergabe. */
 export function peekBelegNummer(
   kundeId: string,
   belegart: BelegArt,
-  periodeMMYY: string,
+  _periodeMMYY?: string,
 ): number {
   const row = getDatabase()
     .prepare(
       `SELECT naechster_start FROM belegnummer_zaehler
        WHERE kunde_id=? AND belegart=? AND periode=?`,
     )
-    .get(kundeId, belegart, periodeMMYY) as { naechster_start: number } | undefined;
+    .get(kundeId, belegart, PERIODE_DURCHLAUFEND) as { naechster_start: number } | undefined;
   return row ? row.naechster_start : 1;
 }
 

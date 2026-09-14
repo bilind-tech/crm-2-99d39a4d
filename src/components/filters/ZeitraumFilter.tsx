@@ -31,6 +31,15 @@ export function zeitraumAktuellesJahr(): ZeitraumState {
   return { jahr: new Date().getFullYear().toString(), monat: "alle" };
 }
 
+/** Standard für Rechnungen/Angebote: aktueller Monat im aktuellen Jahr. */
+export function zeitraumAktuellerMonat(): ZeitraumState {
+  const now = new Date();
+  return {
+    jahr: now.getFullYear().toString(),
+    monat: String(now.getMonth() + 1).padStart(2, "0"),
+  };
+}
+
 /** Liefert sortierte Jahresliste aus den verfügbaren ISO-Daten + aktuelles Jahr. */
 export function jahreAusDaten(verfuegbareDaten: string[]): string[] {
   const set = new Set<string>();
