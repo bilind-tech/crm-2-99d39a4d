@@ -17,6 +17,7 @@ import { rechnungFlow } from "@/lib/flow/flows";
 import { ZahlungErfassenDialog } from "@/components/forms/ZahlungErfassenDialog";
 import { EmailVersandDialog } from "@/components/email/EmailVersandDialog";
 import { EmailVersandHistorie } from "@/components/email/EmailVersandHistorie";
+import { GeplanteMailKarte } from "@/components/email/GeplanteMailKarte";
 import { PdfViewButton } from "@/components/pdf/PdfViewButton";
 import { PdfPreviewCard } from "@/components/pdf/PdfPreviewCard";
 import { PrintButton } from "@/components/pdf/PrintButton";
@@ -39,7 +40,12 @@ function Page() {
   const { id } = Route.useParams();
   const { data: rechnung, isLoading } = useRechnung(id);
   const r = rechnung
-    ? { ...rechnung, zahlungen: rechnung.zahlungen ?? [], positionen: rechnung.positionen ?? [], rabattGesamt: rechnung.rabattGesamt ?? 0 }
+    ? {
+        ...rechnung,
+        zahlungen: rechnung.zahlungen ?? [],
+        positionen: rechnung.positionen ?? [],
+        rabattGesamt: rechnung.rabattGesamt ?? 0,
+      }
     : undefined;
   const pdf = useRechnungPdf(r);
   const [zahlungOpen, setZahlungOpen] = useState(false);
@@ -302,9 +308,7 @@ function Page() {
                       </span>
                     </div>
                     {istPauschal ? (
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        Pauschal
-                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">Pauschal</div>
                     ) : (
                       <div className="mt-0.5 text-xs text-muted-foreground">
                         {menge} × {formatEUR(einzel)}
@@ -335,6 +339,7 @@ function Page() {
             />
           )}
 
+          <GeplanteMailKarte belegId={r.id} belegTyp="rechnung" />
           <EmailVersandHistorie belegId={r.id} belegTyp="rechnung" />
         </div>
 

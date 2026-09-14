@@ -652,6 +652,34 @@ export interface EmailVersand {
   sendErrorCode?: string;
 }
 
+/** Eine vom User geplante E-Mail (geht zum gewünschten Zeitpunkt automatisch raus). */
+export type EmailGeplantStatus = "geplant" | "sending" | "gesendet" | "fehler" | "abgebrochen";
+
+export interface EmailGeplant {
+  id: ID;
+  /** UTC "YYYY-MM-DD HH:MM:SS" */
+  geplantFuer: string;
+  empfaengerTo: string;
+  empfaengerCc?: string | null;
+  empfaengerBcc?: string | null;
+  betreff: string;
+  bodyHtml: string;
+  belegArt?: "angebot" | "rechnung" | null;
+  belegId?: ID | null;
+  vorlageId?: ID | null;
+  signaturId?: ID | null;
+  status: EmailGeplantStatus;
+  versuche: number;
+  verspaetet: boolean;
+  versandId?: ID | null;
+  versendetAm?: string | null;
+  fehlerText?: string | null;
+  erstelltAm: ISODateTime;
+  geaendertAm: ISODateTime;
+  sendOk?: boolean;
+  sendError?: string;
+}
+
 export interface Nummernkreise {
   rechnungFormat: string; // z.B. "{KUERZEL}{MM}{YY}/{NN}"
   angebotFormat: string;  // z.B. "A-{KUERZEL}{MM}{YY}/{NN}"

@@ -1,10 +1,10 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 // E-Mail-Einstellungen-Tab: Vorlagen, Signaturen, SMTP.
 // Eingebettet in src/routes/einstellungen.tsx via Subkomponenten.
 
 import { useEffect, useState } from "react";
 import { LoadingPlaceholder } from "@/components/layout/LoadingPlaceholder";
 import { toast } from "sonner";
+import { RichtextEditor } from "@/components/email/RichtextEditor";
 import { autoLinkifyImages } from "@/lib/email/signature";
 import {
   Plus,
@@ -214,7 +214,8 @@ function VorlageDialog({
   const [betreff, setBetreff] = useState(vorlage?.betreff ?? "");
   const [koerperHtml, setKoerperHtml] = useState(vorlage?.koerperHtml ?? "");
   const [istStandard, setIstStandard] = useState(vorlage?.istStandard ?? false);
-  const [mode, setMode] = useState<"html" | "vorschau">("html");
+  // Direkt schreiben (Standard) oder als fertige Mail ansehen.
+  const [mode, setMode] = useState<"schreiben" | "vorschau">("schreiben");
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
@@ -251,19 +252,19 @@ function VorlageDialog({
 
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <Label className="text-xs font-medium">HTML-Inhalt</Label>
+              <Label className="text-xs font-medium">Text der E-Mail</Label>
               <div className="flex items-center gap-1 rounded-lg border border-border p-0.5">
                 <button
                   type="button"
-                  onClick={() => setMode("html")}
+                  onClick={() => setMode("schreiben")}
                   className={cn(
                     "inline-flex items-center rounded-md px-2.5 py-1 text-xs font-medium",
-                    mode === "html"
+                    mode === "schreiben"
                       ? "bg-card shadow-sm ring-1 ring-border"
                       : "text-muted-foreground",
                   )}
                 >
-                  <Code2 className="mr-1 h-3.5 w-3.5" /> HTML
+                  <Pencil className="mr-1 h-3.5 w-3.5" /> Schreiben
                 </button>
                 <button
                   type="button"
@@ -279,12 +280,11 @@ function VorlageDialog({
                 </button>
               </div>
             </div>
-            {mode === "html" ? (
-              <Textarea
+            {mode === "schreiben" ? (
+              <RichtextEditor
                 value={koerperHtml}
-                onChange={(e) => setKoerperHtml(e.target.value)}
-                rows={14}
-                className="font-mono text-xs"
+                onChange={setKoerperHtml}
+                placeholder="Guten Tag {{kunde.name}}, …"
               />
             ) : (
               <iframe
@@ -294,6 +294,10 @@ function VorlageDialog({
                 className="block h-[360px] w-full rounded-lg border border-border bg-white"
               />
             )}
+            <p className="mt-2 text-xs text-muted-foreground">
+              Einfach losschreiben — fett, kursiv, Listen und Links über die Leiste oben.
+              Platzhalter wie {`{{kunde.name}}`} werden beim Versenden automatisch ersetzt.
+            </p>
           </div>
 
           <label className="flex items-center gap-2 text-sm">

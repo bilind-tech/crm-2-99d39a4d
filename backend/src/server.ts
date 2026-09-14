@@ -26,6 +26,7 @@ import { systemGithubRoutes } from "./routes/system-github.js";
 import { steuernRoutes } from "./routes/steuern.js";
 import { dokumenteRoutes } from "./routes/dokumente.js";
 import { protokolleRoutes } from "./routes/protokolle.js";
+import { startGeplantScheduler } from "./email/plan-scheduler.js";
 import { startFristenScheduler } from "./dokumente/fristen-cron.js";
 import { mahnungRoutes } from "./routes/mahnung.js";
 import { startMahnScheduler } from "./mahnung/cron.js";
@@ -398,6 +399,9 @@ async function main(): Promise<void> {
   });
   // Dokumente-Frist-Cron (täglich nach 07:00 Pi-Zeit)
   startFristenScheduler();
+  // Scheduler für vom User GEPLANTE E-Mails (jede Minute). Sendet
+  // ausschließlich Mails, die der User selbst mit Zeitpunkt angelegt hat.
+  startGeplantScheduler();
   // Mahn-Automatik (Cron) STILLGELEGT — niemals automatischer Mail-Versand.
   // Mahnungen werden nur manuell durch den User im Mahnwesen-Tab ausgelöst.
   // startMahnScheduler();

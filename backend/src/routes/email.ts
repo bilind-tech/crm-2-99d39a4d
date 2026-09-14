@@ -15,23 +15,12 @@ import {
 } from "../email/versand-repo.js";
 import { sendNow, translateSmtpError } from "../email/worker.js";
 import { getTransport, getFromAddress, loadSmtpRuntime, verifyTransport } from "../email/transport.js";
-import { sendeAngebot } from "../belege/angebote-repo.js";
-import { sendeRechnung } from "../belege/rechnungen-repo.js";
-import { emitBelegVersendet } from "../belege/events.js";
-
-function markBelegVersendet(
-  belegArt: "angebot" | "rechnung" | null | undefined,
-  belegId: string | null | undefined,
-): void {
-  if (!belegArt || !belegId) return;
-  try {
-    if (belegArt === "angebot") sendeAngebot(belegId);
-    else if (belegArt === "rechnung") sendeRechnung(belegId);
-    emitBelegVersendet(belegArt, belegId);
-  } catch (e) {
-    console.error("markBelegVersendet", e);
-  }
-}
+import { markBelegVersendet } from "../belege/versand-status.js";
+import {
+  planeVersand, listGeplant, getGeplant, verschiebePlanung, planungAbbrechen,
+  planungReaktivieren, toUtcStamp,
+} from "../email/geplant-repo.js";
+import { sendeGeplantJetzt } from "../email/plan-scheduler.js";
 
 const KONTEXTE = ["rechnung", "angebot", "mahnung", "allgemein"] as const;
 
@@ -298,6 +287,147 @@ export async function emailRoutes(app: FastifyInstance): Promise<void> {
     scoped.post<{ Params: { id: string } }>("/email/versand/:id/abbrechen", async (req, reply) => {
       if (!abbrechen(req.params.id)) { reply.status(404); return { error: "not-found" }; }
       return getById(req.params.id);
+    });
+
+    // ---- Geplanter Versand ------------------------------------------------
+    // Nur der User plant hier etwas — über den Versand-Dialog ("Später senden").
+    // Der Plan-Scheduler schickt genau diese Zeilen zum gewünschten Zeitpunkt.
+
+    scoped.get("/email/geplant", async (req) => {
+      const q = z.object({
+        status: z.enum(["geplant", "sending", "gesendet", "fehler", "abgebrochen"]).optional(),
+        offen: z.coerce.boolean().optional(),
+        beleg_id: z.string().optional(),
+        beleg_art: z.enum(["angebot", "rechnung"]).optional(),
+        limit: z.coerce.number().int().min(1).max(500).optional(),
+      }).parse(req.query ?? {});
+      return listGeplant({
+        status: q.status,
+        nurOffen: q.offen ?? (q.status ? false : true),
+        belegId: q.beleg_id,
+        belegArt: q.beleg_art,
+        limit: q.limit,
+      });
+    });
+
+    scoped.post("/email/versand/plan", async (req, reply) => {
+      const Schema = VersandSchema.extend({ geplantFuer: z.string().min(4).max(40) });
+      const p = Schema.safeParse(req.body);
+      if (!p.success) { reply.status(422); return { error: "validation", issues: p.error.issues }; }
+      const d = p.data;
+
+      // Zeitpunkt prüfen: nicht in der Vergangenheit, maximal 1 Jahr voraus.
+      const ziel = new Date(d.geplantFuer);
+      if (Number.isNaN(ziel.getTime())) {
+        reply.status(422);
+        return { error: "validation", hint: "Zeitpunkt ist ungültig." };
+      }
+      const jetzt = Date.now();
+      if (ziel.getTime() < jetzt - 60_000) {
+        reply.status(422);
+        return { error: "zeitpunkt-vergangen", hint: "Der Zeitpunkt liegt in der Vergangenheit." };
+      }
+      if (ziel.getTime() > jetzt + 365 * 24 * 3600_000) {
+        reply.status(422);
+        return { error: "zeitpunkt-zu-weit", hint: "Maximal ein Jahr im Voraus planbar." };
+      }
+
+      // SMTP muss konfiguriert sein — sonst wäre die Planung von Anfang an wertlos.
+      const rt = loadSmtpRuntime();
+      if (!rt || !rt.smtp?.host || !rt.smtp?.user || !rt.passwordIsSet) {
+        reply.status(412);
+        return {
+          error: "smtp-not-configured",
+          message:
+            "SMTP ist nicht vollständig konfiguriert. Bitte unter Einstellungen → E-Mail Server, Benutzer und Passwort hinterlegen.",
+        };
+      }
+
+      const toList = d.empfaenger ?? (d.empfaengerTo ? [d.empfaengerTo] : []);
+      if (toList.length === 0) { reply.status(422); return { error: "validation", hint: "Empfänger fehlt." }; }
+      const bodyHtml = d.bodyHtml ?? d.koerperHtml ?? "";
+      if (!bodyHtml) { reply.status(422); return { error: "validation", hint: "Body fehlt." }; }
+      const belegArt: "angebot" | "rechnung" | undefined =
+        d.belegArt ?? (d.belegTyp === "angebot" || d.belegTyp === "rechnung" ? d.belegTyp : undefined);
+      const idempotenzKey = d.idempotenzKey ?? `plan-${crypto.randomUUID()}`;
+
+      const { row, created } = planeVersand({
+        geplantFuer: ziel,
+        empfaengerTo: toList.join(", "),
+        empfaengerCc: d.cc?.length ? d.cc.join(", ") : (d.empfaengerCc || undefined),
+        empfaengerBcc: d.bcc?.length ? d.bcc.join(", ") : (d.empfaengerBcc || undefined),
+        betreff: d.betreff,
+        bodyHtml,
+        belegArt,
+        belegId: d.belegId,
+        vorlageId: d.vorlageId,
+        signaturId: d.signaturId,
+        idempotenzKey,
+        angelegtVon: req.user?.id ?? null,
+      });
+
+      audit({
+        userId: req.user?.id,
+        ip: req.ip,
+        action: "email.geplant.angelegt",
+        detail: {
+          geplantId: row.id, an: toList, geplantFuer: toUtcStamp(ziel),
+          belegArt: belegArt ?? null, belegId: d.belegId ?? null,
+        },
+      });
+      reply.status(created ? 201 : 200);
+      return row;
+    });
+
+    scoped.patch<{ Params: { id: string } }>("/email/geplant/:id", async (req, reply) => {
+      const p = z.object({ geplantFuer: z.string().min(4).max(40) }).safeParse(req.body);
+      if (!p.success) { reply.status(422); return { error: "validation" }; }
+      const ziel = new Date(p.data.geplantFuer);
+      if (Number.isNaN(ziel.getTime()) || ziel.getTime() < Date.now() - 60_000) {
+        reply.status(422);
+        return { error: "zeitpunkt-vergangen", hint: "Der Zeitpunkt liegt in der Vergangenheit." };
+      }
+      const cur = getGeplant(req.params.id);
+      if (!cur) { reply.status(404); return { error: "not-found" }; }
+      const row =
+        cur.status === "geplant"
+          ? verschiebePlanung(req.params.id, ziel)
+          : planungReaktivieren(req.params.id, ziel);
+      if (!row) { reply.status(409); return { error: "nicht-aenderbar" }; }
+      audit({
+        userId: req.user?.id, ip: req.ip, action: "email.geplant.verschoben",
+        detail: { geplantId: row.id, geplantFuer: row.geplantFuer },
+      });
+      return row;
+    });
+
+    scoped.post<{ Params: { id: string } }>("/email/geplant/:id/jetzt-senden", async (req, reply) => {
+      const cur = getGeplant(req.params.id);
+      if (!cur) { reply.status(404); return { error: "not-found" }; }
+      if (!sendBudget.tryTake()) { reply.status(429); return { error: "rate-limit" }; }
+      const res = await sendeGeplantJetzt(req.params.id);
+      const after = getGeplant(req.params.id);
+      audit({
+        userId: req.user?.id, ip: req.ip,
+        action: res.ok ? "email.geplant.sofort-gesendet" : "email.geplant.fehler",
+        detail: { geplantId: req.params.id, error: res.ok ? null : res.error ?? null },
+      });
+      reply.status(res.ok ? 200 : 502);
+      return { ...(after ?? cur), sendOk: res.ok, sendError: res.ok ? undefined : res.error };
+    });
+
+    scoped.delete<{ Params: { id: string } }>("/email/geplant/:id", async (req, reply) => {
+      const row = planungAbbrechen(req.params.id);
+      if (!row) {
+        const cur = getGeplant(req.params.id);
+        reply.status(cur ? 409 : 404);
+        return { error: cur ? "nicht-abbrechbar" : "not-found" };
+      }
+      audit({
+        userId: req.user?.id, ip: req.ip, action: "email.geplant.abgebrochen",
+        detail: { geplantId: row.id },
+      });
+      return row;
     });
 
     // ---- Verbindungstest (kein Versand!) ----

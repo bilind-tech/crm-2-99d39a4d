@@ -22,6 +22,7 @@ import { PrimaryAction } from "@/components/layout/PrimaryAction";
 import { angebotFlow } from "@/lib/flow/flows";
 import { EmailVersandDialog } from "@/components/email/EmailVersandDialog";
 import { EmailVersandHistorie } from "@/components/email/EmailVersandHistorie";
+import { GeplanteMailKarte } from "@/components/email/GeplanteMailKarte";
 import { formatEUR, formatDate } from "@/lib/format";
 import { summenRechnung } from "@/lib/belege/summen";
 import { DauerauftragVerwaltungCard } from "@/components/dauerauftrag/DauerauftragVerwaltungCard";
@@ -283,9 +284,7 @@ function Page() {
                       </span>
                     </div>
                     {istPauschal ? (
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        Pauschal
-                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">Pauschal</div>
                     ) : (
                       <div className="mt-0.5 text-xs text-muted-foreground">
                         {menge} × {formatEUR(einzel)}
@@ -316,6 +315,7 @@ function Page() {
             />
           )}
 
+          <GeplanteMailKarte belegId={a.id} belegTyp="angebot" />
           <EmailVersandHistorie belegId={a.id} belegTyp="angebot" />
         </div>
 

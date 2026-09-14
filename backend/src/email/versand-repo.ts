@@ -76,14 +76,19 @@ export interface EnqueueInput {
   signaturId?: string;
   mahnStufe?: number;
   idempotenzKey: string;
-  /** ABSOLUTE Schutzschicht: nur 'manuell' ist erlaubt — d. h. ein direkter
-   *  User-Klick aus dem EmailVersandDialog. Jede andere Quelle wirft. */
-  quelle: "manuell";
+  /** ABSOLUTE Schutzschicht: erlaubt sind nur
+   *  - 'manuell'  = direkter User-Klick im EmailVersandDialog
+   *  - 'geplant'  = eine vom User selbst geplante Mail, die der
+   *                 Plan-Scheduler zum gewünschten Zeitpunkt abschickt.
+   *  Jede andere Quelle (Cron, Trigger, Statuswechsel) wirft. */
+  quelle: "manuell" | "geplant";
 }
 
 export function enqueueVersand(input: EnqueueInput): { row: EmailVersand; created: boolean } {
-  if (input.quelle !== "manuell") {
-    throw new Error("enqueueVersand: nur quelle='manuell' erlaubt — keine Auto-Mails.");
+  if (input.quelle !== "manuell" && input.quelle !== "geplant") {
+    throw new Error(
+      "enqueueVersand: nur quelle='manuell' oder 'geplant' erlaubt — keine Auto-Mails.",
+    );
   }
   const db = getDatabase();
   const existing = db.prepare(`SELECT * FROM email_versand WHERE idempotenz_key = ?`)
@@ -95,8 +100,8 @@ export function enqueueVersand(input: EnqueueInput): { row: EmailVersand; create
     `INSERT INTO email_versand (
       id, empfaenger_to, empfaenger_cc, empfaenger_bcc, betreff, body_html,
       beleg_art, beleg_id, vorlage_id, signatur_id, mahn_stufe, idempotenz_key,
-      status, versuche, naechster_versuch_at
-    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?, 'pending', 0, datetime('now'))`,
+      quelle, status, versuche, naechster_versuch_at
+    ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?, 'pending', 0, datetime('now'))`,
   ).run(
     id, input.empfaengerTo, input.empfaengerCc ?? null, input.empfaengerBcc ?? null,
     input.betreff, input.bodyHtml,
@@ -104,6 +109,7 @@ export function enqueueVersand(input: EnqueueInput): { row: EmailVersand; create
     input.vorlageId ?? null, input.signaturId ?? null,
     input.mahnStufe ?? null,
     input.idempotenzKey,
+    input.quelle,
   );
   return { row: getById(id)!, created: true };
 }

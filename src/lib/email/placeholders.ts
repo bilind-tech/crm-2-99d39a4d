@@ -2,13 +2,7 @@
 // Syntax: {{kunde.firmenname}}, {{rechnung.offen}}, {{rechnung.tageUeber}} …
 // Wird auf Betreff UND HTML-Body angewendet.
 
-import type {
-  Angebot,
-  Ansprechpartner,
-  Firmendaten,
-  Kunde,
-  Rechnung,
-} from "@/lib/api/types";
+import type { Angebot, Ansprechpartner, Firmendaten, Kunde, Rechnung } from "@/lib/api/types";
 import { formatDate, formatEUR } from "@/lib/format";
 import { summenRechnung } from "@/lib/belege/summen";
 
@@ -65,9 +59,9 @@ function flatten(ctx: PlaceholderContext): Record<string, string> {
 
   // Smart-Anrede: persönliche Zeile, wenn Anrede + Nachname bekannt sind,
   // sonst neutrale Geschäftsanrede. Erspart Vorlagen viele if/else-Konstrukte.
-  const apAnredeLabel = ap?.anrede ? ANREDE_LABELS[ap.anrede] ?? "" : "";
+  const apAnredeLabel = ap?.anrede ? (ANREDE_LABELS[ap.anrede] ?? "") : "";
   const apNachname = ap?.nachname ?? "";
-  const kAnredeLabel = ctx.kunde?.anrede ? ANREDE_LABELS[ctx.kunde.anrede] ?? "" : "";
+  const kAnredeLabel = ctx.kunde?.anrede ? (ANREDE_LABELS[ctx.kunde.anrede] ?? "") : "";
   const kNachname = ctx.kunde?.nachname ?? "";
   let anredeZeile = "Sehr geehrte Damen und Herren,";
   if (apAnredeLabel && apNachname) {
@@ -120,10 +114,9 @@ function flatten(ctx: PlaceholderContext): Record<string, string> {
     out["firma.bank"] = f.bankName ?? "";
     out["firma.webseite"] = f.webseite ?? "";
     out["firma.geschaeftsfuehrer"] = f.geschaeftsfuehrer ?? "";
-    const adressTeile = [
-      f.strasse,
-      [f.plz, f.ort].filter(Boolean).join(" "),
-    ].filter((s) => s && s.trim().length > 0);
+    const adressTeile = [f.strasse, [f.plz, f.ort].filter(Boolean).join(" ")].filter(
+      (s) => s && s.trim().length > 0,
+    );
     out["firma.adresse"] = adressTeile.join(", ");
   }
 

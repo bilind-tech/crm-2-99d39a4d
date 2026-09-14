@@ -347,6 +347,7 @@ export function localPreviewGet<T>(path: string): T | null {
   if (cleanPath === "/protokolle") return [] as T;
   if (cleanPath === "/drive/uploads") return [] as T;
   if (cleanPath === "/email/versand") return [] as T;
+  if (cleanPath === "/email/geplant" || cleanPath.startsWith("/email/geplant?")) return [] as T;
   if (cleanPath === "/email/vorlagen") return [] as T;
   if (cleanPath === "/email/signaturen") return [] as T;
   if (cleanPath === "/einstellungen/smtp") return { host: "", port: 587, secure: false, user: "", passwortGesetzt: false, absenderName: "My Clean Center", absenderEmail: "" } as T;
