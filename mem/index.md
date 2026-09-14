@@ -28,7 +28,7 @@ Teilzahlungen sind Kernfeature: mehrere Zahlungen pro Rechnung, Status leitet si
 - [Teilzahlungen](mem://features/payments) — Datenmodell, Status-Ableitung, ZahlungErfassenDialog
 - [Backup & Rotation](mem://features/backup-rotation) — Daily/Weekly/Monthly, Sichtbarkeitsregel, Restore-Flow
 - [System-Update](mem://features/system-update) — ZIP-Upload, Validierung, Live-Steps, Rollback
-- [Belegnummern](mem://features/belegnummern) — Format `{KÜRZEL}{MM}{YY}/{NN}` z. B. `GFU0526/01`, Zähler pro Kunde+Monat
+- [Belegnummern](mem://features/belegnummern) — Format `{KÜRZEL}{MM}{YY}/{NN}` z. B. `GFU0526/01`, Zähler läuft durchgehend pro Kunde+Belegart (kein Monats-Reset)
 - [PDF-Editor](mem://features/pdf-editor) — Eigene Route `/{angebote|rechnungen}/:id/bearbeiten`, links Live-Preview mit Click-to-Edit-Hotspots, rechts Tab-Editor, Autosave
 - [Steuer-Modul](mem://features/steuern) — GmbH Sankt Augustin, Sätze, Hebesätze, Termine, Berechnungsformeln, MVP-Umfang
 - [Kürzel-Eindeutigkeit](mem://features/kuerzel-eindeutigkeit) — Kunden-Kürzel systemweit unique, Backend 409 + Live-Check via /kunden/kuerzel-frei, Submit blockiert bei Konflikt
