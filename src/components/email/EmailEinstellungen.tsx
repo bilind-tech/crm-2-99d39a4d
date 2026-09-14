@@ -214,7 +214,8 @@ function VorlageDialog({
   const [betreff, setBetreff] = useState(vorlage?.betreff ?? "");
   const [koerperHtml, setKoerperHtml] = useState(vorlage?.koerperHtml ?? "");
   const [istStandard, setIstStandard] = useState(vorlage?.istStandard ?? false);
-  const [mode, setMode] = useState<"html" | "vorschau">("html");
+  // Direkt schreiben (Standard) oder als fertige Mail ansehen.
+  const [mode, setMode] = useState<"schreiben" | "vorschau">("schreiben");
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
