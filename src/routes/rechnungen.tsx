@@ -314,7 +314,12 @@ function Page() {
                   )}
                 </div>
               }
-              badge={<span className="flex flex-wrap items-center gap-1.5">{statusBadge(r.status)}<GeplantBadge belegArt="rechnung" belegId={r.id} kompakt /></span>}
+              badge={
+                <span className="flex flex-wrap items-center gap-1.5">
+                  {statusBadge(r.status)}
+                  <GeplantBadge belegArt="rechnung" belegId={r.id} kompakt />
+                </span>
+              }
               footer={<FlowBar steps={rechnungFlow(r).steps} size="sm" />}
               actions={
                 <>
@@ -471,7 +476,12 @@ function Page() {
                         </>
                       )}
                     </td>
-                    <td className="px-4 py-3"><div className="flex flex-wrap items-center gap-1.5">{statusBadge(r.status)}<GeplantBadge belegArt="rechnung" belegId={r.id} kompakt /></div></td>
+                    <td className="px-4 py-3">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {statusBadge(r.status)}
+                        <GeplantBadge belegArt="rechnung" belegId={r.id} kompakt />
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       <FlowBar steps={rechnungFlow(r).steps} size="sm" />
                     </td>

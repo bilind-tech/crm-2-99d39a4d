@@ -10,8 +10,7 @@ const ANCHOR_IMG_RE =
   /<a\b[^>]*\bhref=["'](https?:\/\/[^"']+?\.(?:png|jpe?g|gif|webp|svg)(?:\?[^"']*)?)["'][^>]*>[\s\S]*?<\/a>/gi;
 
 // Nackte Bild-URL (nicht innerhalb von href="…" oder src="…")
-const URL_RE =
-  /(?<!["'=>])\bhttps?:\/\/[^\s<>"']+?\.(?:png|jpe?g|gif|webp|svg)(?:\?[^\s<>"']*)?/gi;
+const URL_RE = /(?<!["'=>])\bhttps?:\/\/[^\s<>"']+?\.(?:png|jpe?g|gif|webp|svg)(?:\?[^\s<>"']*)?/gi;
 
 export function autoLinkifyImages(html: string): string {
   if (!html) return html;

@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/exhaustive-deps */
 // E-Mail-Einstellungen-Tab: Vorlagen, Signaturen, SMTP.
 // Eingebettet in src/routes/einstellungen.tsx via Subkomponenten.
 

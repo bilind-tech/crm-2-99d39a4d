@@ -65,7 +65,11 @@ import {
 } from "@/lib/email/placeholders";
 import { autoLinkifyImages } from "@/lib/email/signature";
 import {
-  ausDatumZeit, geplantKlartext, schnellwahlen, splitDatumZeit, toBackendZeit,
+  ausDatumZeit,
+  geplantKlartext,
+  schnellwahlen,
+  splitDatumZeit,
+  toBackendZeit,
 } from "@/lib/email/geplant";
 import { PdfCanvasViewer } from "@/components/pdf/PdfCanvasViewer";
 import type { Angebot, EmailKontext, EmailVorlage, Kunde, Rechnung } from "@/lib/api/types";
@@ -280,8 +284,7 @@ export function EmailVersandDialog({
 
   // Gewählter Wunschzeitpunkt (lokale Zeit) + Klartext darunter.
   const planZeitpunkt = ausDatumZeit(planDatum, planZeit);
-  const planInVergangenheit =
-    !!planZeitpunkt && planZeitpunkt.getTime() < Date.now() + 30_000;
+  const planInVergangenheit = !!planZeitpunkt && planZeitpunkt.getTime() < Date.now() + 30_000;
   const planKlartext = planZeitpunkt ? geplantKlartext(planZeitpunkt) : "";
 
   const handlePlan = () => {
@@ -353,11 +356,7 @@ export function EmailVersandDialog({
       return;
     }
     const belegTyp =
-      kontext === "rechnung"
-        ? "rechnung"
-        : kontext === "angebot"
-          ? "angebot"
-          : "allgemein";
+      kontext === "rechnung" ? "rechnung" : kontext === "angebot" ? "angebot" : "allgemein";
     const belegId = angebot?.id ?? rechnung?.id;
 
     setPhase("sending");
@@ -677,26 +676,26 @@ export function EmailVersandDialog({
                 <div className="overflow-hidden rounded-xl border border-border bg-muted/30">
                   <div className="flex items-center justify-between px-4 py-3 text-sm">
                     <span className="flex items-center gap-3">
-                    <span className="grid h-9 w-9 place-content-center rounded-lg bg-destructive/10 text-destructive">
-                      {pdfStatus === "loading" ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : pdfStatus === "error" ? (
-                        <AlertCircle className="h-4 w-4" />
-                      ) : (
-                        <Paperclip className="h-4 w-4" />
-                      )}
-                    </span>
-                    <span>
-                      <span className="block font-medium">{pdfDateiname}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {pdfStatus === "loading"
-                          ? "PDF wird vorbereitet …"
-                          : pdfStatus === "error"
-                            ? "PDF konnte nicht erzeugt werden"
-                            : "PDF · automatisch angehängt"}
+                      <span className="grid h-9 w-9 place-content-center rounded-lg bg-destructive/10 text-destructive">
+                        {pdfStatus === "loading" ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : pdfStatus === "error" ? (
+                          <AlertCircle className="h-4 w-4" />
+                        ) : (
+                          <Paperclip className="h-4 w-4" />
+                        )}
+                      </span>
+                      <span>
+                        <span className="block font-medium">{pdfDateiname}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {pdfStatus === "loading"
+                            ? "PDF wird vorbereitet …"
+                            : pdfStatus === "error"
+                              ? "PDF konnte nicht erzeugt werden"
+                              : "PDF · automatisch angehängt"}
+                        </span>
                       </span>
                     </span>
-                  </span>
                     <div className="flex items-center gap-1">
                       {pdfBlobUrl && pdfStatus === "ready" && (
                         <button
@@ -816,8 +815,8 @@ export function EmailVersandDialog({
                 </p>
               ) : planKlartext ? (
                 <p className="text-sm text-foreground">
-                  Geht <span className="font-semibold">{planKlartext}</span> automatisch raus.
-                  Bis dahin können Sie die E-Mail jederzeit verschieben oder abbrechen.
+                  Geht <span className="font-semibold">{planKlartext}</span> automatisch raus. Bis
+                  dahin können Sie die E-Mail jederzeit verschieben oder abbrechen.
                 </p>
               ) : null}
             </div>

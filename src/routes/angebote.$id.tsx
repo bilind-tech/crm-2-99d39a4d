@@ -284,9 +284,7 @@ function Page() {
                       </span>
                     </div>
                     {istPauschal ? (
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        Pauschal
-                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">Pauschal</div>
                     ) : (
                       <div className="mt-0.5 text-xs text-muted-foreground">
                         {menge} × {formatEUR(einzel)}

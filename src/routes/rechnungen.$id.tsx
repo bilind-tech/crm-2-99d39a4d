@@ -40,7 +40,12 @@ function Page() {
   const { id } = Route.useParams();
   const { data: rechnung, isLoading } = useRechnung(id);
   const r = rechnung
-    ? { ...rechnung, zahlungen: rechnung.zahlungen ?? [], positionen: rechnung.positionen ?? [], rabattGesamt: rechnung.rabattGesamt ?? 0 }
+    ? {
+        ...rechnung,
+        zahlungen: rechnung.zahlungen ?? [],
+        positionen: rechnung.positionen ?? [],
+        rabattGesamt: rechnung.rabattGesamt ?? 0,
+      }
     : undefined;
   const pdf = useRechnungPdf(r);
   const [zahlungOpen, setZahlungOpen] = useState(false);
@@ -303,9 +308,7 @@ function Page() {
                       </span>
                     </div>
                     {istPauschal ? (
-                      <div className="mt-0.5 text-xs text-muted-foreground">
-                        Pauschal
-                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">Pauschal</div>
                     ) : (
                       <div className="mt-0.5 text-xs text-muted-foreground">
                         {menge} × {formatEUR(einzel)}

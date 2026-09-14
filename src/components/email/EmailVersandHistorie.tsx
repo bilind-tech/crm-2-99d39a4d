@@ -22,9 +22,7 @@ export function EmailVersandHistorie({ belegId, belegTyp }: Props) {
   // Defensiv: auch client-seitig strikt auf den aktuellen Beleg filtern,
   // damit eine versehentlich ungefilterte Backend-Antwort niemals einen
   // fremden „gesendet"-Eintrag auf dieser Seite anzeigt.
-  const liste = rawListe.filter(
-    (v) => v.belegId === belegId && v.belegArt === belegTyp,
-  );
+  const liste = rawListe.filter((v) => v.belegId === belegId && v.belegArt === belegTyp);
   const qc = useQueryClient();
   const [retrying, setRetrying] = useState(false);
 
@@ -38,7 +36,11 @@ export function EmailVersandHistorie({ belegId, belegTyp }: Props) {
   );
 
   if (isLoading) {
-    return <Card><p className="text-sm text-muted-foreground">Lade …</p></Card>;
+    return (
+      <Card>
+        <p className="text-sm text-muted-foreground">Lade …</p>
+      </Card>
+    );
   }
 
   if (liste.length === 0) {
@@ -68,8 +70,7 @@ export function EmailVersandHistorie({ belegId, belegTyp }: Props) {
   }
 
   // Letzter Versuch fehlgeschlagen, kein neuerer Erfolg → Fehler-Zustand.
-  const erfolgIstNeuer =
-    letzterErfolg && letzterErfolg.id === letzterVersuch.id;
+  const erfolgIstNeuer = letzterErfolg && letzterErfolg.id === letzterVersuch.id;
 
   if (letzterVersuch.status === "manuell" && !erfolgIstNeuer) {
     return (
