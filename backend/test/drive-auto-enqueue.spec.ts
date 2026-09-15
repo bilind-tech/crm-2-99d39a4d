@@ -78,16 +78,15 @@ describe("Drive-Auto-Enqueue nach Bearbeitung", () => {
       positionen: [{ bezeichnung: "Reinigung", menge: 1, einzelpreis: 100 }],
     });
     sendeRechnung(r.id);
+    await flushDriveAutoEnqueueForTests();
     const nachVersand = queueCount(r.id);
-    expect(nachVersand).toBeGreaterThanOrEqual(0);
 
     updateRechnung(r.id, { titel: "Versendet – korrigiert" });
     await flushDriveAutoEnqueueForTests();
-    const nachAenderung = queueCount(r.id);
-    expect(nachAenderung).toBeGreaterThan(0);
+    expect(queueCount(r.id)).toBe(nachVersand + 1);
 
     // Gleiche Fassung erneut: keine zweite Zeile (Idempotenz über PDF-Hash).
     await flushDriveAutoEnqueueForTests();
-    expect(queueCount(r.id)).toBe(nachAenderung);
+    expect(queueCount(r.id)).toBe(nachVersand + 1);
   });
 });
