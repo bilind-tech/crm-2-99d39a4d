@@ -128,6 +128,7 @@ export const previewRechnungen: Rechnung[] = [
     rechnungsdatum: today,
     faelligkeitsdatum: due,
     status: "versendet",
+    versendetAm: isoNow,
     archiviert: false,
     zahlungen: [],
     optionen,
