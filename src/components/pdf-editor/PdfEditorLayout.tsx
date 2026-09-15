@@ -61,7 +61,7 @@ export function PdfEditorLayout(props: Props) {
   const { data: objekteDesKunden = [] } = useObjekte(kunde.id);
   const aktivesObjekt: Objekt | null = draft.objektId
     ? ((objekteDesKunden as Objekt[]).find((o) => o.id === draft.objektId) ??
-       (objekt && objekt.id === draft.objektId ? objekt : null))
+      (objekt && objekt.id === draft.objektId ? objekt : null))
     : null;
 
   const renderEditor = (fieldId: string, close: () => void) => (
