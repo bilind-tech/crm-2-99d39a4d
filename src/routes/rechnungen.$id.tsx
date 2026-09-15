@@ -145,20 +145,33 @@ function Page() {
                 <MailWarning className="mr-1.5 h-4 w-4" /> Erinnerung senden
               </Button>
             )}
-            {r.status === "entwurf" ? (
+            {r.status === "bezahlt" || r.status === "storniert" ? (
+              <Button
+                variant="outline"
+                className="rounded-lg"
+                onClick={() =>
+                  confirm(
+                    {
+                      title:
+                        r.status === "bezahlt"
+                          ? "Bezahlte Rechnung bearbeiten?"
+                          : "Stornierte Rechnung bearbeiten?",
+                      description:
+                        "Das bereits verschickte Dokument ändert sich dadurch nicht rückwirkend. Möchtest du trotzdem fortfahren?",
+                      confirmLabel: "Trotzdem bearbeiten",
+                    },
+                    () => navigate({ to: "/rechnungen/$id/bearbeiten", params: { id: r.id } }),
+                  )
+                }
+                title="PDF bearbeiten"
+              >
+                <Pencil className="mr-1.5 h-4 w-4" /> PDF bearbeiten
+              </Button>
+            ) : (
               <Button asChild variant="outline" className="rounded-lg">
                 <Link to="/rechnungen/$id/bearbeiten" params={{ id: r.id }}>
                   <Pencil className="mr-1.5 h-4 w-4" /> PDF bearbeiten
                 </Link>
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                className="rounded-lg disabled:opacity-50"
-                disabled
-                title="PDF kann nicht mehr bearbeitet werden — die Rechnung wurde bereits versendet."
-              >
-                <Pencil className="mr-1.5 h-4 w-4" /> PDF bearbeiten
               </Button>
             )}
             <Button

@@ -150,22 +150,11 @@ function Page() {
               </Button>
             )}
             <PrintButton blob={pdf.blob} url={pdf.url} variant="outline" size="default" />
-            {a.status === "entwurf" ? (
-              <Button asChild variant="outline" className="rounded-lg">
-                <Link to="/angebote/$id/bearbeiten" params={{ id: a.id }}>
-                  <Pencil className="mr-1.5 h-4 w-4" /> PDF bearbeiten
-                </Link>
-              </Button>
-            ) : (
-              <Button
-                variant="outline"
-                className="rounded-lg disabled:opacity-50"
-                disabled
-                title="PDF kann nicht mehr bearbeitet werden — das Angebot wurde bereits versendet."
-              >
+            <Button asChild variant="outline" className="rounded-lg">
+              <Link to="/angebote/$id/bearbeiten" params={{ id: a.id }}>
                 <Pencil className="mr-1.5 h-4 w-4" /> PDF bearbeiten
-              </Button>
-            )}
+              </Link>
+            </Button>
             <Button
               variant="outline"
               className="rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive"
