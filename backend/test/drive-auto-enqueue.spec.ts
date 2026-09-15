@@ -39,13 +39,19 @@ let kundeId = "";
 
 beforeAll(() => {
   ensureMasterKey(config.keyPath);
-  for (const d of [config.uploadsDir, config.backupsDir, config.pdfCacheDir].filter(Boolean)) {
-    ensureDir(d as string);
-  }
-  openDatabase();
+  for (const d of [
+    config.uploadsDir,
+    config.backupsDir,
+    config.backupsDailyDir,
+    config.backupsWeeklyDir,
+    config.backupsMonthlyDir,
+    config.backupsSafetyDir,
+    config.backupsTmpDir,
+  ]) ensureDir(d);
+  openDatabase(config.dbPath);
   wirePdfCacheInvalidation();
   wireDriveAutoEnqueue();
-  kundeId = createKunde({ typ: "firma", firmenname: "Drive Test GmbH" }).id;
+  kundeId = createKunde({ typ: "firma", firmenname: "Drive Test GmbH", kuerzel: "DTG" }).id;
 });
 
 afterAll(() => {
