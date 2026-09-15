@@ -14,6 +14,7 @@ const PanelResizeHandle = Separator;
 import { LivePdfPreview } from "./LivePdfPreview";
 import { EditorPanel, type EditorTab } from "./EditorPanel";
 import { HotspotInlineEditor } from "./HotspotInlineEditor";
+import { VersendetHinweis } from "./VersendetHinweis";
 import type { RowAction, TableAction } from "./PdfFieldOverlay";
 import { useBelegEditor } from "@/hooks/useBelegEditor";
 import { useObjekte } from "@/hooks/useApi";
@@ -185,6 +186,8 @@ export function PdfEditorLayout(props: Props) {
           </Button>
         </div>
       </div>
+
+      <VersendetHinweis belegArt={kind} belegId={beleg.id} versendetAm={beleg.versendetAm} />
 
       {/* Mobile Toggle */}
       <div className="flex items-center justify-center gap-1 border-b border-border bg-muted/30 p-1.5 lg:hidden">
