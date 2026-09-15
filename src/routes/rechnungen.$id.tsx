@@ -52,7 +52,6 @@ function Page() {
   const [emailOpen, setEmailOpen] = useState(false);
   const [erinnerungOpen, setErinnerungOpen] = useState(false);
   const [delOpen, setDelOpen] = useState(false);
-  const [editWarnOpen, setEditWarnOpen] = useState(false);
   const navigate = useNavigate();
   const { data: quellAngebot } = useAngebot(r?.quellAngebotId ?? "");
   const { data: kunde } = useKunde(r?.kundeId ?? "");
