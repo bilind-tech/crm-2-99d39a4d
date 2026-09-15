@@ -1,7 +1,7 @@
 // Hinweisstreifen im PDF-Editor, wenn der Beleg bereits versendet wurde.
 import { Info } from "lucide-react";
 import { useGeplanteMails } from "@/hooks/useApi";
-import { offeneFuerBeleg, geplantKurz } from "@/lib/email/geplant";
+import { offeneFuerBeleg, geplantKurz, parseGeplantFuer } from "@/lib/email/geplant";
 import { formatDate } from "@/lib/format";
 
 interface Props {
@@ -23,9 +23,12 @@ export function VersendetHinweis({ belegArt, belegId, versendetAm }: Props) {
         {bezeichnung} wurde am {formatDate(versendetAm)} versendet. Änderungen wirken sich nicht
         rückwirkend auf das bereits verschickte Dokument aus — zum Nachreichen einfach erneut
         versenden.
-        {offen.length > 0 && (
-          <> Die geplante E-Mail ({geplantKurz(offen[0].geplantFuer)}) verschickt automatisch die
-          geänderte Fassung.</>
+        {offen && (
+          <>
+            {" "}
+            Die geplante E-Mail ({geplantKurz(parseGeplantFuer(offen.geplantFuer))}) verschickt
+            automatisch die geänderte Fassung.
+          </>
         )}
       </p>
     </div>
