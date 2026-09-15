@@ -149,7 +149,20 @@ function Page() {
               <Button
                 variant="outline"
                 className="rounded-lg"
-                onClick={() => setEditWarnOpen(true)}
+                onClick={() =>
+                  confirm(
+                    {
+                      title:
+                        r.status === "bezahlt"
+                          ? "Bezahlte Rechnung bearbeiten?"
+                          : "Stornierte Rechnung bearbeiten?",
+                      description:
+                        "Das bereits verschickte Dokument ändert sich dadurch nicht rückwirkend. Möchtest du trotzdem fortfahren?",
+                      confirmLabel: "Trotzdem bearbeiten",
+                    },
+                    () => navigate({ to: "/rechnungen/$id/bearbeiten", params: { id: r.id } }),
+                  )
+                }
                 title="PDF bearbeiten"
               >
                 <Pencil className="mr-1.5 h-4 w-4" /> PDF bearbeiten
