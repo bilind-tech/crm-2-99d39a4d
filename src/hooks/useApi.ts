@@ -230,7 +230,7 @@ export const useDeleteVertrag = (kundeId: string) => {
  * wird der eigene Datensatz beim Bearbeiten ignoriert.
  */
 export const useKuerzelFrei = (kuerzel: string, exceptId?: string) => {
-  const norm = (kuerzel ?? "").trim().toUpperCase();
+  const norm = kuerzelUpper((kuerzel ?? "").trim());
   return useQuery({
     queryKey: ["kunden", "kuerzel-frei", norm, exceptId ?? "neu"],
     queryFn: () => {
