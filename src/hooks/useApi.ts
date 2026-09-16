@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient, type QueryClient } from "@tansta
 import { api } from "@/lib/api/client";
 import { piApi, PiApiError } from "@/lib/api/piClient";
 import { getBackendUrl } from "@/lib/api/backendUrl";
+import { kuerzelUpper } from "@/lib/kuerzel";
 import { postWithProgress } from "@/lib/api/piClient";
 import type {
   Aktivitaet,
@@ -230,7 +231,7 @@ export const useDeleteVertrag = (kundeId: string) => {
  * wird der eigene Datensatz beim Bearbeiten ignoriert.
  */
 export const useKuerzelFrei = (kuerzel: string, exceptId?: string) => {
-  const norm = (kuerzel ?? "").trim().toUpperCase();
+  const norm = kuerzelUpper((kuerzel ?? "").trim());
   return useQuery({
     queryKey: ["kunden", "kuerzel-frei", norm, exceptId ?? "neu"],
     queryFn: () => {

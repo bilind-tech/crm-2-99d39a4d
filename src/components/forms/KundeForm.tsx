@@ -15,6 +15,7 @@ import { SmartInput, smartValue } from "@/components/ui/smart-input";
 import { useCreateKunde, useKuerzelFrei } from "@/hooks/useApi";
 import { useCreateDauerauftrag } from "@/hooks/useDauerauftraege";
 import { api } from "@/lib/api/client";
+import { sanitizeKuerzel, kuerzelUpper } from "@/lib/kuerzel";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import type {
@@ -33,24 +34,17 @@ const WEB_PREFIX = "https://";
 function vorschlagKuerzel(name: string): string {
   if (!name.trim()) return "";
   const woerter = name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9 ]/g, " ")
+    .replace(/[^a-zA-Z0-9äöüÄÖÜß ]/g, " ")
     .split(/\s+/)
     .filter(Boolean);
   if (woerter.length === 0) return "";
-  if (woerter.length === 1) return woerter[0].slice(0, 4).toUpperCase();
-  return woerter
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 4)
-    .toUpperCase();
-}
-
-function sanitizeKuerzel(v: string): string {
-  return v
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "");
+  if (woerter.length === 1) return sanitizeKuerzel(woerter[0].slice(0, 4));
+  return sanitizeKuerzel(
+    woerter
+      .map((w) => w[0])
+      .join("")
+      .slice(0, 4),
+  );
 }
 
 interface Props {
@@ -154,7 +148,7 @@ export function KundeForm({ onClose, onCreated }: Props) {
 
   // Live-Vorschau der zukünftigen Belegnummer ({KÜRZEL}{MM}{YY}/{NN})
   const vorschauNummer = useMemo(() => {
-    const k = f.kuerzel.trim().toUpperCase();
+    const k = kuerzelUpper(f.kuerzel.trim());
     if (!k) return "";
     const d = new Date();
     const yy = String(d.getFullYear()).slice(-2);

@@ -1,15 +1,26 @@
 // Validierung & Eindeutigkeit für Kunden-Kürzel.
-// Format: beliebig viele Zeichen [A-Z0-9] (mind. 1). Leere Kürzel sind erlaubt.
+// Format: beliebig viele Zeichen [A-Z0-9ÄÖÜß] (mind. 1). Leere Kürzel sind erlaubt.
+// ß bleibt beim Großschreiben erhalten (kein "SS").
 import { getDatabase } from "../db/index.js";
+
+const SS_PLATZHALTER = "\u0000";
+
+/** Großschreibung, die ß unverändert lässt. */
+export function kuerzelUpper(s: string): string {
+  return s
+    .replace(/ß/g, SS_PLATZHALTER)
+    .toUpperCase()
+    .replace(new RegExp(SS_PLATZHALTER, "g"), "ß");
+}
 
 export function normalizeKuerzel(input: string | null | undefined): string | null {
   if (!input) return null;
-  const v = input.trim().toUpperCase();
+  const v = kuerzelUpper(input.trim());
   return v.length > 0 ? v : null;
 }
 
 export function isKuerzelFormatOk(k: string): boolean {
-  return /^[A-Z0-9]+$/.test(k);
+  return /^[A-Z0-9ÄÖÜß]+$/.test(k);
 }
 
 export interface KuerzelTreffer {

@@ -20,6 +20,7 @@ import {
   type BelegArt,
 } from "./nummer-format.js";
 import { nextBelegNummer, bumpBelegNummerMindestens } from "../kunden/nummern.js";
+import { kuerzelUpper } from "../kunden/kuerzel.js";
 
 export type { BelegArt } from "./nummer-format.js";
 
@@ -41,7 +42,7 @@ function loadKundeNum(kundeId: string): KundeNumInfo | null {
 
 function bestimmePrefix(art: BelegArt, kunde: KundeNumInfo): string {
   if (kunde.kuerzel && kunde.kuerzel.trim()) {
-    return kunde.kuerzel.trim().toUpperCase();
+    return kuerzelUpper(kunde.kuerzel.trim());
   }
   return fallbackPrefix(art, kunde.nummer);
 }

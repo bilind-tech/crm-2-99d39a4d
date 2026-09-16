@@ -29,9 +29,7 @@ import { useKundenZaehler, useUpdateKunde, useKuerzelFrei } from "@/hooks/useApi
 import type { Kunde } from "@/lib/api/types";
 import { VertraegeTab } from "@/components/kunden/VertraegeTab";
 
-function sanitizeKuerzel(v: string): string {
-  return v.toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
+import { sanitizeKuerzel, kuerzelUpper } from "@/lib/kuerzel";
 
 interface Props {
   kunde: Kunde;
@@ -89,7 +87,7 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
   }, [open, kunde]);
 
   const vorschau = useMemo(() => {
-    const k = kuerzel.trim().toUpperCase();
+    const k = kuerzelUpper(kuerzel.trim());
     if (!k) return "";
     const d = new Date();
     const yy = String(d.getFullYear()).slice(-2);

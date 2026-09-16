@@ -5,13 +5,15 @@
 // Server-seitig wird die echte Nummer in src/lib/mock/backend.ts -> nextCustomerNumber()
 // erzeugt. Dieser Helper dient ausschließlich der UI-Vorschau.
 
+import { kuerzelUpper } from "@/lib/kuerzel";
+
 export function vorschauBelegnummer(
   kuerzel: string | undefined | null,
   fallbackPraefix: string,
   naechsterZaehler: number = 1,
   basisDatum: Date = new Date(),
 ): string {
-  const k = kuerzel?.trim().toUpperCase();
+  const k = kuerzel ? kuerzelUpper(kuerzel.trim()) : "";
   const yyyy = String(basisDatum.getFullYear());
   const yy = yyyy.slice(-2);
   const mm = String(basisDatum.getMonth() + 1).padStart(2, "0");
