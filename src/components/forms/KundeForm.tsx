@@ -33,24 +33,17 @@ const WEB_PREFIX = "https://";
 function vorschlagKuerzel(name: string): string {
   if (!name.trim()) return "";
   const woerter = name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9 ]/g, " ")
+    .replace(/[^a-zA-Z0-9äöüÄÖÜß ]/g, " ")
     .split(/\s+/)
     .filter(Boolean);
   if (woerter.length === 0) return "";
-  if (woerter.length === 1) return woerter[0].slice(0, 4).toUpperCase();
-  return woerter
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 4)
-    .toUpperCase();
-}
-
-function sanitizeKuerzel(v: string): string {
-  return v
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "");
+  if (woerter.length === 1) return sanitizeKuerzel(woerter[0].slice(0, 4));
+  return sanitizeKuerzel(
+    woerter
+      .map((w) => w[0])
+      .join("")
+      .slice(0, 4),
+  );
 }
 
 interface Props {
