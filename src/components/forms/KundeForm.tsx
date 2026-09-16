@@ -15,6 +15,7 @@ import { SmartInput, smartValue } from "@/components/ui/smart-input";
 import { useCreateKunde, useKuerzelFrei } from "@/hooks/useApi";
 import { useCreateDauerauftrag } from "@/hooks/useDauerauftraege";
 import { api } from "@/lib/api/client";
+import { sanitizeKuerzel, kuerzelUpper } from "@/lib/kuerzel";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 import type {
@@ -147,7 +148,7 @@ export function KundeForm({ onClose, onCreated }: Props) {
 
   // Live-Vorschau der zukünftigen Belegnummer ({KÜRZEL}{MM}{YY}/{NN})
   const vorschauNummer = useMemo(() => {
-    const k = f.kuerzel.trim().toUpperCase();
+    const k = kuerzelUpper(f.kuerzel.trim());
     if (!k) return "";
     const d = new Date();
     const yy = String(d.getFullYear()).slice(-2);

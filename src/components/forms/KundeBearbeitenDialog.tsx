@@ -87,7 +87,7 @@ export function KundeBearbeitenDialog({ kunde, open, onOpenChange }: Props) {
   }, [open, kunde]);
 
   const vorschau = useMemo(() => {
-    const k = kuerzel.trim().toUpperCase();
+    const k = kuerzelUpper(kuerzel.trim());
     if (!k) return "";
     const d = new Date();
     const yy = String(d.getFullYear()).slice(-2);
