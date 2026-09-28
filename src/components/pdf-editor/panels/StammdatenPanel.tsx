@@ -53,6 +53,18 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
     zeigeAp,
   );
   const manuell = Array.isArray(o?.empfaengerZeilen);
+  const setRechnungsdatum = (neu: string) => {
+    if (!neu) return;
+    const r = draft as Rechnung;
+    const alt = r.rechnungsdatum?.slice(0, 10);
+    const altZiel = alt ? plusTage(alt, kunde.zahlungszielTage ?? 14) : "";
+    set("rechnungsdatum", neu);
+    // Fälligkeit mitziehen, solange sie nicht manuell abweicht.
+    if (!r.faelligkeitsdatum || r.faelligkeitsdatum.slice(0, 10) === altZiel) {
+      set("faelligkeitsdatum", plusTage(neu, kunde.zahlungszielTage ?? 14));
+    }
+  };
+  const datumFehler = pruefeDaten(kind, draft);
   return (
     <div className="space-y-5">
       <Section label="Objekt" feldId="objekt">
@@ -208,36 +220,88 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
         />
       </Section>
 
-      <Section label="Meta-Daten" feldId="meta">
+      <Section label="Datum" feldId="meta">
         <div className="grid gap-3 sm:grid-cols-2">
           {kind === "angebot" ? (
-            <Field label="Gültig bis">
-              <Input
-                type="date"
-                value={(draft as Angebot).gueltigBis ?? ""}
-                onChange={(e) => set("gueltigBis", e.target.value || undefined)}
-              />
-            </Field>
+            <>
+              <Field label="Angebotsdatum">
+                <div className="flex gap-1.5">
+                  <Input
+                    type="date"
+                    value={o?.angebotsdatum ?? (draft as Angebot).erstelltAm?.slice(0, 10) ?? ""}
+                    onChange={(e) => setOption("angebotsdatum", e.target.value || undefined)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOption("angebotsdatum", heuteISO())}
+                  >
+                    Heute
+                  </Button>
+                </div>
+              </Field>
+              <Field label="Gültig bis">
+                <Input
+                  type="date"
+                  value={(draft as Angebot).gueltigBis ?? ""}
+                  onChange={(e) => set("gueltigBis", e.target.value || undefined)}
+                />
+              </Field>
+            </>
           ) : (
             <>
               <Field label="Rechnungsdatum">
-                <Input
-                  type="date"
-                  value={(draft as Rechnung).rechnungsdatum}
-                  onChange={(e) => set("rechnungsdatum", e.target.value)}
-                />
+                <div className="flex gap-1.5">
+                  <Input
+                    type="date"
+                    value={(draft as Rechnung).rechnungsdatum?.slice(0, 10) ?? ""}
+                    onChange={(e) => setRechnungsdatum(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRechnungsdatum(heuteISO())}
+                  >
+                    Heute
+                  </Button>
+                </div>
               </Field>
               <Field label="Fällig am">
                 <Input
                   type="date"
-                  value={(draft as Rechnung).faelligkeitsdatum}
+                  value={(draft as Rechnung).faelligkeitsdatum?.slice(0, 10) ?? ""}
                   onChange={(e) => set("faelligkeitsdatum", e.target.value)}
+                />
+              </Field>
+              <Field label="Leistungsmonat">
+                <Input
+                  type="month"
+                  value={(draft as Rechnung).leistungsmonat ?? ""}
+                  onChange={(e) => set("leistungsmonat", e.target.value || null)}
                 />
               </Field>
             </>
           )}
+          <Field label="Leistung von">
+            <Input
+              type="date"
+              value={draft.einsatzVon?.slice(0, 10) ?? ""}
+              onChange={(e) => set("einsatzVon", e.target.value || null)}
+            />
+          </Field>
+          <Field label="Leistung bis">
+            <Input
+              type="date"
+              value={draft.einsatzBis?.slice(0, 10) ?? ""}
+              onChange={(e) => set("einsatzBis", e.target.value || null)}
+            />
+          </Field>
         </div>
+        {datumFehler && <p className="mt-2 text-xs text-destructive">{datumFehler}</p>}
       </Section>
+
 
       <Section label="Steuersatz & Rabatt" feldId="steuersatz">
         <div className="grid gap-3 sm:grid-cols-2">
