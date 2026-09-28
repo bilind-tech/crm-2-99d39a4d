@@ -39,9 +39,7 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
   const o = draft.optionen;
   const zeigeAp = o?.ansprechpartnerImEmpfaenger ?? true;
   const zeigeObjekt = o?.objektnameImEmpfaenger ?? true;
-  const ansprechpartner = kundeVoll?.ansprechpartner?.find(
-    (a) => a.id === draft.ansprechpartnerId,
-  );
+  const ansprechpartner = kundeVoll?.ansprechpartner?.find((a) => a.id === draft.ansprechpartnerId);
   const autoAnrede = automatischeAnrede(kunde, ansprechpartner, zeigeAp);
   const aktivesObjekt: Objekt | null =
     (objekte as Objekt[]).find((x) => x.id === draft.objektId) ?? objekt ?? null;
@@ -204,7 +202,7 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
               <SelectItem value="__none__">— ohne Vertragsbezug —</SelectItem>
               {vertraege.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
-                  {(v.bezeichnung || "Vertrag")} · ab {v.startDatum}
+                  {v.bezeichnung || "Vertrag"} · ab {v.startDatum}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -301,7 +299,6 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
         </div>
         {datumFehler && <p className="mt-2 text-xs text-destructive">{datumFehler}</p>}
       </Section>
-
 
       <Section label="Steuersatz & Rabatt" feldId="steuersatz">
         <div className="grid gap-3 sm:grid-cols-2">
@@ -432,7 +429,10 @@ function plusTage(iso: string, tage: number): string {
 }
 
 /** Einfache Plausibilitätsprüfung für die Datumsfelder. */
-export function pruefeDaten(kind: "angebot" | "rechnung", draft: Angebot | Rechnung): string | null {
+export function pruefeDaten(
+  kind: "angebot" | "rechnung",
+  draft: Angebot | Rechnung,
+): string | null {
   const von = draft.einsatzVon?.slice(0, 10);
   const bis = draft.einsatzBis?.slice(0, 10);
   if (von && bis && bis < von) return "„Leistung bis“ liegt vor „Leistung von“.";

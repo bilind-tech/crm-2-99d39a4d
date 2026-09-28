@@ -66,12 +66,9 @@ export function useBelegEditor<T extends Angebot | Rechnung>(kind: BelegKind, be
     pauschalpreisNetto: modus === "pauschal" ? 0 : undefined,
   });
 
-  const mutatePositions = useCallback(
-    (fn: (list: Position[]) => Position[]) => {
-      setDraft((prev) => ({ ...prev, positionen: fn(prev.positionen.slice()) }));
-    },
-    [],
-  );
+  const mutatePositions = useCallback((fn: (list: Position[]) => Position[]) => {
+    setDraft((prev) => ({ ...prev, positionen: fn(prev.positionen.slice()) }));
+  }, []);
 
   const updatePosition = useCallback(
     (id: string, patch: Partial<Position>) => {
