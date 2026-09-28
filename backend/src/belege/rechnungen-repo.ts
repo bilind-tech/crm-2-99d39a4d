@@ -253,6 +253,9 @@ export function updateRechnung(id: string, patch: Record<string, unknown>): ApiR
     if (k === "positionen") continue;
     const col = RECHNUNG_UPDATABLE[k];
     if (!col) continue;
+    if ((k === "rechnungsdatum" || k === "faelligkeitsdatum") && !/^\d{4}-\d{2}-\d{2}/.test(String(v ?? ""))) {
+      throw new Error("ungueltiges-datum");
+    }
     if (k === "archiviert" || k === "inkassoMarkiert") {
       sets.push(`${col} = @${col}`);
       params[col] = v ? 1 : 0;
