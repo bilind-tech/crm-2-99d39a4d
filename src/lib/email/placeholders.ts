@@ -2,6 +2,7 @@
 // Syntax: {{kunde.firmenname}}, {{rechnung.offen}}, {{rechnung.tageUeber}} …
 // Wird auf Betreff UND HTML-Body angewendet.
 
+import { angebotsdatumVon } from "@/lib/belege/angebotsdatum";
 import type { Angebot, Ansprechpartner, Firmendaten, Kunde, Rechnung } from "@/lib/api/types";
 import { formatDate, formatEUR } from "@/lib/format";
 import { summenRechnung } from "@/lib/belege/summen";
@@ -76,7 +77,7 @@ function flatten(ctx: PlaceholderContext): Record<string, string> {
     const s = summenRechnung(a.positionen, a.rabattGesamt);
     out["angebot.nummer"] = a.nummer;
     out["angebot.titel"] = a.titel;
-    out["angebot.datum"] = formatDate(a.erstelltAm);
+    out["angebot.datum"] = formatDate(angebotsdatumVon(a));
     out["angebot.gueltigBis"] = a.gueltigBis ? formatDate(a.gueltigBis) : "";
     out["angebot.summe"] = formatEUR(s.brutto);
     out["angebot.netto"] = formatEUR(s.netto);

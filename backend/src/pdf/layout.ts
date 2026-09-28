@@ -1,6 +1,7 @@
 // Layout-Bauer für Belege — 1:1-Port aus src/lib/pdf/belegPdf.ts
 // Schwarz/weiß, dünne graue Linien, Logo rechts, kompakter 4-spaltiger Footer.
 
+import { angebotsdatumVon } from "../belege/angebotsdatum.js";
 import type { ApiPosition, ApiAngebot, ApiRechnung } from "../belege/mappers.js";
 import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.js";
 import type { FirmaForPdf } from "./types.js";
@@ -556,7 +557,7 @@ export function angebotDocDef(args: {
   );
   const meta: { label: string; wert: string }[] = [
     { label: "Angebot-Nr.", wert: angebot.nummer },
-    { label: "Angebotsdatum", wert: dt(angebot.erstelltAm) },
+    { label: "Angebotsdatum", wert: dt(angebotsdatumVon(angebot)) },
     ...(angebot.gueltigBis ? [{ label: "Gültig bis", wert: dt(angebot.gueltigBis) }] : []),
   ];
   return buildDoc({

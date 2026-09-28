@@ -161,6 +161,8 @@ export interface BelegOptionen {
    * werden exakt diese Zeilen gerendert — der automatische Aufbau entfällt.
    */
   empfaengerZeilen?: string[];
+  /** Manuell gesetztes Angebotsdatum (YYYY-MM-DD). Leer = Erstellungstag. */
+  angebotsdatum?: string;
   /** Per-Beleg Firmendaten-Override. Felder, die hier gesetzt sind, überschreiben die globalen Firmendaten im PDF. */
   firmaOverride?: Partial<Firmendaten>;
 }
