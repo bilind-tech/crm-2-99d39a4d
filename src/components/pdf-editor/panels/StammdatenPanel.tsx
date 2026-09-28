@@ -418,3 +418,29 @@ function automatischeAnrede(k: Kunde, ap: Ansprechpartner | undefined, zeigeAp: 
   if (k.anrede === "frau") return `Sehr geehrte Frau ${k.nachname ?? ""},`;
   return "Sehr geehrte Damen und Herren,";
 }
+
+function heuteISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function plusTage(iso: string, tage: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  if (isNaN(d.getTime())) return iso;
+  d.setUTCDate(d.getUTCDate() + tage);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Einfache Plausibilitätsprüfung für die Datumsfelder. */
+export function pruefeDaten(kind: "angebot" | "rechnung", draft: Angebot | Rechnung): string | null {
+  const von = draft.einsatzVon?.slice(0, 10);
+  const bis = draft.einsatzBis?.slice(0, 10);
+  if (von && bis && bis < von) return "„Leistung bis“ liegt vor „Leistung von“.";
+  if (kind === "rechnung") {
+    const r = draft as Rechnung;
+    if (!r.rechnungsdatum) return "Bitte ein Rechnungsdatum angeben.";
+    if (r.faelligkeitsdatum && r.faelligkeitsdatum.slice(0, 10) < r.rechnungsdatum.slice(0, 10))
+      return "Die Fälligkeit liegt vor dem Rechnungsdatum.";
+  }
+  return null;
+}
