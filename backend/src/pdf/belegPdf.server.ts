@@ -4,6 +4,7 @@ import { getAngebot } from "../belege/angebote-repo.js";
 import { getRechnung } from "../belege/rechnungen-repo.js";
 import { getKunde, getAnsprechpartner, getObjekt } from "../kunden/repo.js";
 import { angebotDocDef, rechnungDocDef } from "./layout.js";
+import { angebotsdatumVon } from "../belege/angebotsdatum.js";
 import { renderPdf } from "./render.js";
 import { computeHash, invalidate, invalidateAll, logoFingerprint, readCached, writeCached, type BelegArt } from "./cache.js";
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
@@ -29,7 +30,7 @@ function dateinameAngebot(a: ApiAngebot, k: ApiKunde): string {
   const teile = [`Angebot ${nummerForFilename(a.nummer)}`, kundeName(k)];
   const titel = safe(a.titel || "");
   if (titel) teile.push(`– ${titel}`);
-  teile.push(`(${mmYYYY(a.erstelltAm)})`);
+  teile.push(`(${mmYYYY(angebotsdatumVon(a))})`);
   return `${teile.join(" ")}.pdf`.replace(/\s+/g, " ");
 }
 function dateinameRechnung(r: ApiRechnung, k: ApiKunde): string {

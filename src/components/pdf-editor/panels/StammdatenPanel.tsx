@@ -39,9 +39,7 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
   const o = draft.optionen;
   const zeigeAp = o?.ansprechpartnerImEmpfaenger ?? true;
   const zeigeObjekt = o?.objektnameImEmpfaenger ?? true;
-  const ansprechpartner = kundeVoll?.ansprechpartner?.find(
-    (a) => a.id === draft.ansprechpartnerId,
-  );
+  const ansprechpartner = kundeVoll?.ansprechpartner?.find((a) => a.id === draft.ansprechpartnerId);
   const autoAnrede = automatischeAnrede(kunde, ansprechpartner, zeigeAp);
   const aktivesObjekt: Objekt | null =
     (objekte as Objekt[]).find((x) => x.id === draft.objektId) ?? objekt ?? null;
@@ -53,6 +51,18 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
     zeigeAp,
   );
   const manuell = Array.isArray(o?.empfaengerZeilen);
+  const setRechnungsdatum = (neu: string) => {
+    if (!neu) return;
+    const r = draft as Rechnung;
+    const alt = r.rechnungsdatum?.slice(0, 10);
+    const altZiel = alt ? plusTage(alt, kunde.zahlungszielTage ?? 14) : "";
+    set("rechnungsdatum", neu);
+    // Fälligkeit mitziehen, solange sie nicht manuell abweicht.
+    if (!r.faelligkeitsdatum || r.faelligkeitsdatum.slice(0, 10) === altZiel) {
+      set("faelligkeitsdatum", plusTage(neu, kunde.zahlungszielTage ?? 14));
+    }
+  };
+  const datumFehler = pruefeDaten(kind, draft);
   return (
     <div className="space-y-5">
       <Section label="Objekt" feldId="objekt">
@@ -192,7 +202,7 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
               <SelectItem value="__none__">— ohne Vertragsbezug —</SelectItem>
               {vertraege.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
-                  {(v.bezeichnung || "Vertrag")} · ab {v.startDatum}
+                  {v.bezeichnung || "Vertrag"} · ab {v.startDatum}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -208,35 +218,86 @@ export function StammdatenPanel({ kind, draft, kunde, set, setOption }: Props) {
         />
       </Section>
 
-      <Section label="Meta-Daten" feldId="meta">
+      <Section label="Datum" feldId="meta">
         <div className="grid gap-3 sm:grid-cols-2">
           {kind === "angebot" ? (
-            <Field label="Gültig bis">
-              <Input
-                type="date"
-                value={(draft as Angebot).gueltigBis ?? ""}
-                onChange={(e) => set("gueltigBis", e.target.value || undefined)}
-              />
-            </Field>
+            <>
+              <Field label="Angebotsdatum">
+                <div className="flex gap-1.5">
+                  <Input
+                    type="date"
+                    value={o?.angebotsdatum ?? (draft as Angebot).erstelltAm?.slice(0, 10) ?? ""}
+                    onChange={(e) => setOption("angebotsdatum", e.target.value || undefined)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setOption("angebotsdatum", heuteISO())}
+                  >
+                    Heute
+                  </Button>
+                </div>
+              </Field>
+              <Field label="Gültig bis">
+                <Input
+                  type="date"
+                  value={(draft as Angebot).gueltigBis ?? ""}
+                  onChange={(e) => set("gueltigBis", e.target.value || undefined)}
+                />
+              </Field>
+            </>
           ) : (
             <>
               <Field label="Rechnungsdatum">
-                <Input
-                  type="date"
-                  value={(draft as Rechnung).rechnungsdatum}
-                  onChange={(e) => set("rechnungsdatum", e.target.value)}
-                />
+                <div className="flex gap-1.5">
+                  <Input
+                    type="date"
+                    value={(draft as Rechnung).rechnungsdatum?.slice(0, 10) ?? ""}
+                    onChange={(e) => setRechnungsdatum(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRechnungsdatum(heuteISO())}
+                  >
+                    Heute
+                  </Button>
+                </div>
               </Field>
               <Field label="Fällig am">
                 <Input
                   type="date"
-                  value={(draft as Rechnung).faelligkeitsdatum}
+                  value={(draft as Rechnung).faelligkeitsdatum?.slice(0, 10) ?? ""}
                   onChange={(e) => set("faelligkeitsdatum", e.target.value)}
+                />
+              </Field>
+              <Field label="Leistungsmonat">
+                <Input
+                  type="month"
+                  value={(draft as Rechnung).leistungsmonat ?? ""}
+                  onChange={(e) => set("leistungsmonat", e.target.value || null)}
                 />
               </Field>
             </>
           )}
+          <Field label="Leistung von">
+            <Input
+              type="date"
+              value={draft.einsatzVon?.slice(0, 10) ?? ""}
+              onChange={(e) => set("einsatzVon", e.target.value || null)}
+            />
+          </Field>
+          <Field label="Leistung bis">
+            <Input
+              type="date"
+              value={draft.einsatzBis?.slice(0, 10) ?? ""}
+              onChange={(e) => set("einsatzBis", e.target.value || null)}
+            />
+          </Field>
         </div>
+        {datumFehler && <p className="mt-2 text-xs text-destructive">{datumFehler}</p>}
       </Section>
 
       <Section label="Steuersatz & Rabatt" feldId="steuersatz">
@@ -353,4 +414,33 @@ function automatischeAnrede(k: Kunde, ap: Ansprechpartner | undefined, zeigeAp: 
   if (k.anrede === "herr") return `Sehr geehrter Herr ${k.nachname ?? ""},`;
   if (k.anrede === "frau") return `Sehr geehrte Frau ${k.nachname ?? ""},`;
   return "Sehr geehrte Damen und Herren,";
+}
+
+function heuteISO(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function plusTage(iso: string, tage: number): string {
+  const d = new Date(iso + "T00:00:00Z");
+  if (isNaN(d.getTime())) return iso;
+  d.setUTCDate(d.getUTCDate() + tage);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Einfache Plausibilitätsprüfung für die Datumsfelder. */
+export function pruefeDaten(
+  kind: "angebot" | "rechnung",
+  draft: Angebot | Rechnung,
+): string | null {
+  const von = draft.einsatzVon?.slice(0, 10);
+  const bis = draft.einsatzBis?.slice(0, 10);
+  if (von && bis && bis < von) return "„Leistung bis“ liegt vor „Leistung von“.";
+  if (kind === "rechnung") {
+    const r = draft as Rechnung;
+    if (!r.rechnungsdatum) return "Bitte ein Rechnungsdatum angeben.";
+    if (r.faelligkeitsdatum && r.faelligkeitsdatum.slice(0, 10) < r.rechnungsdatum.slice(0, 10))
+      return "Die Fälligkeit liegt vor dem Rechnungsdatum.";
+  }
+  return null;
 }

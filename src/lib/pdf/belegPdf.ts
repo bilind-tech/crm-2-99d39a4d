@@ -2,6 +2,7 @@
 // Layout 1:1 nach My-Clean-Center-Vorlage: schwarz/weiß, dünne graue Linien,
 // Logo rechts oben, kompakter 4-spaltiger Footer.
 
+import { angebotsdatumVon } from "@/lib/belege/angebotsdatum";
 import type {
   Angebot,
   Rechnung,
@@ -832,7 +833,7 @@ export async function generateAngebotPdf(
   if (cached) return cached;
   const meta = [
     { label: "Angebot-Nr.", wert: angebot.nummer },
-    { label: "Angebotsdatum", wert: dt(angebot.erstelltAm) },
+    { label: "Angebotsdatum", wert: dt(angebotsdatumVon(angebot)) },
     angebot.gueltigBis ? { label: "Gültig bis", wert: dt(angebot.gueltigBis) } : null,
   ].filter(Boolean) as { label: string; wert: string }[];
   const opts: BuildOptions = {

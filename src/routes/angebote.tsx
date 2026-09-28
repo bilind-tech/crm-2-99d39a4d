@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { angebotsdatumVon } from "@/lib/belege/angebotsdatum";
 import { useState, useMemo } from "react";
 import {
   Search,
@@ -131,14 +132,14 @@ function Page() {
   const filtered = useMemo(() => {
     let list = alle;
     if (filter !== "alle") list = list.filter((a) => a.status === filter);
-    list = list.filter((a) => passtInZeitraum(a.erstelltAm, zeitraum));
+    list = list.filter((a) => passtInZeitraum(angebotsdatumVon(a), zeitraum));
     if (q.trim()) {
       const t = q.toLowerCase();
       list = list.filter(
         (a) => a.nummer.toLowerCase().includes(t) || a.titel.toLowerCase().includes(t),
       );
     }
-    return [...list].sort((a, b) => b.erstelltAm.localeCompare(a.erstelltAm));
+    return [...list].sort((a, b) => angebotsdatumVon(b).localeCompare(angebotsdatumVon(a)));
   }, [alle, filter, q, zeitraum]);
 
   return (
@@ -170,7 +171,7 @@ function Page() {
         placeholder="Suche nach Nummer, Titel, Kunde…"
         zeitraum={zeitraum}
         setZeitraum={setZeitraum}
-        verfuegbareDaten={alle.map((a) => a.erstelltAm)}
+        verfuegbareDaten={alle.map((a) => angebotsdatumVon(a))}
       />
 
       {/* Mobil: Card-View */}

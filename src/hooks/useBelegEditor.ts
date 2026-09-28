@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useUpdateAngebot, useUpdateRechnung } from "@/hooks/useApi";
 import { useInvalidateBelegPdf } from "@/hooks/useBelegPdf";
+import { pruefeDaten } from "@/components/pdf-editor/panels/StammdatenPanel";
 import type { Angebot, Position, PositionModus, Rechnung } from "@/lib/api/types";
 
 type BelegKind = "angebot" | "rechnung";
@@ -65,12 +66,9 @@ export function useBelegEditor<T extends Angebot | Rechnung>(kind: BelegKind, be
     pauschalpreisNetto: modus === "pauschal" ? 0 : undefined,
   });
 
-  const mutatePositions = useCallback(
-    (fn: (list: Position[]) => Position[]) => {
-      setDraft((prev) => ({ ...prev, positionen: fn(prev.positionen.slice()) }));
-    },
-    [],
-  );
+  const mutatePositions = useCallback((fn: (list: Position[]) => Position[]) => {
+    setDraft((prev) => ({ ...prev, positionen: fn(prev.positionen.slice()) }));
+  }, []);
 
   const updatePosition = useCallback(
     (id: string, patch: Partial<Position>) => {
@@ -176,6 +174,11 @@ export function useBelegEditor<T extends Angebot | Rechnung>(kind: BelegKind, be
   const save = useCallback(
     async (opts?: { silent?: boolean }) => {
       if (!isDirty) return;
+      const fehler = pruefeDaten(kind, draft as unknown as Angebot | Rechnung);
+      if (fehler) {
+        if (!opts?.silent) toast.error(fehler);
+        return;
+      }
       try {
         const payload = { ...draft } as Partial<T>;
         if (kind === "angebot") {
