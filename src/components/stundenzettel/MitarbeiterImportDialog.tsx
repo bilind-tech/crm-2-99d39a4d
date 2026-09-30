@@ -182,6 +182,13 @@ export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene }: Prop
           spellCheck={false}
           className="font-mono text-xs"
         />
+        {vorschau && (
+          <div className="space-y-1 rounded-md border bg-muted/40 p-3 text-sm">
+            <div><span className="font-medium">Neu:</span> {vorschau.neu.join(", ") || "–"}</div>
+            <div><span className="font-medium">Aktualisiert:</span> {vorschau.aktualisiert.join(", ") || "–"}</div>
+            <div className="text-destructive"><span className="font-medium">Wird gelöscht:</span> {vorschau.geloescht.map((m) => m.name).join(", ") || "–"}</div>
+          </div>
+        )}
         <div className="flex justify-start">
           <Button
             type="button"
@@ -189,7 +196,7 @@ export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene }: Prop
             size="sm"
             onClick={() => setText(MITARBEITER_PRESET_JSON)}
           >
-            Beispiel-Datensatz einsetzen
+            Zeiten aus Papier-Stundenzetteln einsetzen
           </Button>
         </div>
         <DialogFooter>
