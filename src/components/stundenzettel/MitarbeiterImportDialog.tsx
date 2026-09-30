@@ -26,6 +26,7 @@ import { MITARBEITER_PRESET_JSON } from "@/lib/stundenzettel/importPreset";
 import {
   useCreateMitarbeiter,
   useDeleteMitarbeiter,
+  useGenerieren,
   useUpdateMitarbeiter,
 } from "@/hooks/useStundenzettel";
 
@@ -33,6 +34,8 @@ interface Props {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   vorhandene: Mitarbeiter[];
+  jahr: number;
+  monat: number;
 }
 
 /** Rohdaten defensiv in eine vollständige ArbeitsZeitConfig überführen. */
@@ -72,12 +75,13 @@ function normalisiere(raw: any): ArbeitsZeitConfig {
   };
 }
 
-export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene }: Props) {
+export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene, jahr, monat }: Props) {
   const [text, setText] = useState(MITARBEITER_PRESET_JSON);
   const [busy, setBusy] = useState(false);
   const create = useCreateMitarbeiter();
   const update = useUpdateMitarbeiter();
   const remove = useDeleteMitarbeiter();
+  const generieren = useGenerieren();
 
   const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
 
@@ -160,9 +164,19 @@ export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene }: Prop
         fehler++;
       }
     }
+    // Zettel des angezeigten Monats mit den neuen Zeiten neu erzeugen.
+    let neuErzeugt = false;
+    try {
+      await generieren.mutateAsync({ jahr, monat, ueberschreiben: true });
+      neuErzeugt = true;
+    } catch {
+      toast.error("Zettel konnten nicht neu erzeugt werden — bitte „Generieren“ drücken.");
+    }
     setBusy(false);
     if (fehler > 0) toast.error(`${fehler} Einträge fehlgeschlagen`);
-    toast.success(`${neu} neu, ${aktualisiert} aktualisiert, ${geloescht} gelöscht`);
+    toast.success(
+      `${neu} neu, ${aktualisiert} aktualisiert, ${geloescht} gelöscht${neuErzeugt ? " · Zettel neu erzeugt" : ""}`,
+    );
     if (fehler === 0) onOpenChange(false);
   }
 
