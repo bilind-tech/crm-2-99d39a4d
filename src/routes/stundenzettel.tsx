@@ -352,7 +352,7 @@ function Page() {
                     <Plus className="mr-1.5 h-4 w-4" /> Ersten Mitarbeiter anlegen
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setImportOffen(true)}>
-                    <FolderInput className="mr-1.5 h-4 w-4" /> Aus JSON importieren
+                    <FolderInput className="mr-1.5 h-4 w-4" /> Zeiten aus Papier-Stundenzetteln übernehmen
                   </Button>
                 </div>
               </div>
@@ -360,7 +360,7 @@ function Page() {
               <>
               <div className="pb-2">
                 <Button size="sm" variant="outline" onClick={() => setImportOffen(true)}>
-                  <FolderInput className="mr-1.5 h-4 w-4" /> Aus JSON importieren
+                  <FolderInput className="mr-1.5 h-4 w-4" /> Zeiten aus Papier-Stundenzetteln übernehmen
                 </Button>
               </div>
               <ul className="divide-y divide-border">

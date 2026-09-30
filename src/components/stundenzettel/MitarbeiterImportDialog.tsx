@@ -23,7 +23,11 @@ import {
   type Wochentag,
 } from "@/lib/stundenzettel/types";
 import { MITARBEITER_PRESET_JSON } from "@/lib/stundenzettel/importPreset";
-import { useCreateMitarbeiter, useUpdateMitarbeiter } from "@/hooks/useStundenzettel";
+import {
+  useCreateMitarbeiter,
+  useDeleteMitarbeiter,
+  useUpdateMitarbeiter,
+} from "@/hooks/useStundenzettel";
 
 interface Props {
   open: boolean;
@@ -73,22 +77,65 @@ export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene }: Prop
   const [busy, setBusy] = useState(false);
   const create = useCreateMitarbeiter();
   const update = useUpdateMitarbeiter();
+  const remove = useDeleteMitarbeiter();
 
-  async function handleImport() {
-    let liste: any[];
+  const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, " ");
+
+  function parse(): { liste: any[]; entfernen: string[] } | null {
     try {
       const parsed = JSON.parse(text);
-      liste = Array.isArray(parsed) ? parsed : parsed.mitarbeiter;
+      const liste = Array.isArray(parsed) ? parsed : parsed.mitarbeiter;
       if (!Array.isArray(liste)) throw new Error("Kein 'mitarbeiter'-Array gefunden.");
-    } catch (e) {
-      toast.error(`JSON ungültig: ${(e as Error).message}`);
+      const entfernen = Array.isArray(parsed?.entfernen) ? parsed.entfernen.map(String) : [];
+      return { liste, entfernen };
+    } catch {
+      return null;
+    }
+  }
+
+  const vorschau = (() => {
+    const p = parse();
+    if (!p) return null;
+    const namen = p.liste.map((r) => String(r?.name ?? "").trim()).filter(Boolean);
+    const vorh = new Set(vorhandene.map((m) => norm(m.name)));
+    const weg = new Set(p.entfernen.map(norm));
+    return {
+      neu: namen.filter((n) => !vorh.has(norm(n))),
+      aktualisiert: namen.filter((n) => vorh.has(norm(n))),
+      geloescht: vorhandene.filter((m) => weg.has(norm(m.name))),
+    };
+  })();
+
+  async function handleImport() {
+    const p = parse();
+    if (!p) {
+      toast.error("JSON ungültig.");
+      return;
+    }
+    const { liste } = p;
+    const zuLoeschen = vorschau?.geloescht ?? [];
+    if (
+      zuLoeschen.length > 0 &&
+      !window.confirm(
+        `${zuLoeschen.map((m) => m.name).join(", ")} wird samt Stundenzetteln gelöscht. Fortfahren?`,
+      )
+    ) {
       return;
     }
 
     setBusy(true);
     let neu = 0;
     let aktualisiert = 0;
+    let geloescht = 0;
     let fehler = 0;
+    for (const m of zuLoeschen) {
+      try {
+        await remove.mutateAsync(m.id);
+        geloescht++;
+      } catch {
+        fehler++;
+      }
+    }
     for (const roh of liste) {
       const name = String(roh?.name ?? "").trim();
       if (!name) {
@@ -100,9 +147,7 @@ export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene }: Prop
         aktiv: roh.aktiv !== false,
         arbeitszeiten: normalisiere(roh.arbeitszeiten),
       };
-      const treffer = vorhandene.find(
-        (m) => m.name.trim().toLowerCase() === name.toLowerCase(),
-      );
+      const treffer = vorhandene.find((m) => norm(m.name) === norm(name));
       try {
         if (treffer) {
           await update.mutateAsync({ id: treffer.id, patch: input });
@@ -117,7 +162,7 @@ export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene }: Prop
     }
     setBusy(false);
     if (fehler > 0) toast.error(`${fehler} Einträge fehlgeschlagen`);
-    toast.success(`${neu} neu angelegt, ${aktualisiert} aktualisiert`);
+    toast.success(`${neu} neu, ${aktualisiert} aktualisiert, ${geloescht} gelöscht`);
     if (fehler === 0) onOpenChange(false);
   }
 
@@ -137,6 +182,13 @@ export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene }: Prop
           spellCheck={false}
           className="font-mono text-xs"
         />
+        {vorschau && (
+          <div className="space-y-1 rounded-md border bg-muted/40 p-3 text-sm">
+            <div><span className="font-medium">Neu:</span> {vorschau.neu.join(", ") || "–"}</div>
+            <div><span className="font-medium">Aktualisiert:</span> {vorschau.aktualisiert.join(", ") || "–"}</div>
+            <div className="text-destructive"><span className="font-medium">Wird gelöscht:</span> {vorschau.geloescht.map((m) => m.name).join(", ") || "–"}</div>
+          </div>
+        )}
         <div className="flex justify-start">
           <Button
             type="button"
@@ -144,7 +196,7 @@ export function MitarbeiterImportDialog({ open, onOpenChange, vorhandene }: Prop
             size="sm"
             onClick={() => setText(MITARBEITER_PRESET_JSON)}
           >
-            Beispiel-Datensatz einsetzen
+            Zeiten aus Papier-Stundenzetteln einsetzen
           </Button>
         </div>
         <DialogFooter>
