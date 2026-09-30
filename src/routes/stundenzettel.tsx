@@ -487,13 +487,22 @@ function ZettelBlock({
 
 function beschreibung(m: Mitarbeiter): string {
   const cfg = m.arbeitszeiten;
-  const std = `${cfg.standardZeiten.arbeitsbeginn}–${cfg.standardZeiten.arbeitsende}`;
-  const tage =
-    cfg.wpiMuster === "gleich"
-      ? `${cfg.arbeitstage.length} Arbeitstage`
-      : "Zeiten pro Wochentag";
   const ziel = cfg.zielStundenProMonat ? ` · Ziel ${cfg.zielStundenProMonat} h` : "";
-  return `${std} · ${tage}${ziel}`;
+  if (cfg.wpiMuster === "gleich") {
+    const std = `${cfg.standardZeiten.arbeitsbeginn}–${cfg.standardZeiten.arbeitsende}`;
+    return `${std} · ${cfg.arbeitstage.length} Arbeitstage${ziel}`;
+  }
+  const kurz: Record<string, string> = {
+    montag: "Mo", dienstag: "Di", mittwoch: "Mi", donnerstag: "Do",
+    freitag: "Fr", samstag: "Sa", sonntag: "So",
+  };
+  const teile = Object.entries(cfg.wochentagZeiten)
+    .filter(([, z]) => z.aktiv)
+    .map(([w, z]) => {
+      const b2 = z.block2 ? ` + ${z.block2.beginn}–${z.block2.ende}` : "";
+      return `${kurz[w] ?? w} ${z.beginn}–${z.ende}${b2}`;
+    });
+  return `${teile.join(", ") || "keine Arbeitstage"}${ziel}`;
 }
 
 function FeiertageContent({ jahr, loading }: { jahr: number; loading: boolean }) {
