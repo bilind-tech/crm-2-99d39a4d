@@ -77,9 +77,14 @@ export function PdfCanvasViewer({
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    // Schwelle + rAF: verhindert die Chrome-Scrollbalken-Schleife (Flackern).
+    let raf = 0;
     const measure = () => {
-      const w = el.clientWidth;
-      if (w > 0) setContainerWidth(w);
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const w = el.clientWidth;
+        if (w > 0) setContainerWidth((alt) => (alt === 0 || Math.abs(alt - w) > 24 ? w : alt));
+      });
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -89,6 +94,7 @@ export function PdfCanvasViewer({
     }, 800);
     return () => {
       ro.disconnect();
+      cancelAnimationFrame(raf);
       clearTimeout(fb);
     };
   }, []);
@@ -150,7 +156,11 @@ export function PdfCanvasViewer({
         : "—";
 
   return (
-    <div ref={containerRef} className={className ?? "h-full w-full overflow-y-auto bg-muted/30"}>
+    <div
+      ref={containerRef}
+      style={{ scrollbarGutter: "stable" }}
+      className={className ?? "h-full w-full overflow-y-auto bg-muted/30"}
+    >
       {!hasSource && (
         <div className="flex h-full min-h-[40vh] flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-5 w-5 animate-spin" />
