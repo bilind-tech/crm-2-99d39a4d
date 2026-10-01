@@ -16,15 +16,19 @@ export function BulkDriveSyncButton({ belegArt, belegIds }: Props) {
   const items = status.data?.items ?? [];
   const synced = items.filter((item) => item.status === "synced").length;
   const active = items.some((item) => item.status === "pending" || item.status === "running");
+  const failed = items.filter((item) => item.status === "error" || item.status === "not-found").length;
   const complete = stableIds.length > 0 && items.length === stableIds.length && synced === stableIds.length;
   const progress = stableIds.length > 0 ? Math.round((synced / stableIds.length) * 100) : 0;
-  const busy = upload.isPending || active || status.isFetching;
+  const initialLoading = status.isPending;
+  const busy = upload.isPending || active || initialLoading;
   const verbunden = status.data?.verbunden === true;
 
   const label = complete
     ? "Alles ist in Google Drive"
     : active
       ? `${synced} von ${stableIds.length} in Drive`
+      : failed > 0
+        ? `${failed} erneut versuchen`
       : `Alle sichtbaren in Drive (${stableIds.length})`;
 
   return (
@@ -32,7 +36,7 @@ export function BulkDriveSyncButton({ belegArt, belegIds }: Props) {
       <Button
         type="button"
         variant={complete ? "secondary" : "outline"}
-        className={complete ? "border-success/30 bg-success/10 text-success" : ""}
+        className={complete ? "border-success/30 bg-success/10 text-success shadow-[0_0_24px_hsl(var(--success)/0.18)] transition-all duration-500" : "transition-all duration-300"}
         disabled={stableIds.length === 0 || !verbunden || complete || busy}
         title={!verbunden ? "Google Drive ist nicht verbunden" : label}
         onClick={() => upload.mutate({ belegArt, belegIds: stableIds })}

@@ -113,7 +113,7 @@ async function processBeleg(row: DriveUpload): Promise<void> {
     name: fileName,
     data: pdf.buffer,
     mimeType: "application/pdf",
-    replaceFileId: prev?.driveFileId ?? undefined,
+    replaceFileId: prev?.driveFileId ?? row.driveFileId ?? undefined,
   });
   markErfolg(row.id, out.id, out.webViewLink);
   setStatusOk();

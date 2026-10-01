@@ -41,6 +41,7 @@ describe("Drive-Sammelupload", () => {
     const firstR = await backfillOneDetailed("rechnung", rechnung.id);
     const firstA = await backfillOneDetailed("angebot", angebot.id);
     expect(firstR.created).toBe(true);
+    expect(firstR.queued).toBe(true);
     expect(firstA.created).toBe(true);
     expect(getBySha("rechnung", rechnung.id, firstR.pdfSha256 ?? "")?.status).toBe("pending");
     expect(getBySha("angebot", angebot.id, firstA.pdfSha256 ?? "")?.status).toBe("pending");
@@ -49,6 +50,7 @@ describe("Drive-Sammelupload", () => {
     const secondA = await backfillOneDetailed("angebot", angebot.id);
     expect(secondR.created).toBe(false);
     expect(secondA.created).toBe(false);
+    expect(secondR.queued).toBe(true);
     const counts = getDatabase().prepare(
       `SELECT beleg_art AS art, COUNT(*) AS n FROM drive_upload_queue WHERE beleg_id IN (?, ?) GROUP BY beleg_art`,
     ).all(rechnung.id, angebot.id) as { art: string; n: number }[];

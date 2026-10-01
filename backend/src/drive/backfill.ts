@@ -7,7 +7,7 @@ import { renderAngebotPdf, renderRechnungPdf } from "../pdf/belegPdf.server.js";
 import { getAngebot } from "../belege/angebote-repo.js";
 import { getRechnung } from "../belege/rechnungen-repo.js";
 import { listDokumente } from "../dokumente/repo.js";
-import { enqueue } from "./upload-repo.js";
+import { enqueue, getLatestErfolg, rescheduleKnownVersion } from "./upload-repo.js";
 import { loadDriveSettings } from "./oauth.js";
 
 interface Row { id: string }
@@ -28,7 +28,32 @@ function listRechnungIdsForSync(): string[] {
 export interface BackfillOneResult {
   found: boolean;
   created: boolean;
+  synced?: boolean;
+  queued?: boolean;
   pdfSha256?: string;
+}
+
+function enqueueRendered(input: {
+  belegArt: "angebot" | "rechnung";
+  belegId: string;
+  nummer?: string;
+  dateiName: string;
+  pdfSha256: string;
+}): BackfillOneResult {
+  const latest = getLatestErfolg(input.belegArt, input.belegId);
+  if (latest?.pdfSha256 === input.pdfSha256) {
+    return { found: true, created: false, synced: true, queued: false, pdfSha256: input.pdfSha256 };
+  }
+  const result = enqueue({
+    belegArt: input.belegArt,
+    belegId: input.belegId,
+    dateiName: input.dateiName,
+    pdfSha256: input.pdfSha256,
+    idempotenzKey: `${input.belegArt}-${input.nummer ?? input.belegId}-${input.pdfSha256.slice(0, 16)}`,
+  });
+  const queued = result.created || result.row.status === "pending" || result.row.status === "running"
+    || rescheduleKnownVersion(result.row.id);
+  return { found: true, created: result.created, synced: false, queued, pdfSha256: input.pdfSha256 };
 }
 
 async function enqueueAngebot(id: string): Promise<BackfillOneResult> {
@@ -37,14 +62,13 @@ async function enqueueAngebot(id: string): Promise<BackfillOneResult> {
   const pdf = await renderAngebotPdf(id);
   if (!pdf) return { found: false, created: false };
   const sha = crypto.createHash("sha256").update(pdf.buffer).digest("hex");
-  const result = enqueue({
+  return enqueueRendered({
     belegArt: "angebot",
     belegId: id,
+    nummer: (beleg as { nummer?: string }).nummer,
     dateiName: pdf.dateiname,
     pdfSha256: sha,
-    idempotenzKey: `angebot-${(beleg as { nummer?: string }).nummer ?? id}-${sha.slice(0, 16)}`,
   });
-  return { found: true, created: result.created, pdfSha256: sha };
 }
 
 async function enqueueRechnung(id: string): Promise<BackfillOneResult> {
@@ -53,14 +77,13 @@ async function enqueueRechnung(id: string): Promise<BackfillOneResult> {
   const pdf = await renderRechnungPdf(id);
   if (!pdf) return { found: false, created: false };
   const sha = crypto.createHash("sha256").update(pdf.buffer).digest("hex");
-  const result = enqueue({
+  return enqueueRendered({
     belegArt: "rechnung",
     belegId: id,
+    nummer: (beleg as { nummer?: string }).nummer,
     dateiName: pdf.dateiname,
     pdfSha256: sha,
-    idempotenzKey: `rechnung-${(beleg as { nummer?: string }).nummer ?? id}-${sha.slice(0, 16)}`,
   });
-  return { found: true, created: result.created, pdfSha256: sha };
 }
 
 function enqueueDokument(id: string, sha256: string | null, dateiname: string | null): boolean {

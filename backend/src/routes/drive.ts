@@ -382,10 +382,10 @@ export async function driveRoutes(app: FastifyInstance): Promise<void> {
       let failed = 0;
       for (const belegId of uniqueIds) {
         try {
-          const status = await inspectBulkBeleg(body.data.belegArt, belegId);
-          if (status.status === "synced") { alreadySynced++; continue; }
           const result = await backfillOneDetailed(body.data.belegArt, belegId);
           if (!result.found) { failed++; continue; }
+          if (result.synced) { alreadySynced++; continue; }
+          if (!result.queued) { failed++; continue; }
           if (result.created) enqueued++; else alreadyQueued++;
         } catch { failed++; }
       }

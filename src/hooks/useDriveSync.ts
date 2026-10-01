@@ -26,7 +26,7 @@ export function useBulkDriveStatus(
     staleTime: 3_000,
     refetchInterval: (query) => {
       const items = query.state.data?.items ?? [];
-      return items.some((item) => item.status === "pending" || item.status === "running") ? 1_500 : false;
+      return items.some((item) => item.status === "pending" || item.status === "running") ? 4_000 : false;
     },
   });
 }

@@ -197,3 +197,18 @@ export function retry(id: string): boolean {
      WHERE id=? AND status IN ('fehler','manuell','pending')`,
   ).run(id).changes > 0;
 }
+
+/**
+ * Plant eine bereits bekannte PDF-Fassung erneut ein. Das ist insbesondere
+ * nötig, wenn ein Beleg zwischen zwei Fassungen wieder auf einen älteren
+ * Inhalt zurückgesetzt wurde. Die bestehende Zeile bleibt erhalten, damit
+ * ihre Drive-Datei beim Ersetzen weiterverwendet werden kann.
+ */
+export function rescheduleKnownVersion(id: string): boolean {
+  return getDatabase().prepare(
+    `UPDATE drive_upload_queue
+        SET status='pending', fehler_text=NULL, abgeschlossen_am=NULL,
+            naechster_versuch_at=datetime('now'), geaendert_am=datetime('now')
+      WHERE id=? AND status NOT IN ('pending','running')`,
+  ).run(id).changes > 0;
+}
