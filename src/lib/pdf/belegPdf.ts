@@ -517,7 +517,6 @@ function metaBox(
     };
   }
   const body: unknown[][] = [];
-  let noteRowsCount = 0;
   if (headerNote) {
     const noteLines = headerNote.split("\n");
     noteLines.forEach((line, idx) => {
@@ -533,7 +532,6 @@ function metaBox(
         },
         {},
       ]);
-      noteRowsCount++;
     });
   }
   meta.forEach((m) => {
@@ -569,9 +567,19 @@ function metaBox(
         i === 0 || i === node.table.widths.length ? 0.6 : 0,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      paddingTop: (i: number) => (i === 0 ? 4 : 2),
-      paddingBottom: (i: number, node: { table: { body: unknown[][] } }) =>
-        i === node.table.body.length - 1 ? 4 : 2,
+      // Mehr Luft direkt am Außenrahmen, bei identischer Gesamthöhe des Blocks.
+      paddingTop: (i: number, node: { table: { body: unknown[][] } }) => {
+        const last = node.table.body.length - 1;
+        if (i === 0) return 4;
+        if (i === 1 || i === last) return 1;
+        return 2;
+      },
+      paddingBottom: (i: number, node: { table: { body: unknown[][] } }) => {
+        const last = node.table.body.length - 1;
+        if (i === last) return 4;
+        if (i === 0 || i === last - 1) return 1;
+        return 2;
+      },
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },
