@@ -93,17 +93,6 @@ function header(f: FirmaForPdf, logoDataUrl: string | null) {
     margin: [55, 30, 55, 0] as [number, number, number, number],
     stack: [
       ...(logoNode ? [logoNode] : []),
-      {
-        columns: [
-          {
-            width: "*",
-            stack: [
-              { text: absenderzeile(f), fontSize: 7, color: COLOR_TEXT, decoration: "underline", margin: [0, 70, 0, 0], noWrap: true },
-            ],
-          },
-          { width: 270, text: "" },
-        ],
-      },
     ],
   };
 }
@@ -128,8 +117,8 @@ function footer(f: FirmaForPdf) {
               f.strasse,
               [f.plz, f.ort].filter(Boolean).join(" ") || null,
             ]),
-            cell(["Bank", f.bankName, f.iban], "center"),
-            cell([f.telefon, f.mobil, f.email], "center"),
+            cell(["Bankverbindung", f.bankName, f.iban], "left"),
+            cell([f.telefon, f.mobil, f.email], "right"),
             cell(
               [
                 f.handelsregister,
@@ -222,7 +211,7 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
   }
   headerRow.push(
     { text: "Abrechnungsart", bold: true, fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] },
-    { text: "Preis (netto)", bold: true, fontSize: 10, color: COLOR_TEXT, alignment: "right", margin: [0, 6, 0, 6] },
+    { text: "Preis (netto)", bold: true, fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] },
   );
 
   const body: unknown[][] = [headerRow];
@@ -235,7 +224,7 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       row.push({ text: stundenText(p), fontSize: 10, alignment: "center", margin: mittig });
     row.push(
       { text: abrechnungsartText(p), fontSize: 10, alignment: "center", margin: mittig },
-      { text: eur(summe(p)), fontSize: 10, alignment: "right", margin: mittig },
+      { text: eur(summe(p)), fontSize: 10, alignment: "center", margin: mittig },
     );
     body.push(row);
   });
@@ -253,8 +242,8 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       heights: (row: number) => (row === 0 ? 22 : undefined),
     },
     layout: {
-      hLineWidth: () => 0.6,
-      vLineWidth: () => 0.6,
+      hLineWidth: () => 0.8,
+      vLineWidth: () => 0.8,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
       paddingTop: () => 8,
@@ -269,19 +258,19 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
         [
           { text: "Gesamtbetrag (netto)", colSpan: spanCols, fontSize: 10, bold: true },
           ...spanFiller,
-          { text: eur(totalsT.netto), fontSize: 10, alignment: "right", bold: true },
+          { text: eur(totalsT.netto), fontSize: 10, alignment: "center", bold: true },
         ],
       ]
     : [
         [
           { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
           ...spanFiller,
-          { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
+          { text: eur(totalsT.steuer), fontSize: 10, alignment: "center" },
         ],
         [
           { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
           ...spanFiller,
-          { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
+          { text: eur(totalsT.brutto), fontSize: 10, alignment: "center", bold: true },
         ],
       ];
 
@@ -293,8 +282,8 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       body: summenBody,
     },
     layout: {
-      hLineWidth: () => 0.6,
-      vLineWidth: () => 0.6,
+      hLineWidth: () => 0.8,
+      vLineWidth: () => 0.8,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
       paddingTop: () => 8,
@@ -493,7 +482,10 @@ function buildDoc(args: BuildArgs) {
         columns: [
           {
             width: "*",
-            stack: (args.empfaengerZeilen
+            stack: [
+              // Absenderzeile fest auf Höhe der ersten Meta-Zeile.
+              { text: absenderzeile(args.firma), fontSize: 7, color: COLOR_TEXT, decoration: "underline", margin: [0, 4, 0, 8], noWrap: true },
+              ...(args.empfaengerZeilen
               ? args.empfaengerZeilen
               : kundeAdresse(
                   args.kunde,
@@ -506,6 +498,7 @@ function buildDoc(args: BuildArgs) {
               text: l && l.trim() ? l : " ",
               fontSize: 10,
             })),
+            ],
           },
           metaBox(args.meta, args.metaVariant, args.metaNote),
         ],
