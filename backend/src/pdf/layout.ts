@@ -82,6 +82,25 @@ function absenderzeile(f: FirmaForPdf): string {
   return teile.join(" – ");
 }
 
+const ABSENDER_BREITE = 230;
+const ABSENDER_SCHRIFT_MAX = 8;
+const ABSENDER_SCHRIFT_MIN = 3;
+
+/** Gleiche Einzeilen-Anpassung wie in der Browser-PDF-Vorlage. */
+function absenderSchriftgroesse(text: string): number {
+  let einheiten = 0;
+  for (const zeichen of text) {
+    if (/[MWÄÖÜ@%&]/.test(zeichen)) einheiten += 0.82;
+    else if (/[ilI1.,:;!'|]/.test(zeichen)) einheiten += 0.28;
+    else if (/\s/.test(zeichen)) einheiten += 0.3;
+    else if (/[A-Z0-9]/.test(zeichen)) einheiten += 0.62;
+    else einheiten += 0.52;
+  }
+  if (einheiten <= 0) return ABSENDER_SCHRIFT_MAX;
+  const passend = ABSENDER_BREITE / einheiten;
+  return Math.max(ABSENDER_SCHRIFT_MIN, Math.min(ABSENDER_SCHRIFT_MAX, Math.floor(passend * 10) / 10));
+}
+
 function header(f: FirmaForPdf, logoDataUrl: string | null) {
   const logoNode = logoDataUrl
     ? {
@@ -505,6 +524,8 @@ interface BuildArgs {
 function buildDoc(args: BuildArgs) {
   const t = totals(args.positionen, args.rabattGesamt, args.steuersatz);
   const signatur = signaturFromFirma(args.firma);
+  const absender = absenderzeile(args.firma);
+  const istRechnung = args.titel === "Rechnung";
   return {
     pageSize: "A4" as const,
     pageMargins: [55, 155, 55, 100] as [number, number, number, number],
@@ -515,10 +536,19 @@ function buildDoc(args: BuildArgs) {
       {
         columns: [
           {
-            width: "*",
+            // Feste Breite hält die rechte Meta-Box auch bei `noWrap`
+            // unverrückbar an ihrer vorgesehenen Position.
+            width: ABSENDER_BREITE,
             stack: [
               // Absenderzeile fest auf Höhe der ersten Meta-Zeile.
-              { text: absenderzeile(args.firma), fontSize: 7, color: COLOR_TEXT, decoration: "underline", margin: [0, 4, 0, 8], noWrap: true },
+              {
+                text: absender,
+                fontSize: absenderSchriftgroesse(absender),
+                color: COLOR_TEXT,
+                decoration: "underline",
+                margin: [0, 4, 0, 8],
+                noWrap: true,
+              },
               ...(args.empfaengerZeilen
               ? args.empfaengerZeilen
               : kundeAdresse(
@@ -538,7 +568,14 @@ function buildDoc(args: BuildArgs) {
         ],
         columnGap: 20,
       },
-      { text: args.titel, fontSize: 22, bold: true, color: COLOR_TEXT, margin: [0, 30, 0, 14] },
+      {
+        text: args.titel,
+        fontSize: istRechnung ? 19 : 22,
+        bold: true,
+        color: COLOR_TEXT,
+        // Kleinere Schrift, aber identische Gesamthöhe dieses Abschnitts.
+        margin: [0, 30, 0, istRechnung ? 17.75 : 14],
+      },
       {
         stack: [
           { text: anrede(args.kunde, args.ansprechpartner, args.eigeneAnrede), margin: [0, 0, 0, 8] },

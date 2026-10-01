@@ -220,6 +220,29 @@ function absenderzeile(f: Firmendaten) {
   return teile.join(" – ");
 }
 
+const ABSENDER_BREITE = 230;
+const ABSENDER_SCHRIFT_MAX = 8;
+const ABSENDER_SCHRIFT_MIN = 3;
+
+/**
+ * Hält die Absenderzeile sicher innerhalb der linken Spalte. Die konservative
+ * Breitenmessung deckt die im Browser verwendete Roboto-Schrift ebenso wie die
+ * Helvetica-Ausgabe auf dem Pi ab; nur überlange Zeilen werden verkleinert.
+ */
+function absenderSchriftgroesse(text: string): number {
+  let einheiten = 0;
+  for (const zeichen of text) {
+    if (/[MWÄÖÜ@%&]/.test(zeichen)) einheiten += 0.82;
+    else if (/[ilI1.,:;!'|]/.test(zeichen)) einheiten += 0.28;
+    else if (/\s/.test(zeichen)) einheiten += 0.3;
+    else if (/[A-Z0-9]/.test(zeichen)) einheiten += 0.62;
+    else einheiten += 0.52;
+  }
+  if (einheiten <= 0) return ABSENDER_SCHRIFT_MAX;
+  const passend = ABSENDER_BREITE / einheiten;
+  return Math.max(ABSENDER_SCHRIFT_MIN, Math.min(ABSENDER_SCHRIFT_MAX, Math.floor(passend * 10) / 10));
+}
+
 function anrede(k: Kunde, ap?: Ansprechpartner, eigene?: string) {
   if (eigene && eigene.trim()) return eigene.trim();
   if (ap) {
@@ -754,18 +777,23 @@ async function buildDoc(
   const logo =
     vorgeladenesLogo !== undefined ? vorgeladenesLogo : await resolveLogo(ctx.firma, logoOverride);
   const t = totals(beleg.positionen, beleg.rabattGesamt, beleg.steuersatz);
+  const absender = absenderzeile(ctx.firma);
+  const istRechnung = titel === "Rechnung";
   const kundeColumn = {
     id: "kunde",
-    width: "*",
+    // Feste Breite verhindert, dass `noWrap` bei langen Absenderdaten die
+    // rechte Meta-Box aus ihrer unveränderlichen Position drückt.
+    width: ABSENDER_BREITE,
     stack: [
       // Absenderzeile: feste Position, gleiche Höhe wie die erste Zeile der
       // Meta-Box rechts. Empfängerzeilen wachsen nur darunter nach unten.
       {
-        text: absenderzeile(ctx.firma),
-        fontSize: 8,
+        text: absender,
+        fontSize: absenderSchriftgroesse(absender),
         color: COLOR_TEXT,
         decoration: "underline",
         margin: [0, 4, 0, 8],
+        noWrap: true,
       },
       ...(ctx.empfaengerZeilen
         ? ctx.empfaengerZeilen
@@ -801,10 +829,12 @@ async function buildDoc(
       {
         id: "titel",
         text: titel,
-        fontSize: 22,
+        fontSize: istRechnung ? 19 : 22,
         bold: true,
         color: COLOR_TEXT,
-        margin: [0, 30, 0, 14],
+        // Die kleinere Rechnungsüberschrift verändert die nachfolgenden
+        // Positionen nicht: ihre geringere Zeilenhöhe wird unten ausgeglichen.
+        margin: [0, 30, 0, istRechnung ? 17.75 : 14],
       },
       {
         stack: [
