@@ -20,6 +20,7 @@ import { generateAngebotPdf, generateRechnungPdf } from "@/lib/pdf/belegPdf";
 import type { Angebot, Rechnung, Kunde, Firmendaten, Ansprechpartner, Objekt } from "@/lib/api/types";
 import { PdfFieldOverlay, type RowAction, type TableAction } from "./PdfFieldOverlay";
 import { A4 } from "@/lib/pdf/hotspotTracker";
+import { aktuellesPixelVerhaeltnis, rasterGenaueBreite } from "@/lib/pdf/vorschauBreite";
 import type { RuntimeHotspot } from "@/lib/pdf/hotspotTracker";
 import { FALLBACK_HOTSPOTS_SEITE_1 } from "@/lib/pdf/fieldMap";
 
@@ -165,10 +166,16 @@ export function LivePdfPreview(props: Props) {
     return () => clearTimeout(t);
   }, [isStale, currentKey]);
 
+  // Bildschirm-Pixelverhältnis erst nach dem Laden lesen (kein Hydration-Mismatch).
+  const [pixelVerhaeltnis, setPixelVerhaeltnis] = useState(1);
+  useEffect(() => {
+    setPixelVerhaeltnis(aktuellesPixelVerhaeltnis());
+  }, [containerWidth]);
+
   const renderWidth = useMemo(() => {
     const raw = Math.min(Math.max(containerWidth - 16, 280), 900);
-    return Math.round(raw / 20) * 20;
-  }, [containerWidth]);
+    return rasterGenaueBreite(Math.round(raw / 20) * 20, pixelVerhaeltnis);
+  }, [containerWidth, pixelVerhaeltnis]);
   const scale = renderWidth / A4.width;
 
   // Frische Kopie pro Document-Load — sonst detacht PDF.js den Buffer.
@@ -260,6 +267,7 @@ export function LivePdfPreview(props: Props) {
                 <Page
                   pageNumber={pageNum}
                   width={renderWidth}
+                  devicePixelRatio={pixelVerhaeltnis}
                   renderAnnotationLayer={false}
                   renderTextLayer={false}
                 />

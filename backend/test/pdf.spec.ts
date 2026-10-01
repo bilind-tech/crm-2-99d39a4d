@@ -112,7 +112,10 @@ describe("PDF-Rendering", () => {
     const meta = doc.content[0].columns[1];
     expect(meta.layout.hLineWidth(0, meta)).toBe(0.6);
     expect(meta.layout.hLineWidth(1, meta)).toBe(0);
-    expect(meta.layout.paddingTop(0, meta)).toBe(6);
+    // Mehr Luft zwischen oberer Rahmenlinie und „Bei Zahlung bitte" (6 + 5),
+    // ohne dass sich der Kasten verschiebt (Ausgleich über negativen Rand).
+    expect(meta.layout.paddingTop(0, meta)).toBe(11);
+    expect(meta.margin[1]).toBe(-5);
 
     const positions = doc.content[3].stack[0];
     const summen = doc.content[3].stack[1];
@@ -120,8 +123,9 @@ describe("PDF-Rendering", () => {
     expect(positions.layout.hLineWidth(positions.table.body.length, positions)).toBe(0);
     expect(summen.layout.hLineWidth(0, summen)).toBe(0.8);
     expect(summen.layout.vLineWidth(0, summen)).toBe(0.8);
-    expect(summen.layout.paddingTop()).toBe(6);
-    expect(summen.layout.paddingBottom()).toBe(6);
+    // Ohne Raster-Plan: Standard-Innenabstände.
+    expect(summen.layout.paddingTop(0)).toBe(6);
+    expect(summen.layout.paddingBottom(0)).toBe(6);
   });
 
   it("Rechnung: nutzt gespeichertes Firmenlogo und ändert Cache-Hash bei Logo-Wechsel", async () => {

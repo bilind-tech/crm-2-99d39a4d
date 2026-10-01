@@ -57,6 +57,10 @@ export async function renderMitRaster(build: (raster: RasterOptionen) => any): P
       const raster: RasterOptionen = { plan };
       const probe = build(raster);
       probe.compress = false;
+      // Kopf (Logo) und Fuß liegen fest im Seitenrand und beeinflussen das
+      // Layout nicht — beim Messen weglassen, das spart viel Zeit.
+      delete probe.header;
+      delete probe.footer;
       const linien = waagerechteLinienAusPdf((await renderPdf(probe)).toString("latin1"));
       if (liegtImRaster(linien, raster.zeilen)) break;
       const naechster = verbessereRasterPlan(linien, raster.zeilen, plan);

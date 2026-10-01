@@ -16,7 +16,7 @@
 //    nächste Linie genau auf dem Raster landet.
 //
 // Reine Rechenlogik ohne Abhängigkeiten. MUSS identisch mit
-// src/lib/pdf/linienRaster.ts bleiben (Browser-Vorschau).
+// backend/src/pdf/linienRaster.ts bleiben (PDF auf dem Pi).
 
 /** Stärke aller Linien der Leistungstabelle (pt). */
 export const TABELLEN_LINIE = 0.8;
