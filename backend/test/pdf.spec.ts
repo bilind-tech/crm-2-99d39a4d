@@ -137,8 +137,8 @@ describe("PDF-Rendering", () => {
     expect(summen.layout.hLineWidth(0, summen)).toBe(0.8);
     expect(summen.layout.vLineWidth(0, summen)).toBe(0.8);
     // Ohne Raster-Plan: Standard-Innenabstände.
-    expect(positions.table.heights(0)).toBe(24);
-    expect(summen.table.heights(0)).toBe(24);
+    expect(positions.table.heights).toBeUndefined();
+    expect(summen.table.heights).toBeUndefined();
     expect(positions.layout.paddingTop(0)).toBe(5);
     expect(positions.layout.paddingBottom(0)).toBe(5);
     expect(summen.layout.paddingTop(0)).toBe(5);
@@ -156,8 +156,8 @@ describe("PDF-Rendering", () => {
     const summen = doc.content[3].stack[1];
     expect(positions.table.body[0][1].text).toBe("Ausführungen");
     expect(positions.table.body[1][1].text).toBe("1× monatlich");
-    expect(positions.table.heights(0)).toBe(24);
-    expect(summen.table.heights(0)).toBe(24);
+    expect(positions.table.heights).toBeUndefined();
+    expect(summen.table.heights).toBeUndefined();
   });
 
   it("Footer: sitzt tief, ist größer und alle vier Blöcke sind linksbündig", () => {
@@ -166,11 +166,11 @@ describe("PDF-Rendering", () => {
       positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19 }] });
     const doc = rechnungDocDef({ rechnung: r, kunde: k, firma: loadFirmaForPdf(), logoDataUrl: null }) as any;
     const footer = doc.footer();
-    expect(footer.margin).toEqual([55, 0, 55, 0]);
+    expect(footer.margin).toEqual([55, 15, 55, 0]);
     const columns = footer.stack[1].columns;
     expect(columns).toHaveLength(4);
     for (const column of columns) {
-      expect(column.stack.every((line: { fontSize: number; alignment: string }) => line.fontSize === 8.5 && line.alignment === "left")).toBe(true);
+      expect(column.stack.every((line: { fontSize: number; alignment: string }) => line.fontSize === 9 && line.alignment === "left")).toBe(true);
     }
     expect(doc.pageMargins[3]).toBe(105);
     expect(doc.content[2].stack[0].fontSize).toBe(11.5);

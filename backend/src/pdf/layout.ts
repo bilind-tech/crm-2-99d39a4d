@@ -123,10 +123,10 @@ function footer(f: FirmaForPdf) {
       lines: (string | null | undefined)[],
       alignment: "left" | "center" | "right" = "left",
     ) => ({
-      stack: lines.filter(Boolean).map((l) => ({ text: l as string, fontSize: 8.5, color: COLOR_TEXT, alignment })),
+      stack: lines.filter(Boolean).map((l) => ({ text: l as string, fontSize: 9, color: COLOR_TEXT, alignment })),
     });
     return {
-      margin: [55, 0, 55, 0] as [number, number, number, number],
+      margin: [55, 15, 55, 0] as [number, number, number, number],
       stack: [
         { canvas: [{ type: "line", x1: 0, y1: 0, x2: 485, y2: 0, lineWidth: 0.5, lineColor: COLOR_LINE }] },
         {
@@ -222,7 +222,6 @@ function vertikalMittigMargin(text: string, charsPerLine: number): [number, numb
 export type { RasterOptionen };
 
 const LINIE = TABELLEN_LINIE;
-const KOMPAKTE_ZEILENHOEHE = 24;
 const PAD_POS = 5;
 const PAD_SUM = 5;
 
@@ -271,7 +270,6 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       headerRows: 1,
       widths,
       body,
-      heights: (row: number) => (row === 0 ? KOMPAKTE_ZEILENHOEHE : undefined),
     },
     layout: {
       // Der Summenblock zeichnet die gemeinsame Kante. So wird die Linie
@@ -318,7 +316,6 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       dontBreakRows: true,
       widths,
       body: summenBody,
-      heights: () => KOMPAKTE_ZEILENHOEHE,
     },
     layout: {
       hLineWidth: () => LINIE,

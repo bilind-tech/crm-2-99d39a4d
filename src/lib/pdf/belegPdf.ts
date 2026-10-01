@@ -283,10 +283,10 @@ function footer(firma: Firmendaten) {
     ) => ({
       stack: lines
         .filter(Boolean)
-        .map((l) => ({ text: l as string, fontSize: 8.5, color: COLOR_TEXT, alignment })),
+        .map((l) => ({ text: l as string, fontSize: 9, color: COLOR_TEXT, alignment })),
     });
     return {
-      margin: [55, 0, 55, 0] as [number, number, number, number],
+      margin: [55, 15, 55, 0] as [number, number, number, number],
       stack: [
         {
           canvas: [
@@ -408,7 +408,6 @@ function leistungstabelle(
   raster?: RasterOptionen,
   istAngebot = false,
 ) {
-  const kompakteZeilenhoehe = 24;
   const kompakterInnenabstand = 5;
   const plan = raster?.plan ?? LEERER_PLAN;
   const showStunden = hasStundenPositionen(positionen);
@@ -508,7 +507,6 @@ function leistungstabelle(
       headerRows: 1,
       widths,
       body: positionsBody,
-      heights: (row: number) => (row === 0 ? kompakteZeilenhoehe : undefined),
     },
     layout: {
       ...tableLayout,
@@ -523,7 +521,6 @@ function leistungstabelle(
       dontBreakRows: true,
       widths,
       body: summenBody,
-      heights: () => kompakteZeilenhoehe,
     },
     layout: {
       ...tableLayout,
