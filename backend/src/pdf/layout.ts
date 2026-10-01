@@ -304,6 +304,9 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
   return { stack: [positionsTabelle, summenTabelle] };
 }
 
+/** Zusätzliche Luft über „Bei Zahlung bitte“ (pt). MUSS in beiden Vorlagen gleich sein. */
+const META_LUFT_OBEN = 5;
+
 function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plain", headerNote?: string) {
   if (variant === "plain") {
     return {
@@ -342,6 +345,9 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
   });
   return {
     width: 235,
+    // Rahmen-Oberkante rückt um META_LUFT_OBEN nach oben, der Text bleibt exakt
+    // an seiner Stelle und die Gesamthöhe im Fluss ist unverändert.
+    margin: [0, -META_LUFT_OBEN, 0, 0],
     table: {
       widths: ["auto", "*"],
       body,
@@ -357,7 +363,7 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
       // Mehr Luft über dem Zahlungshinweis, bei identischer Gesamthöhe des Blocks.
       paddingTop: (i: number, node: { table: { body: unknown[][] } }) => {
         const last = node.table.body.length - 1;
-        if (i === 0) return 6;
+        if (i === 0) return 6 + META_LUFT_OBEN;
         if (i === 1) return 0;
         if (i === last) return 1;
         return 2;
