@@ -116,6 +116,7 @@ describe("PDF-Rendering", () => {
     expect(kundeSpalte.width).toBe(230);
     expect(absender.noWrap).toBe(true);
     expect(absender.fontSize).toBeLessThanOrEqual(8);
+    expect(absender.margin).toEqual([0, 0, 0, 8]);
     expect(titel.fontSize).toBe(19);
     expect(titel.margin).toEqual([0, 30, 0, 17.75]);
     expect(meta.layout.hLineWidth(0, meta)).toBe(0.6);

@@ -794,7 +794,7 @@ async function buildDoc(
         fontSize: absenderSchriftgroesse(absender),
         color: COLOR_TEXT,
         decoration: "underline",
-        margin: [0, 6, 0, 8],
+        margin: [0, 0, 0, 8],
         noWrap: true,
       },
       ...(ctx.empfaengerZeilen
