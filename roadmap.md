@@ -21,3 +21,4 @@
 - [x] Rechnungs- und Angebots-PDF: Zeilenhöhen, Typografie, Footer und Angebots-Ausführungen verfeinern
 - [x] Gefilterte Rechnungen und Angebote gesammelt und statusgenau in Google Drive sichern
 - [x] PDF-, Drive-, Browser- und Update-Sicherheit vollständig prüfen
+- [x] Tabellenzeilen, vertikale Textausrichtung, Fließtext und Footer sichtbar nachkorrigieren und erneut prüfen

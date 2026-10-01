@@ -123,10 +123,10 @@ function footer(f: FirmaForPdf) {
       lines: (string | null | undefined)[],
       alignment: "left" | "center" | "right" = "left",
     ) => ({
-      stack: lines.filter(Boolean).map((l) => ({ text: l as string, fontSize: 8, color: COLOR_TEXT, alignment })),
+      stack: lines.filter(Boolean).map((l) => ({ text: l as string, fontSize: 9, color: COLOR_TEXT, alignment })),
     });
     return {
-      margin: [55, 0, 55, 5] as [number, number, number, number],
+      margin: [55, 15, 55, 0] as [number, number, number, number],
       stack: [
         { canvas: [{ type: "line", x1: 0, y1: 0, x2: 485, y2: 0, lineWidth: 0.5, lineColor: COLOR_LINE }] },
         {
@@ -222,8 +222,8 @@ function vertikalMittigMargin(text: string, charsPerLine: number): [number, numb
 export type { RasterOptionen };
 
 const LINIE = TABELLEN_LINIE;
-const PAD_POS = 8;
-const PAD_SUM = 8;
+const PAD_POS = 5;
+const PAD_SUM = 5;
 
 function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false, raster?: RasterOptionen, istAngebot = false) {
   const plan = raster?.plan ?? LEERER_PLAN;
@@ -270,7 +270,6 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       headerRows: 1,
       widths,
       body,
-      heights: (row: number) => (row === 0 ? 30 : undefined),
     },
     layout: {
       // Der Summenblock zeichnet die gemeinsame Kante. So wird die Linie
@@ -317,7 +316,6 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       dontBreakRows: true,
       widths,
       body: summenBody,
-      heights: () => 30,
     },
     layout: {
       hLineWidth: () => LINIE,
@@ -589,15 +587,15 @@ function buildDoc(args: BuildArgs) {
       },
       {
         stack: [
-          { text: anrede(args.kunde, args.ansprechpartner, args.eigeneAnrede), fontSize: 11, margin: [0, 0, 0, 8] },
-          { text: inlineText(args.intro), fontSize: 11, margin: [0, 0, 0, 14] },
+          { text: anrede(args.kunde, args.ansprechpartner, args.eigeneAnrede), fontSize: 11.5, margin: [0, 0, 0, 8] },
+          { text: inlineText(args.intro), fontSize: 11.5, margin: [0, 0, 0, 14] },
         ],
       },
       leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true, args.raster, !istRechnung),
       {
         stack: [
-          { text: inlineText(args.outro), fontSize: 11, margin: [0, 16, 0, 0] },
-          { text: "Mit freundlichen Grüßen", fontSize: 11, margin: [0, 18, 0, 0] },
+          { text: inlineText(args.outro), fontSize: 11.5, margin: [0, 16, 0, 0] },
+          { text: "Mit freundlichen Grüßen", fontSize: 11.5, margin: [0, 18, 0, 0] },
           ...signatur.map((s) => ({ text: s, margin: [0, 0, 0, 0], color: COLOR_TEXT })),
         ],
         unbreakable: true,

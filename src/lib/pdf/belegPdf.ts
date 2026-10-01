@@ -283,10 +283,10 @@ function footer(firma: Firmendaten) {
     ) => ({
       stack: lines
         .filter(Boolean)
-        .map((l) => ({ text: l as string, fontSize: 8, color: COLOR_TEXT, alignment })),
+        .map((l) => ({ text: l as string, fontSize: 9, color: COLOR_TEXT, alignment })),
     });
     return {
-      margin: [55, 0, 55, 5] as [number, number, number, number],
+      margin: [55, 15, 55, 0] as [number, number, number, number],
       stack: [
         {
           canvas: [
@@ -408,6 +408,7 @@ function leistungstabelle(
   raster?: RasterOptionen,
   istAngebot = false,
 ) {
+  const kompakterInnenabstand = 5;
   const plan = raster?.plan ?? LEERER_PLAN;
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
@@ -495,8 +496,8 @@ function leistungstabelle(
     hLineColor: () => COLOR_TEXT,
     vLineColor: () => COLOR_TEXT,
     // Zusatzabstand je Zeile (Linien-Raster, siehe linienRaster.ts), je zur Hälfte oben/unten.
-    paddingTop: (i: number) => 8 + rasterExtra(plan, "p", i) / 2,
-    paddingBottom: (i: number) => 8 + rasterExtra(plan, "p", i) / 2 + rasterExtraUnten(plan, "p", i),
+    paddingTop: (i: number) => kompakterInnenabstand + rasterExtra(plan, "p", i) / 2,
+    paddingBottom: (i: number) => kompakterInnenabstand + rasterExtra(plan, "p", i) / 2 + rasterExtraUnten(plan, "p", i),
     paddingLeft: () => 8,
     paddingRight: () => 8,
   };
@@ -506,7 +507,6 @@ function leistungstabelle(
       headerRows: 1,
       widths,
       body: positionsBody,
-      heights: (row: number) => (row === 0 ? 30 : undefined),
     },
     layout: {
       ...tableLayout,
@@ -521,12 +521,11 @@ function leistungstabelle(
       dontBreakRows: true,
       widths,
       body: summenBody,
-      heights: () => 30,
     },
     layout: {
       ...tableLayout,
-      paddingTop: (i: number) => 8 + rasterExtra(plan, "s", i) / 2,
-      paddingBottom: (i: number) => 8 + rasterExtra(plan, "s", i) / 2,
+      paddingTop: (i: number) => kompakterInnenabstand + rasterExtra(plan, "s", i) / 2,
+      paddingBottom: (i: number) => kompakterInnenabstand + rasterExtra(plan, "s", i) / 2,
     },
   };
 
@@ -850,18 +849,18 @@ async function buildDoc(
           {
             id: "anrede",
             text: anrede(ctx.kunde, ctx.ansprechpartner, ctx.eigeneAnrede),
-            fontSize: 11,
+            fontSize: 11.5,
             margin: [0, 0, 0, 8],
           },
-          { id: "intro", text: inlineText(intro), fontSize: 11, margin: [0, 0, 0, 14] },
+          { id: "intro", text: inlineText(intro), fontSize: 11.5, margin: [0, 0, 0, 14] },
         ],
       },
       leistungstabelle(beleg.positionen, t, beleg.steuersatz, beleg.nurNetto === true, raster, !istRechnung),
       {
         id: "outro",
         stack: [
-          { text: inlineText(outro), fontSize: 11, margin: [0, 16, 0, 0] },
-          { text: "Mit freundlichen Grüßen", fontSize: 11, margin: [0, 18, 0, 0] },
+          { text: inlineText(outro), fontSize: 11.5, margin: [0, 16, 0, 0] },
+          { text: "Mit freundlichen Grüßen", fontSize: 11.5, margin: [0, 18, 0, 0] },
           ...signatur.map((s) => ({ text: s, margin: [0, 0, 0, 0], color: COLOR_TEXT })),
         ],
         unbreakable: true,
