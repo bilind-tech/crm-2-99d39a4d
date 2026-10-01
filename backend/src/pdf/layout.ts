@@ -309,7 +309,6 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
     };
   }
   const body: unknown[][] = [];
-  let noteRowsCount = 0;
   if (headerNote) {
     const noteLines = headerNote.split("\n");
     noteLines.forEach((line, idx) => {
@@ -325,7 +324,6 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
         },
         {},
       ]);
-      noteRowsCount++;
     });
   }
   meta.forEach((m) => {
@@ -334,7 +332,6 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
       { text: m.wert, fontSize: 9.5, alignment: "right", margin: [0, 1, 0, 1], lineHeight: 1.2 },
     ]);
   });
-  const dividerIndex = noteRowsCount;
   return {
     width: 235,
     table: {
@@ -344,14 +341,24 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
     layout: {
       hLineWidth: (i: number, node: { table: { body: unknown[][] } }) => {
         if (i === 0 || i === node.table.body.length) return 0.6;
-        if (i === dividerIndex && noteRowsCount > 0) return 0.4;
         return 0;
       },
       vLineWidth: (i: number, node: { table: { widths: unknown[] } }) => (i === 0 || i === node.table.widths.length ? 0.6 : 0),
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      paddingTop: () => 2,
-      paddingBottom: () => 2,
+      // Mehr Luft direkt am Außenrahmen, bei identischer Gesamthöhe des Blocks.
+      paddingTop: (i: number, node: { table: { body: unknown[][] } }) => {
+        const last = node.table.body.length - 1;
+        if (i === 0) return 4;
+        if (i === 1 || i === last) return 1;
+        return 2;
+      },
+      paddingBottom: (i: number, node: { table: { body: unknown[][] } }) => {
+        const last = node.table.body.length - 1;
+        if (i === last) return 4;
+        if (i === 0 || i === last - 1) return 1;
+        return 2;
+      },
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },
