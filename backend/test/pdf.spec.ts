@@ -16,7 +16,7 @@ const { createKunde } = await import("../src/kunden/repo.js");
 const { createAngebot, updateAngebot } = await import("../src/belege/angebote-repo.js");
 const { createRechnung } = await import("../src/belege/rechnungen-repo.js");
 const { renderAngebotPdf, renderRechnungPdf } = await import("../src/pdf/belegPdf.server.js");
-const { rechnungDocDef } = await import("../src/pdf/layout.js");
+const { angebotDocDef, rechnungDocDef } = await import("../src/pdf/layout.js");
 const { wirePdfCacheInvalidation } = await import("../src/pdf/wireup.js");
 const { brandingDir, loadFirmaForPdf, loadLogoDataUrl } = await import("../src/pdf/firma.js");
 
@@ -117,8 +117,8 @@ describe("PDF-Rendering", () => {
     expect(absender.noWrap).toBe(true);
     expect(absender.fontSize).toBeLessThanOrEqual(8);
     expect(absender.margin).toEqual([0, 0, 0, 8]);
-    expect(titel.fontSize).toBe(19);
-    expect(titel.margin).toEqual([0, 45, 0, 17.75]);
+    expect(titel.fontSize).toBe(17);
+    expect(titel.margin).toEqual([0, 45, 0, 20.25]);
     expect(meta.layout.hLineWidth(0, meta)).toBe(0.6);
     expect(meta.layout.hLineWidth(1, meta)).toBe(0);
     // Mehr Luft zwischen oberer Rahmenlinie und „Bei Zahlung bitte" (6 + 5),
@@ -137,10 +137,43 @@ describe("PDF-Rendering", () => {
     expect(summen.layout.hLineWidth(0, summen)).toBe(0.8);
     expect(summen.layout.vLineWidth(0, summen)).toBe(0.8);
     // Ohne Raster-Plan: Standard-Innenabstände.
-    expect(summen.layout.paddingTop(0)).toBe(6);
-    expect(summen.layout.paddingBottom(0)).toBe(6);
+    expect(positions.table.heights(0)).toBe(30);
+    expect(summen.table.heights(0)).toBe(30);
+    expect(summen.layout.paddingTop(0)).toBe(8);
+    expect(summen.layout.paddingBottom(0)).toBe(8);
     expect(positions.table.body[0].every((cell: { bold?: boolean }) => cell.bold !== true)).toBe(true);
     expect(summen.table.body.at(-1)[0].bold).toBe(true);
+  });
+
+  it("Angebot: nennt die freie zweite Spalte Ausführungen", () => {
+    const k = createKunde({ typ: "firma", firmenname: "Ausführung GmbH", kuerzel: "AUS" });
+    const a = createAngebot({ kundeId: k.id, titel: "Ausführungs-Test",
+      positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19, abrechnungsartLabel: "1× monatlich" }] });
+    const doc = angebotDocDef({ angebot: a, kunde: k, firma: loadFirmaForPdf(), logoDataUrl: null }) as any;
+    const positions = doc.content[3].stack[0];
+    const summen = doc.content[3].stack[1];
+    expect(positions.table.body[0][1].text).toBe("Ausführungen");
+    expect(positions.table.body[1][1].text).toBe("1× monatlich");
+    expect(positions.table.heights(0)).toBe(30);
+    expect(summen.table.heights(0)).toBe(30);
+  });
+
+  it("Footer: sitzt tief, ist größer und alle vier Blöcke sind linksbündig", () => {
+    const k = createKunde({ typ: "firma", firmenname: "Footer GmbH", kuerzel: "FOO" });
+    const r = createRechnung({ kundeId: k.id, titel: "Footer-Test",
+      positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19 }] });
+    const doc = rechnungDocDef({ rechnung: r, kunde: k, firma: loadFirmaForPdf(), logoDataUrl: null }) as any;
+    const footer = doc.footer();
+    expect(footer.margin).toEqual([55, 0, 55, 5]);
+    const columns = footer.stack[1].columns;
+    expect(columns).toHaveLength(4);
+    for (const column of columns) {
+      expect(column.stack.every((line: { fontSize: number; alignment: string }) => line.fontSize === 8 && line.alignment === "left")).toBe(true);
+    }
+    expect(doc.pageMargins[3]).toBe(105);
+    expect(doc.content[2].stack[0].fontSize).toBe(11);
+    expect(doc.content[2].stack[1].fontSize).toBe(11);
+    expect(doc.content[4].stack[0].fontSize).toBe(11);
   });
 
   it("Empfänger-Modus: hebt nur den Empfänger an und lässt die Metadaten unter dem Logo", () => {
