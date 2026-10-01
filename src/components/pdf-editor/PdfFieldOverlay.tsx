@@ -116,8 +116,9 @@ export function PdfFieldOverlay({
         return (
           <Popover key={h.id} open={isOpen} onOpenChange={(o) => onOpenChange(o ? h.id : null)}>
             <PopoverTrigger asChild>
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 aria-label={`Bearbeiten: ${meta.label}`}
                 title={`Bearbeiten: ${meta.label}`}
                 className={`pointer-events-auto group absolute flex items-start justify-end rounded-md border-2 transition ${
@@ -145,7 +146,7 @@ export function PdfFieldOverlay({
                     rowActions={rowActions}
                   />
                 )}
-              </button>
+              </div>
             </PopoverTrigger>
             <PopoverContent
               side="right"
