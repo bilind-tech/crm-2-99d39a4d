@@ -110,6 +110,12 @@ describe("PDF-Rendering", () => {
     }) as any;
 
     const meta = doc.content[0].columns[1];
+    const absender = doc.content[0].columns[0].stack[0];
+    const titel = doc.content[1];
+    expect(absender.noWrap).toBe(true);
+    expect(absender.fontSize).toBeLessThanOrEqual(8);
+    expect(titel.fontSize).toBe(19);
+    expect(titel.margin).toEqual([0, 30, 0, 17.75]);
     expect(meta.layout.hLineWidth(0, meta)).toBe(0.6);
     expect(meta.layout.hLineWidth(1, meta)).toBe(0);
     // Mehr Luft zwischen oberer Rahmenlinie und „Bei Zahlung bitte" (6 + 5),
@@ -126,6 +132,23 @@ describe("PDF-Rendering", () => {
     // Ohne Raster-Plan: Standard-Innenabstände.
     expect(summen.layout.paddingTop(0)).toBe(6);
     expect(summen.layout.paddingBottom(0)).toBe(6);
+  });
+
+  it("Absenderzeile: bleibt bei langen Firmendaten einzeilig und wird passend verkleinert", () => {
+    const k = createKunde({ typ: "firma", firmenname: "Absender Test GmbH", kuerzel: "ABS" });
+    const r = createRechnung({ kundeId: k.id, titel: "Absender-Test",
+      positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19 }] });
+    const firma = {
+      ...loadFirmaForPdf(),
+      firmenname: "My Clean Center Gebäudereinigung und Hausmeisterservice GmbH",
+      strasse: "Sehr lange Musterstraße 123",
+      plz: "53757",
+      ort: "Sankt Augustin",
+    };
+    const doc = rechnungDocDef({ rechnung: r, kunde: k, firma, logoDataUrl: null }) as any;
+    const absender = doc.content[0].columns[0].stack[0];
+    expect(absender.noWrap).toBe(true);
+    expect(absender.fontSize).toBe(5.5);
   });
 
   it("Rechnung: nutzt gespeichertes Firmenlogo und ändert Cache-Hash bei Logo-Wechsel", async () => {
