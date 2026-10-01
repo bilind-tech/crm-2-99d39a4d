@@ -554,6 +554,11 @@ export const TABLE_COL_WIDTHS_STUNDEN = [181.2, 61.2, 91.2, 82.2] as const;
 const META_LUFT_OBEN = 5;
 const RECHNUNG_META_BREITE = 190;
 
+function metaWertSchriftgroesse(wert: string): number {
+  if (wert.length <= 16) return 9.5;
+  return Math.max(5, Math.floor((9.5 * 16 / wert.length) * 10) / 10);
+}
+
 function metaBox(
   meta: { label: string; wert: string }[],
   variant: "box" | "plain",
@@ -599,10 +604,11 @@ function metaBox(
       },
       {
         text: m.wert,
-        fontSize: 9.5,
+        fontSize: metaWertSchriftgroesse(m.wert),
         alignment: "right",
         margin: [0, 1, 0, 1],
         lineHeight: 1.2,
+        noWrap: true,
       },
     ]);
   });

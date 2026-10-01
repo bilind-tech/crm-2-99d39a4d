@@ -128,6 +128,7 @@ describe("PDF-Rendering", () => {
     expect(meta.width).toBe(190);
     expect(doc.content[0].columnGap).toBe(65);
     expect(meta.table.body.some((row: any[]) => row[0]?.text === "Kundennummer:")).toBe(false);
+    expect(meta.table.body.filter((row: any[]) => row[1]?.text).every((row: any[]) => row[1].noWrap === true)).toBe(true);
 
     const positions = doc.content[3].stack[0];
     const summen = doc.content[3].stack[1];
