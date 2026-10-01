@@ -16,8 +16,9 @@ const { createKunde } = await import("../src/kunden/repo.js");
 const { createAngebot, updateAngebot } = await import("../src/belege/angebote-repo.js");
 const { createRechnung } = await import("../src/belege/rechnungen-repo.js");
 const { renderAngebotPdf, renderRechnungPdf } = await import("../src/pdf/belegPdf.server.js");
+const { rechnungDocDef } = await import("../src/pdf/layout.js");
 const { wirePdfCacheInvalidation } = await import("../src/pdf/wireup.js");
-const { brandingDir, loadLogoDataUrl } = await import("../src/pdf/firma.js");
+const { brandingDir, loadFirmaForPdf, loadLogoDataUrl } = await import("../src/pdf/firma.js");
 
 function ensureDir(p: string) { if (!existsSync(p)) mkdirSync(p, { recursive: true, mode: 0o700 }); }
 
@@ -95,6 +96,32 @@ describe("PDF-Rendering", () => {
     const out = await renderRechnungPdf(r.id);
     expect(out!.buffer.subarray(0, 5).toString()).toBe("%PDF-");
     expect(out!.dateiname).toContain(r.nummer.replace(/\//g, "-"));
+  });
+
+  it("Rechnung: zeichnet Tabellenkanten einheitlich und ohne doppelte Summenlinie", () => {
+    const k = createKunde({ typ: "firma", firmenname: "Linien GmbH", kuerzel: "LIN" });
+    const r = createRechnung({ kundeId: k.id, titel: "Linien-Test",
+      positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19 }] });
+    const doc = rechnungDocDef({
+      rechnung: r,
+      kunde: k,
+      firma: loadFirmaForPdf(),
+      logoDataUrl: null,
+    }) as any;
+
+    const meta = doc.content[0].columns[1];
+    expect(meta.layout.hLineWidth(0, meta)).toBe(0.6);
+    expect(meta.layout.hLineWidth(1, meta)).toBe(0);
+    expect(meta.layout.paddingTop(0, meta)).toBe(6);
+
+    const positions = doc.content[3].stack[0];
+    const summen = doc.content[3].stack[1];
+    expect(positions.layout.hLineWidth(0, positions)).toBe(0.8);
+    expect(positions.layout.hLineWidth(positions.table.body.length, positions)).toBe(0);
+    expect(summen.layout.hLineWidth(0, summen)).toBe(0.8);
+    expect(summen.layout.vLineWidth(0, summen)).toBe(0.8);
+    expect(summen.layout.paddingTop()).toBe(6);
+    expect(summen.layout.paddingBottom()).toBe(6);
   });
 
   it("Rechnung: nutzt gespeichertes Firmenlogo und ändert Cache-Hash bei Logo-Wechsel", async () => {
