@@ -336,6 +336,7 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
 
 /** Zusätzliche Luft über „Bei Zahlung bitte“ (pt). MUSS in beiden Vorlagen gleich sein. */
 const META_LUFT_OBEN = 5;
+const RECHNUNG_META_BREITE = 190;
 
 function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plain", headerNote?: string) {
   if (variant === "plain") {
@@ -374,7 +375,7 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
     ]);
   });
   return {
-    width: 210,
+    width: RECHNUNG_META_BREITE,
     // Rahmen-Oberkante rückt um META_LUFT_OBEN nach oben, der Text bleibt exakt
     // an seiner Stelle und die Gesamthöhe im Fluss ist unverändert.
     margin: [0, -META_LUFT_OBEN, 0, 0],
@@ -535,12 +536,14 @@ function buildDoc(args: BuildArgs) {
     footer: footer(args.firma),
     content: [
       {
-        margin: [0, args.empfaengerOben ? -40 : 0, 0, 0],
         columns: [
           {
             // Feste Breite hält die rechte Meta-Box auch bei `noWrap`
             // unverrückbar an ihrer vorgesehenen Position.
             width: ABSENDER_BREITE,
+            // Nur der Empfänger wird angehoben. Logo und Rechnungsdaten
+            // bleiben rechts untereinander und können nicht überlappen.
+            margin: [0, args.empfaengerOben ? -40 : 0, 0, 0],
             stack: [
               // Absenderzeile fest auf Höhe der ersten Meta-Zeile.
               {
@@ -568,7 +571,7 @@ function buildDoc(args: BuildArgs) {
           },
           metaBox(args.meta, args.metaVariant, args.metaNote),
         ],
-        columnGap: args.metaVariant === "box" ? 45 : 20,
+        columnGap: args.metaVariant === "box" ? 65 : 20,
       },
       {
         text: args.titel,
@@ -576,7 +579,7 @@ function buildDoc(args: BuildArgs) {
         bold: true,
         color: COLOR_TEXT,
         // Kleinere Schrift, aber identische Gesamthöhe dieses Abschnitts.
-        margin: [0, args.empfaengerOben ? 70 : 30, 0, istRechnung ? 17.75 : 14],
+        margin: [0, istRechnung ? 45 : 30, 0, istRechnung ? 17.75 : 14],
       },
       {
         stack: [
@@ -679,7 +682,6 @@ export function rechnungDocDef(args: {
   const customOutro = opts.eigenesOutro || rechnung.outroText;
   const outro = customOutro ? customOutro : zahlungsSatz;
   const meta: { label: string; wert: string }[] = [
-    { label: "Kundennummer:", wert: kunde.nummer },
     { label: "Rechnung-Nr.:", wert: rechnung.nummer },
     { label: "Rechnungsdatum:", wert: dt(rechnung.rechnungsdatum) },
   ];
