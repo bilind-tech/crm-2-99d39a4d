@@ -10,6 +10,7 @@ import type {
   Kunde,
   Nummernkreise,
   Rechnung,
+  PdfVorlageEinstellungen,
   UmsatzPunkt,
 } from "@/lib/api/types";
 import { vorschauBelegnummer } from "@/lib/belegNummer";
@@ -152,6 +153,7 @@ interface PreviewStore {
   dauerauftragEinstellungen?: DauerauftragEinstellungen;
   dauerauftragSeq?: number;
   firma?: Firmendaten;
+  pdfVorlage?: PdfVorlageEinstellungen;
 }
 
 function clone<T>(value: T): T {
@@ -175,6 +177,7 @@ function readStore(): PreviewStore {
       dauerauftragEinstellungen: parsed.dauerauftragEinstellungen,
       dauerauftragSeq: typeof parsed.dauerauftragSeq === "number" ? parsed.dauerauftragSeq : 0,
       firma: parsed.firma,
+      pdfVorlage: parsed.pdfVorlage,
     };
   } catch {
     return { angebote: [], rechnungen: [], dauerauftraege: [], dauerauftragLaeufe: [], dauerauftragSonderpos: [] };
@@ -380,6 +383,9 @@ export function localPreviewGet<T>(path: string): T | null {
   if (cleanPath === "/benachrichtigungen") return [] as T;
   if (cleanPath === "/einstellungen/firma") return (readStore().firma ?? previewFirma) as T;
   if (cleanPath === "/einstellungen/nummernkreise") return previewNummernkreise as T;
+  if (cleanPath === "/einstellungen/pdfVorlage") {
+    return (readStore().pdfVorlage ?? { empfaengerOben: false }) as T;
+  }
   const stz = stundenzettelPreviewGet<T>(cleanPath, params);
   if (stz !== null) return stz;
   return null;
@@ -635,6 +641,16 @@ export function localPreviewMutate<T>(method: string, path: string, body?: unkno
     const current = store.firma ?? previewFirma;
     const next: Firmendaten = { ...current, ...(body as Partial<Firmendaten>) };
     store.firma = next;
+    writeStore(store);
+    return next as T;
+  }
+
+  if (method === "PATCH" && cleanPath === "/einstellungen/pdfVorlage") {
+    const next = {
+      ...(store.pdfVorlage ?? { empfaengerOben: false }),
+      ...(body as Partial<PdfVorlageEinstellungen>),
+    };
+    store.pdfVorlage = next;
     writeStore(store);
     return next as T;
   }

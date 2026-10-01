@@ -135,6 +135,7 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
     "nummernkreise",
     "sicherheit",
     "erscheinung",
+    "pdfVorlage",
     "backup",
     // "mahnung" wird unten mit eigenem Mapper bedient
     "dauerauftrag",
@@ -149,6 +150,7 @@ export async function einstellungenRoutes(app: FastifyInstance): Promise<void> {
         return { error: r.error, issues: r.issues };
       }
       audit({ userId: req.user?.id, action: `settings.${a}.patch`, ip: req.ip });
+      if (a === "pdfVorlage") invalidateAllPdfCaches();
       emit("einstellung:geaendert", { key: a, userId: req.user?.id ?? null });
       return r.value;
     });

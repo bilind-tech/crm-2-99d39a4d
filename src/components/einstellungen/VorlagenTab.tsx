@@ -3,6 +3,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -28,6 +29,8 @@ import {
   useCreateTextvorlage,
   useUpdateTextvorlage,
   useDeleteTextvorlage,
+  usePdfVorlage,
+  useUpdatePdfVorlage,
 } from "@/hooks/useApi";
 import type { Positionsvorlage, Textvorlage, TextvorlageZweck, Einheit } from "@/lib/api/types";
 import { Section, Field } from "./_shared";
@@ -54,9 +57,45 @@ const ZWECKE: { value: TextvorlageZweck; label: string }[] = [
 export function VorlagenTab() {
   return (
     <div className="space-y-5 pb-12">
+      <PdfLayoutSektion />
       <PositionsvorlagenSektion />
       <TextvorlagenSektion />
     </div>
+  );
+}
+
+function PdfLayoutSektion() {
+  const { data } = usePdfVorlage();
+  const update = useUpdatePdfVorlage();
+  const enabled = data?.empfaengerOben ?? false;
+  return (
+    <Section
+      title="PDF-Anordnung"
+      description="Gemeinsame Anordnung für Rechnungen und Angebote."
+    >
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-sm font-medium">Empfängerblock weiter oben</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Ordnet Absenderzeile und Empfänger links neben dem Logo an.
+          </p>
+        </div>
+        <Switch
+          checked={enabled}
+          disabled={!data || update.isPending}
+          onCheckedChange={(empfaengerOben) =>
+            update.mutate(
+              { empfaengerOben },
+              {
+                onSuccess: () => toast.success("PDF-Anordnung gespeichert"),
+                onError: () => toast.error("PDF-Anordnung konnte nicht gespeichert werden"),
+              },
+            )
+          }
+          aria-label="Empfängerblock weiter oben"
+        />
+      </div>
+    </Section>
   );
 }
 

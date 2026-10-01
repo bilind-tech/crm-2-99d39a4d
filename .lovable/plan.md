@@ -1,48 +1,39 @@
-# PDF-Editor und Belegvorlage zuverlässig überarbeiten
+# PDF-Editor und Rechnungslayout zuverlässig verbessern
 
-## Zielbild
-- Der PDF-Editor speichert Änderungen ausschließlich nach einem Klick auf „Speichern“; die laufende PDF-Vorschau bleibt weiterhin sofort sichtbar.
-- Beim Zurückgehen, Wechseln der Seite, Neuladen oder Schließen mit ungespeicherten Änderungen erscheint eine Warnung. Der Nutzer kann im Editor bleiben oder die Änderungen bewusst verwerfen.
-- Der rechte Rechnungskasten zeigt zusätzlich die Kundennummer und wird insgesamt schmaler, ohne dass Nummern oder Datumswerte abgeschnitten werden.
-- Die unterstrichene Absenderzeile beginnt exakt auf derselben Höhe wie die Oberkante des rechten Kastens.
-- In den Einstellungen gibt es einen gemeinsamen Modus für Rechnungen und Angebote, der Absenderzeile und Empfängerblock weiter oben links neben dem Logo anordnet. Ausgeschaltet bleibt die normale Anordnung erhalten.
-- Die gesamte Schriftwirkung der PDFs wird an die hochgeladene Referenz angeglichen: schlichte Standardschrift, passende Größen und Gewichte; insbesondere steht „Leistung“ nicht mehr fett. Tabellenlinien und bestehendes Raster bleiben unverändert.
+## Ziel
+Der PDF-Editor speichert Änderungen nur noch nach einem ausdrücklichen Klick auf „Speichern“. Ungespeicherte Änderungen werden beim Zurückgehen, bei anderer Navigation sowie beim Neuladen geschützt. Rechnungen zeigen wieder alle Kundendaten und zusätzlich die Kundennummer. Das PDF-Layout wird kompakter und typografisch an die bereitgestellte Referenz angenähert.
 
 ## Umsetzung
-1. **Kundendaten im Editor absichern**
-   - Die im Editor geladene vollständige Kundenakte konsistent für Empfängerblock und PDF-Vorschau verwenden.
-   - Fehlende oder noch ladende Kundendaten eindeutig behandeln, damit kein leerer Empfängerblock durch einen Zwischenstand entsteht.
-   - Die Kundennummer im rechten Rechnungskasten als eigene Zeile ergänzen.
 
-2. **Manuelles Speichern und Verlassenswarnung**
-   - Den derzeit bestätigten 1,5-Sekunden-Autosave entfernen; „Speichern“ bleibt die einzige dauerhafte Übernahme.
-   - Nach erfolgreichem Speichern den neuen Ausgangsstand setzen; „Verwerfen“ setzt exakt auf den zuletzt gespeicherten Stand zurück.
-   - Den Zurück-Button und alle internen Seitenwechsel bei ungespeicherten Änderungen mit einem schlichten Bestätigungsdialog abfangen.
-   - Zusätzlich die Browser-Warnung für Neuladen, Tab-Schließen und externe Navigation aktivieren; nach Speichern oder Verwerfen erscheint keine Warnung.
+### PDF-Editor
+- Das bisherige automatische Speichern vollständig entfernen; die Live-Vorschau bleibt weiterhin sofort sichtbar, schreibt aber nichts in die Datenbank.
+- „Speichern“ speichert den aktuellen Entwurf; „Verwerfen“ stellt exakt den zuletzt gespeicherten Stand wieder her.
+- Bei ungespeicherten Änderungen interne Navigation und Zurück-Schaltfläche blockieren und einen klaren Bestätigungsdialog anzeigen.
+- Für Browser-Neuladen, Tab-Schließen und externe Navigation den nativen Browser-Schutz aktivieren.
+- Den vorhandenen vollständigen Kundendatensatz weiterhin in Editor und Vorschau verwenden, damit Kundennummer und Kundenanschrift nicht leer erscheinen.
 
-3. **Einstellbarer hoher Empfängerblock**
-   - Unter „Einstellungen → Vorlagen“ einen klar beschrifteten Ein/Aus-Schalter für die höhere Anordnung ergänzen.
-   - Die Einstellung dauerhaft in den vorhandenen Einstellungen speichern, ohne neue Datenbanktabelle oder Migration.
-   - Browser-Vorschau und endgültige Pi-PDF-Ausgabe lesen denselben Wert und setzen Rechnung sowie Angebot identisch um.
+### PDF-Einstellung
+- Unter „Einstellungen → Vorlagen“ einen gemeinsamen Schalter „Empfängerblock weiter oben“ für Rechnungen und Angebote ergänzen.
+- Die Einstellung update-sicher im bestehenden generischen Einstellungs-Store speichern, ohne Datenbankmigration.
+- Lokale Vorschau und PDF-Caches berücksichtigen die Einstellung ebenfalls.
 
-4. **PDF-Layout nach Referenz**
-   - Die verfügbare Breite neu aufteilen: schmalerer rechter Rechnungskasten, ausreichend Abstand dazwischen und mehr Platz links.
-   - Absenderzeile und Kastenoberkante exakt ausrichten; im hohen Modus Absender und Empfänger nach oben links neben das Logo setzen, ohne Logo-Überlagerung.
-   - Kundennummer, Rechnungsnummer und Rechnungsdatum kompakt, vollständig lesbar und sauber ausgerichtet darstellen.
-   - Schriftfamilie, Grundschrift, Überschrift, Anrede, Fließtext, Tabelle und Summenbereich an die Referenz angleichen. Tabellenkopf regulär statt fett; der Gesamtbetrag bleibt zur Hervorhebung fett.
-   - Das bestehende 0,8-pt-/3-pt-Linienraster sowie die identischen Browser-/Pi-Spaltenbreiten beibehalten.
+### Rechnung und Angebot
+- Browser-PDF und serverseitiges Pi-PDF synchron anpassen.
+- Absenderzeile exakt an der Oberkante des rechten Informationskastens ausrichten.
+- Im optionalen oberen Modus Absender- und Empfängerblock weiter oben links neben dem Logo positionieren, ohne Logo, Fußzeile oder Leistungstabelle zu verschieben.
+- Den Rechnungskasten horizontal kompakter gestalten und darin Kundennummer, Rechnungsnummer sowie Rechnungsdatum vollständig anzeigen.
+- Schriftbild näher an die Referenz bringen: Tabellenkopf normal statt fett, insbesondere „Leistung“; Gesamtbetrag bleibt deutlich hervorgehoben.
+- Bestehende 0,8-pt-Linien und das 3-pt-Raster unverändert konsistent halten.
 
-## Technische Absicherung
-- Browser-PDF und Pi-PDF gemeinsam ändern und mit denselben Layoutkonstanten beziehungsweise gleichen Werten synchron halten.
-- Den globalen Vorlagenwert in PDF-Cache-Schlüssel beziehungsweise Cache-Invalidierung einbeziehen, damit ein Moduswechsel sofort eine neue PDF erzeugt.
-- Keine Update-, Installations-, Backup- oder Nutzdatenpfade verändern; bestehende Installationen erhalten automatisch den bisherigen Modus als Standard.
-- Die bestehende PDF-Editor-Struktur und gespeicherten Belege bleiben kompatibel.
+## Technische Details
+- Die neue PDF-Einstellung erhält ein eigenes Schema und einen eigenen API-Bereich, um bestehende Erscheinungs-Einstellungen nicht inkompatibel zu verändern.
+- Serverseitige PDFs laden dieselbe lokal vorhandene Roboto-Familie wie die Browser-PDFs; es werden keine externen Schrift- oder CDN-Abhängigkeiten eingeführt.
+- Die Einstellung fließt in Browser-LRU-, React-Query- und Server-PDF-Cache-Signaturen ein.
+- Kundennummer und Layoutmodus werden explizit an beide Renderer übergeben.
 
 ## Prüfung
-- Editor-Fluss für Rechnung und Angebot testen: ändern, Vorschau prüfen, zurückgehen/Seite wechseln/neu laden, abbrechen, verwerfen und speichern.
-- Prüfen, dass ohne Klick auf „Speichern“ keine Änderung dauerhaft übernommen wird und gespeicherte Änderungen nach erneutem Öffnen vorhanden sind.
-- PDFs mit kurzer und langer Kundennummer, kurzen und langen Firmendaten sowie mehrzeiligem Empfänger rendern.
-- Beide Modi für Rechnung und Angebot in Browser-Vorschau und endgültiger Pi-PDF-Ausgabe bildlich vergleichen.
-- Kontrollieren, dass Logo, Empfänger, Kasten, Überschrift, Tabelle, Summen, Footer und Seitenumbrüche weder kollidieren noch abgeschnitten werden.
-- Tabellenlinien erneut vermessen und die vorhandenen PDF-/Rastertests um Kundennummer, Kastenbreite, Ausrichtung, Schrift und Modus ergänzen.
-- Relevante Editor-Tests, PDF-Tests, Typprüfungen und aktuellen Build-Status prüfen; erst danach fertig melden.
+- Tests für manuelles Speichern, Verwerfen und Dirty-State-Navigation ergänzen.
+- PDF-Tests für Kundennummer, kompakte Meta-Box, normalen Tabellenkopf und beide Empfänger-Modi ergänzen.
+- Normale und lange Kunden-/Firmendaten sowie Rechnung und Angebot visuell rendern und vergleichen.
+- Tabellenlinien erneut vermessen; Browser- und Pi-Ausgabe auf gleiche Struktur prüfen.
+- Frontend- und Backend-Typprüfung sowie bestehende relevante Tests ausführen; keine Migration und keine Änderung am Update-Ablauf.
