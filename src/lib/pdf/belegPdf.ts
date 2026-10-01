@@ -528,7 +528,6 @@ function metaBox(
           fontSize: 9.5,
           bold: true,
           colSpan: 2,
-          border: [false, false, false, false],
           margin: [0, 0, 0, isLast ? 2 : 0],
           lineHeight: 1.15,
         },
@@ -542,7 +541,6 @@ function metaBox(
       {
         text: m.label,
         fontSize: 9.5,
-        border: [false, false, false, false],
         margin: [0, 1, 8, 1],
         lineHeight: 1.2,
       },
@@ -550,7 +548,6 @@ function metaBox(
         text: m.wert,
         fontSize: 9.5,
         alignment: "right",
-        border: [false, false, false, false],
         margin: [0, 1, 0, 1],
         lineHeight: 1.2,
       },
