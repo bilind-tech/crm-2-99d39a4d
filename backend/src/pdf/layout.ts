@@ -232,7 +232,11 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
   const spanCols = colCount - 1;
   const spanFiller = Array.from({ length: spanCols - 1 }, () => ({}));
 
-  const widths = showStunden ? ["*", 60, 90, 85] : ["*", 110, 95];
+  // Feste Breiten statt "*": Jede Spalte belegt inkl. Innenabstand (2×8) und
+  // Linie (0,8) genau ein Vielfaches von 4 pt. So liegen alle senkrechten
+  // Linien im selben Raster und wirken überall gleich dick.
+  // MUSS identisch mit src/lib/pdf/belegPdf.ts (TABLE_COL_WIDTHS_*) bleiben.
+  const widths = showStunden ? [183.2, 59.2, 91.2, 83.2] : [227.2, 111.2, 95.2];
 
   const positionsTabelle = {
     table: {

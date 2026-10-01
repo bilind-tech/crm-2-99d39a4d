@@ -502,11 +502,14 @@ function leistungstabelle(
   };
 }
 
-/** Spaltenbreiten der Leistungstabelle in pdfmake-Punkten. Wird im
- *  Inline-Editor wiederverwendet, damit die Editor-Reihe optisch auf der
- *  PDF-Zeile sitzt. */
-export const TABLE_COL_WIDTHS_STANDARD = ["*", 110, 95] as const;
-export const TABLE_COL_WIDTHS_STUNDEN = ["*", 60, 90, 85] as const;
+/** Spaltenbreiten der Leistungstabelle in pdfmake-Punkten.
+ *  Feste Breiten statt "*": Jede Spalte belegt inkl. Innenabstand (2×8) und
+ *  Linie (0,8) genau ein Vielfaches von 4 pt. Dadurch liegen ALLE senkrechten
+ *  Linien im selben Raster und werden in jeder Vorschau gleich dick gezeichnet.
+ *  Gesamtbreite 484,8 pt (passt in die 485,28 pt Inhaltsbreite).
+ *  MUSS identisch mit backend/src/pdf/layout.ts bleiben. */
+export const TABLE_COL_WIDTHS_STANDARD = [227.2, 111.2, 95.2] as const;
+export const TABLE_COL_WIDTHS_STUNDEN = [183.2, 59.2, 91.2, 83.2] as const;
 
 // ───────── Meta-Box ────────────────────────────────────────────────────────
 
