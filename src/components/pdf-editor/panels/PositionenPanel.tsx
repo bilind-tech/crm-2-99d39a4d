@@ -8,11 +8,12 @@ import type { Angebot, Rechnung } from "@/lib/api/types";
 
 interface Props {
   draft: Angebot | Rechnung;
+  kind: "angebot" | "rechnung";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   set: (key: any, value: any) => void;
 }
 
-export function PositionenPanel({ draft, set }: Props) {
+export function PositionenPanel({ draft, kind, set }: Props) {
   const positionen: PositionDraft[] = draft.positionen.map(fromApiPosition);
 
   return (
@@ -24,6 +25,7 @@ export function PositionenPanel({ draft, set }: Props) {
         positionen={positionen}
         onChange={(next) => set("positionen", toApiPositionen(next))}
         defaultSteuersatz={draft.steuersatz}
+        belegArt={kind}
       />
     </div>
   );

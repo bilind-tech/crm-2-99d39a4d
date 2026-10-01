@@ -70,6 +70,7 @@ export function HotspotInlineEditor({
       <PositionRowEditor
         posId={posId}
         draft={draft}
+        kind={kind}
         set={set}
         firstRef={firstRef}
         rowActions={rowActions}
@@ -195,6 +196,7 @@ function FooterDone({ onClose }: { onClose: () => void }) {
 function PositionRowEditor({
   posId,
   draft,
+  kind,
   set,
   firstRef,
   rowActions,
@@ -203,6 +205,7 @@ function PositionRowEditor({
 }: {
   posId: string;
   draft: Draft;
+  kind: "angebot" | "rechnung";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   set: (key: any, value: any) => void;
   firstRef: React.MutableRefObject<HTMLTextAreaElement | HTMLInputElement | null>;
@@ -374,6 +377,18 @@ function PositionRowEditor({
       </div>
 
       {/* Eingabezeile */}
+      <div className="mb-2">
+        <label className="mb-1 block text-[10px] uppercase tracking-wider text-muted-foreground">
+          {kind === "angebot" ? "Ausführungen" : "Abrechnungsart"}
+        </label>
+        <Input
+          value={pos.abrechnungsartLabel ?? ""}
+          onChange={(e) => updatePos({ abrechnungsartLabel: e.target.value })}
+          placeholder={kind === "angebot" ? "z. B. 1× monatlich" : "z. B. Pauschal"}
+          className="h-9 text-sm"
+        />
+      </div>
+
       <div
         className="grid items-start gap-2"
         style={{

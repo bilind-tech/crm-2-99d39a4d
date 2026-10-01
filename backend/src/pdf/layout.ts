@@ -123,10 +123,10 @@ function footer(f: FirmaForPdf) {
       lines: (string | null | undefined)[],
       alignment: "left" | "center" | "right" = "left",
     ) => ({
-      stack: lines.filter(Boolean).map((l) => ({ text: l as string, fontSize: 7, color: COLOR_TEXT, alignment })),
+      stack: lines.filter(Boolean).map((l) => ({ text: l as string, fontSize: 8, color: COLOR_TEXT, alignment })),
     });
     return {
-      margin: [55, 0, 55, 12] as [number, number, number, number],
+      margin: [55, 0, 55, 5] as [number, number, number, number],
       stack: [
         { canvas: [{ type: "line", x1: 0, y1: 0, x2: 485, y2: 0, lineWidth: 0.5, lineColor: COLOR_LINE }] },
         {
@@ -138,7 +138,7 @@ function footer(f: FirmaForPdf) {
               [f.plz, f.ort].filter(Boolean).join(" ") || null,
             ]),
             cell(["Bankverbindung", f.bankName, f.iban], "left"),
-            cell([f.telefon, f.mobil, f.email], "right"),
+            cell([f.telefon, f.mobil, f.email], "left"),
             cell(
               [
                 f.handelsregister,
@@ -146,7 +146,7 @@ function footer(f: FirmaForPdf) {
                 f.webseite,
                 f.geschaeftsfuehrer ? `Geschäftsführer: ${f.geschaeftsfuehrer}` : null,
               ],
-              "right",
+              "left",
             ),
           ],
           columnGap: 12,
@@ -223,22 +223,22 @@ export type { RasterOptionen };
 
 const LINIE = TABELLEN_LINIE;
 const PAD_POS = 8;
-const PAD_SUM = 6;
+const PAD_SUM = 8;
 
-function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false, raster?: RasterOptionen) {
+function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false, raster?: RasterOptionen, istAngebot = false) {
   const plan = raster?.plan ?? LEERER_PLAN;
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
 
   const headerRow: unknown[] = [
-    { text: "Leistung", fontSize: 10, color: COLOR_TEXT, margin: [0, 6, 0, 6] },
+    { text: "Leistung", fontSize: 10, color: COLOR_TEXT },
   ];
   if (showStunden) {
-    headerRow.push({ text: "Stunden", fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] });
+    headerRow.push({ text: "Stunden", fontSize: 10, color: COLOR_TEXT, alignment: "center" });
   }
   headerRow.push(
-    { text: "Abrechnungsart", fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] },
-    { text: "Preis (netto)", fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] },
+    { text: istAngebot ? "Ausführungen" : "Abrechnungsart", fontSize: 10, color: COLOR_TEXT, alignment: "center" },
+    { text: "Preis (netto)", fontSize: 10, color: COLOR_TEXT, alignment: "center" },
   );
 
   const body: unknown[][] = [headerRow];
@@ -270,7 +270,7 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       headerRows: 1,
       widths,
       body,
-      heights: (row: number) => (row === 0 ? 22 : undefined),
+      heights: (row: number) => (row === 0 ? 30 : undefined),
     },
     layout: {
       // Der Summenblock zeichnet die gemeinsame Kante. So wird die Linie
@@ -317,6 +317,7 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       dontBreakRows: true,
       widths,
       body: summenBody,
+      heights: () => 30,
     },
     layout: {
       hLineWidth: () => LINIE,
@@ -535,7 +536,7 @@ function buildDoc(args: BuildArgs) {
   const istRechnung = args.titel === "Rechnung";
   return {
     pageSize: "A4" as const,
-    pageMargins: [55, 155, 55, 100] as [number, number, number, number],
+    pageMargins: [55, 155, 55, 105] as [number, number, number, number],
     defaultStyle: { font: DEFAULT_FONT, fontSize: 10, color: COLOR_TEXT, lineHeight: 1.25 },
     header: header(args.firma, args.logoDataUrl),
     footer: footer(args.firma),
@@ -580,23 +581,23 @@ function buildDoc(args: BuildArgs) {
       },
       {
         text: args.titel,
-        fontSize: istRechnung ? 19 : 22,
+        fontSize: istRechnung ? 17 : 20,
         bold: true,
         color: COLOR_TEXT,
         // Kleinere Schrift, aber identische Gesamthöhe dieses Abschnitts.
-        margin: [0, istRechnung ? 45 : 30, 0, istRechnung ? 17.75 : 14],
+        margin: [0, istRechnung ? 45 : 30, 0, istRechnung ? 20.25 : 16.5],
       },
       {
         stack: [
-          { text: anrede(args.kunde, args.ansprechpartner, args.eigeneAnrede), margin: [0, 0, 0, 8] },
-          { text: inlineText(args.intro), margin: [0, 0, 0, 14] },
+          { text: anrede(args.kunde, args.ansprechpartner, args.eigeneAnrede), fontSize: 11, margin: [0, 0, 0, 8] },
+          { text: inlineText(args.intro), fontSize: 11, margin: [0, 0, 0, 14] },
         ],
       },
-      leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true, args.raster),
+      leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true, args.raster, !istRechnung),
       {
         stack: [
-          { text: inlineText(args.outro), margin: [0, 16, 0, 0] },
-          { text: "Mit freundlichen Grüßen", margin: [0, 18, 0, 0] },
+          { text: inlineText(args.outro), fontSize: 11, margin: [0, 16, 0, 0] },
+          { text: "Mit freundlichen Grüßen", fontSize: 11, margin: [0, 18, 0, 0] },
           ...signatur.map((s) => ({ text: s, margin: [0, 0, 0, 0], color: COLOR_TEXT })),
         ],
         unbreakable: true,
