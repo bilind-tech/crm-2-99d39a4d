@@ -30,6 +30,7 @@ import {
   type ZeitraumState,
 } from "@/components/filters/ZeitraumFilter";
 import type { Rechnung } from "@/lib/api/types";
+import { BulkDriveSyncButton } from "@/components/drive/BulkDriveSyncButton";
 
 export const Route = createFileRoute("/rechnungen")({ component: Layout });
 
@@ -256,6 +257,10 @@ function Page() {
         <Repeat className="h-3.5 w-3.5 text-primary" />
         Nur Daueraufträge anzeigen
       </label>
+
+      <div className="flex justify-stretch sm:justify-end">
+        <BulkDriveSyncButton belegArt="rechnung" belegIds={filtered.map((r) => r.id)} />
+      </div>
 
       {/* Mobil: Card-View */}
       <div className="space-y-2 md:hidden">

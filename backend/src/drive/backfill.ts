@@ -25,36 +25,42 @@ function listRechnungIdsForSync(): string[] {
   return rows.map((r) => r.id);
 }
 
-async function enqueueAngebot(id: string): Promise<boolean> {
+export interface BackfillOneResult {
+  found: boolean;
+  created: boolean;
+  pdfSha256?: string;
+}
+
+async function enqueueAngebot(id: string): Promise<BackfillOneResult> {
   const beleg = getAngebot(id);
-  if (!beleg) return false;
+  if (!beleg) return { found: false, created: false };
   const pdf = await renderAngebotPdf(id);
-  if (!pdf) return false;
+  if (!pdf) return { found: false, created: false };
   const sha = crypto.createHash("sha256").update(pdf.buffer).digest("hex");
-  enqueue({
+  const result = enqueue({
     belegArt: "angebot",
     belegId: id,
     dateiName: pdf.dateiname,
     pdfSha256: sha,
     idempotenzKey: `angebot-${(beleg as { nummer?: string }).nummer ?? id}-${sha.slice(0, 16)}`,
   });
-  return true;
+  return { found: true, created: result.created, pdfSha256: sha };
 }
 
-async function enqueueRechnung(id: string): Promise<boolean> {
+async function enqueueRechnung(id: string): Promise<BackfillOneResult> {
   const beleg = getRechnung(id);
-  if (!beleg) return false;
+  if (!beleg) return { found: false, created: false };
   const pdf = await renderRechnungPdf(id);
-  if (!pdf) return false;
+  if (!pdf) return { found: false, created: false };
   const sha = crypto.createHash("sha256").update(pdf.buffer).digest("hex");
-  enqueue({
+  const result = enqueue({
     belegArt: "rechnung",
     belegId: id,
     dateiName: pdf.dateiname,
     pdfSha256: sha,
     idempotenzKey: `rechnung-${(beleg as { nummer?: string }).nummer ?? id}-${sha.slice(0, 16)}`,
   });
-  return true;
+  return { found: true, created: result.created, pdfSha256: sha };
 }
 
 function enqueueDokument(id: string, sha256: string | null, dateiname: string | null): boolean {
@@ -83,11 +89,11 @@ export async function backfillAll(): Promise<BackfillResult> {
 
   // Idempotenz im Repo verhindert Duplikate — wir können bedenkenlos alle enqueuen.
   for (const id of listAngebotIdsForSync()) {
-    try { if (await enqueueAngebot(id)) out.angebote++; }
+    try { if ((await enqueueAngebot(id)).found) out.angebote++; }
     catch { out.skipped++; }
   }
   for (const id of listRechnungIdsForSync()) {
-    try { if (await enqueueRechnung(id)) out.rechnungen++; }
+    try { if ((await enqueueRechnung(id)).found) out.rechnungen++; }
     catch { out.skipped++; }
   }
   const dokumente = listDokumente({ limit: 1000 } as never);
@@ -105,10 +111,18 @@ export async function backfillOne(
   belegArt: "angebot" | "rechnung" | "dokument",
   belegId: string,
 ): Promise<boolean> {
-  if (belegArt === "angebot") return enqueueAngebot(belegId);
-  if (belegArt === "rechnung") return enqueueRechnung(belegId);
+  if (belegArt === "angebot") return (await enqueueAngebot(belegId)).found;
+  if (belegArt === "rechnung") return (await enqueueRechnung(belegId)).found;
   const dokumente = listDokumente({ limit: 1000 } as never);
   const d = dokumente.find((x) => x.id === belegId);
   if (!d) return false;
   return enqueueDokument(d.id, d.sha256 ?? null, d.dateiname ?? null);
+}
+
+/** Einzelner Beleg mit Information, ob wirklich eine neue Queue-Zeile entstand. */
+export async function backfillOneDetailed(
+  belegArt: "angebot" | "rechnung",
+  belegId: string,
+): Promise<BackfillOneResult> {
+  return belegArt === "angebot" ? enqueueAngebot(belegId) : enqueueRechnung(belegId);
 }

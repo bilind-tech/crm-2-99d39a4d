@@ -102,6 +102,16 @@ export function getLatestErfolg(belegArt: BelegArt, belegId: string): DriveUploa
   return r ? map(r) : null;
 }
 
+/** Aktueller Queue-Eintrag für exakt diese gerenderte Fassung. */
+export function getBySha(belegArt: BelegArt, belegId: string, pdfSha256: string): DriveUpload | null {
+  const r = getDatabase().prepare(
+    `SELECT * FROM drive_upload_queue
+     WHERE beleg_art = ? AND beleg_id = ? AND pdf_sha256 = ?
+     ORDER BY erstellt_am DESC LIMIT 1`,
+  ).get(belegArt, belegId, pdfSha256) as Row | undefined;
+  return r ? map(r) : null;
+}
+
 export interface ListFilter { status?: DriveUploadStatus; belegId?: string; belegArt?: BelegArt; limit?: number; offset?: number }
 export function listUploads(f: ListFilter = {}): DriveUpload[] {
   const where: string[] = []; const params: unknown[] = [];

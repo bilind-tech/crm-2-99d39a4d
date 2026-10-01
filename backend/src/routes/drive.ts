@@ -7,9 +7,9 @@ import {
   getGoogleOAuthRedirectUri,
 } from "../drive/oauth.js";
 import { ensureRootFolder, createTextFile, resetDriveClient } from "../drive/folders.js";
-import { getLatestErfolg, listUploads, retry, type DriveUploadStatus, type BelegArt } from "../drive/upload-repo.js";
+import { getBySha, getLatestErfolg, listUploads, retry, type DriveUploadStatus, type BelegArt } from "../drive/upload-repo.js";
 import { tickDriveQueue } from "../drive/upload-worker.js";
-import { backfillAll, backfillOne } from "../drive/backfill.js";
+import { backfillAll, backfillOne, backfillOneDetailed } from "../drive/backfill.js";
 import { driftCheckDokumente } from "../drive/drift-check.js";
 import { listMaps } from "../dokumente/ordner-drive-map-repo.js";
 import crypto from "node:crypto";
@@ -56,6 +56,32 @@ const DEFAULT_FILES = {
   angebot: "{nummer} {kunde} {leistung} {MM}-{YYYY}",
   protokoll: "{nummer} {kunde} {leistung} {DD}-{MM}-{YYYY}",
 };
+
+const BulkBelegSchema = z.object({
+  belegArt: z.enum(["angebot", "rechnung"]),
+  belegIds: z.array(z.string().min(1).max(64)).min(1).max(200),
+});
+
+async function inspectBulkBeleg(belegArt: "angebot" | "rechnung", belegId: string) {
+  const pdf = belegArt === "angebot"
+    ? await renderAngebotPdf(belegId)
+    : await renderRechnungPdf(belegId);
+  if (!pdf) return { belegId, status: "not-found" as const };
+  const currentSha = crypto.createHash("sha256").update(pdf.buffer).digest("hex");
+  const exact = getBySha(belegArt, belegId, currentSha);
+  const latest = getLatestErfolg(belegArt, belegId);
+  if (latest?.pdfSha256 === currentSha) {
+    return { belegId, status: "synced" as const, currentSha };
+  }
+  const status = exact?.status === "running"
+    ? "running"
+    : exact?.status === "pending"
+      ? "pending"
+      : exact?.status === "manuell" || exact?.status === "fehler"
+        ? "error"
+        : "missing";
+  return { belegId, status, currentSha, error: exact?.fehlerText ?? undefined };
+}
 
 // Alte Default-Pfade (vor Einführung von {MMMM}) — werden beim Laden auf
 // die neuen Defaults gehoben, solange der User das Feld nicht selbst angepasst hat.
@@ -323,6 +349,48 @@ export async function driveRoutes(app: FastifyInstance): Promise<void> {
         reply.status(500);
         return { error: "render-failed", message: e instanceof Error ? e.message : String(e) };
       }
+    });
+
+    // Gebündelter, hash-genauer Status für genau die aktuell gefilterte Liste.
+    scoped.post("/drive/uploads/bulk-status", async (req, reply) => {
+      const body = BulkBelegSchema.safeParse(req.body ?? {});
+      if (!body.success) { reply.status(422); return { error: "validation", issues: body.error.issues }; }
+      const verbunden = loadDriveSettings().refreshTokenIsSet;
+      const uniqueIds = [...new Set(body.data.belegIds)];
+      const items = [];
+      for (const belegId of uniqueIds) {
+        try { items.push(await inspectBulkBeleg(body.data.belegArt, belegId)); }
+        catch (e) {
+          items.push({ belegId, status: "error" as const, error: e instanceof Error ? e.message : String(e) });
+        }
+      }
+      return { verbunden, items };
+    });
+
+    // Bewusster Sammel-Upload: verarbeitet ausschließlich die übergebenen sichtbaren IDs.
+    scoped.post("/drive/uploads/bulk-enqueue", async (req, reply) => {
+      const body = BulkBelegSchema.safeParse(req.body ?? {});
+      if (!body.success) { reply.status(422); return { error: "validation", issues: body.error.issues }; }
+      if (!loadDriveSettings().refreshTokenIsSet) {
+        reply.status(409);
+        return { error: "drive-not-connected", message: "Google Drive ist nicht verbunden — bitte zuerst in Einstellungen verbinden." };
+      }
+      const uniqueIds = [...new Set(body.data.belegIds)];
+      let enqueued = 0;
+      let alreadyQueued = 0;
+      let alreadySynced = 0;
+      let failed = 0;
+      for (const belegId of uniqueIds) {
+        try {
+          const status = await inspectBulkBeleg(body.data.belegArt, belegId);
+          if (status.status === "synced") { alreadySynced++; continue; }
+          const result = await backfillOneDetailed(body.data.belegArt, belegId);
+          if (!result.found) { failed++; continue; }
+          if (result.created) enqueued++; else alreadyQueued++;
+        } catch { failed++; }
+      }
+      void tickDriveQueue(Math.min(50, uniqueIds.length)).catch(() => undefined);
+      return { ok: true, total: uniqueIds.length, enqueued, alreadyQueued, alreadySynced, failed };
     });
 
     scoped.post<{ Params: { id: string } }>("/drive/uploads/:id/retry", async (req, reply) => {

@@ -54,6 +54,7 @@ import {
 import { X } from "lucide-react";
 import type { Angebot } from "@/lib/api/types";
 import { useConfirm } from "@/hooks/useConfirm";
+import { BulkDriveSyncButton } from "@/components/drive/BulkDriveSyncButton";
 
 export const Route = createFileRoute("/angebote")({ component: Layout });
 
@@ -173,6 +174,10 @@ function Page() {
         setZeitraum={setZeitraum}
         verfuegbareDaten={alle.map((a) => angebotsdatumVon(a))}
       />
+
+      <div className="flex justify-stretch sm:justify-end">
+        <BulkDriveSyncButton belegArt="angebot" belegIds={filtered.map((a) => a.id)} />
+      </div>
 
       {/* Mobil: Card-View */}
       <div className="space-y-2 md:hidden">
