@@ -553,7 +553,6 @@ function metaBox(
       },
     ]);
   });
-  const dividerIndex = noteRowsCount; // Linie zwischen Note und Daten
   return {
     id: "meta",
     width: 235,
@@ -564,15 +563,15 @@ function metaBox(
     layout: {
       hLineWidth: (i: number, node: { table: { body: unknown[][] } }) => {
         if (i === 0 || i === node.table.body.length) return 0.6;
-        if (i === dividerIndex && noteRowsCount > 0) return 0.4;
         return 0;
       },
       vLineWidth: (i: number, node: { table: { widths: unknown[] } }) =>
         i === 0 || i === node.table.widths.length ? 0.6 : 0,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      paddingTop: () => 2,
-      paddingBottom: () => 2,
+      paddingTop: (i: number) => (i === 0 ? 4 : 2),
+      paddingBottom: (i: number, node: { table: { body: unknown[][] } }) =>
+        i === node.table.body.length - 1 ? 4 : 2,
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },
