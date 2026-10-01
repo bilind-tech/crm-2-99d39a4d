@@ -2,9 +2,10 @@
 // rechts Editor-Panel mit Tabs. Mobile: gestapelt mit Vorschau/Bearbeiten-Toggle.
 
 import { useState } from "react";
-import { ArrowLeft, Download, Eye, Pencil, RotateCcw, Save, Loader2 } from "lucide-react";
-import { Link } from "@tanstack/react-router";
+import { ArrowLeft, Eye, Pencil, RotateCcw, Save, Loader2 } from "lucide-react";
+import { useBlocker, useNavigate } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Group, Panel, Separator } from "react-resizable-panels";
 // react-resizable-panels v4 hat ungenaue Typings — Group nimmt `direction` zur Laufzeit.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -17,7 +18,7 @@ import { HotspotInlineEditor } from "./HotspotInlineEditor";
 import { VersendetHinweis } from "./VersendetHinweis";
 import type { RowAction, TableAction } from "./PdfFieldOverlay";
 import { useBelegEditor } from "@/hooks/useBelegEditor";
-import { useObjekte } from "@/hooks/useApi";
+import { useObjekte, usePdfVorlage } from "@/hooks/useApi";
 import { metaForId } from "@/lib/pdf/fieldMap";
 import type {
   Angebot,
@@ -52,6 +53,12 @@ type Props =
 export function PdfEditorLayout(props: Props) {
   const { kind, beleg, kunde, firma, ansprechpartner, objekt, backTo } = props;
   const editor = useBelegEditor(kind, beleg);
+  const navigate = useNavigate();
+  const blocker = useBlocker({
+    shouldBlockFn: () => editor.isDirty,
+    enableBeforeUnload: editor.isDirty,
+    withResolver: true,
+  });
   const [activeTab, setActiveTab] = useState<EditorTab>("stammdaten");
   const [mobileView, setMobileView] = useState<"editor" | "preview">("editor");
 
@@ -59,6 +66,7 @@ export function PdfEditorLayout(props: Props) {
   const draft = editor.draft;
   // Objektwechsel im Editor sofort in der Vorschau berücksichtigen.
   const { data: objekteDesKunden = [] } = useObjekte(kunde.id);
+  const { data: pdfVorlage } = usePdfVorlage();
   const aktivesObjekt: Objekt | null = draft.objektId
     ? ((objekteDesKunden as Objekt[]).find((o) => o.id === draft.objektId) ??
       (objekt && objekt.id === draft.objektId ? objekt : null))
@@ -114,6 +122,7 @@ export function PdfEditorLayout(props: Props) {
       renderEditor={renderEditor}
       rowActions={rowActions}
       tableActions={tableActions}
+      empfaengerOben={pdfVorlage?.empfaengerOben ?? false}
     />
   );
 
@@ -134,12 +143,17 @@ export function PdfEditorLayout(props: Props) {
     <div className="-m-4 flex h-[calc(100dvh-3.5rem)] min-h-[600px] flex-col sm:-m-6 sm:h-[calc(100dvh-4rem)]">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-2 border-b border-border bg-background px-3 py-2 sm:px-5 sm:py-3">
-        <Button variant="ghost" size="sm" asChild className="rounded-full">
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <Link to={backTo.to as any} params={backTo.params as any}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="rounded-full"
+          onClick={() => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            void navigate({ to: backTo.to as any, params: backTo.params as any });
+          }}
+        >
             <ArrowLeft className="mr-1 h-4 w-4" />
             Zurück
-          </Link>
         </Button>
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold sm:text-base">
@@ -241,6 +255,18 @@ export function PdfEditorLayout(props: Props) {
           )}
         </div>
       </div>
+      <ConfirmDialog
+        open={blocker.status === "blocked"}
+        onOpenChange={(open) => {
+          if (!open) blocker.reset?.();
+        }}
+        title="Ungespeicherte Änderungen verwerfen?"
+        description="Wenn Sie zurückgehen, gehen alle Änderungen seit dem letzten Speichern verloren."
+        confirmLabel="Änderungen verwerfen"
+        cancelLabel="Im Editor bleiben"
+        variant="destructive"
+        onConfirm={() => blocker.proceed?.()}
+      />
     </div>
   );
 }

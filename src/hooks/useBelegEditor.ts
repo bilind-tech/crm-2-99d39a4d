@@ -1,6 +1,6 @@
 // Lokaler Draft-Editor für Angebote/Rechnungen.
 // - Hält den Draft im State (Quelle der Wahrheit für Live-Preview).
-// - Autosave 1.5s nach letzter Änderung via useUpdateAngebot/useUpdateRechnung.
+// - Speichert ausschließlich nach ausdrücklichem Klick auf „Speichern“.
 // - Stellt focusField(id) bereit: scrollt das Element mit data-feld-id im
 //   EditorPanel ins Sichtfeld + kurzer Highlight + fokussiert das erste Input.
 
@@ -22,6 +22,7 @@ function stableStringify<T>(obj: T): string {
 export function useBelegEditor<T extends Angebot | Rechnung>(kind: BelegKind, beleg: T) {
   const [draft, setDraft] = useState<T>(beleg);
   const lastSavedRef = useRef<string>(stableStringify(beleg));
+  const savedDraftRef = useRef<T>(beleg);
   const draftRef = useRef<T>(beleg);
   draftRef.current = draft;
 
@@ -33,11 +34,13 @@ export function useBelegEditor<T extends Angebot | Rechnung>(kind: BelegKind, be
     const currentDraft = stableStringify(draftRef.current);
     if (incoming === currentDraft) {
       lastSavedRef.current = incoming;
+      savedDraftRef.current = beleg;
       return;
     }
     if (currentDraft !== lastSavedRef.current) return; // Draft dirty → User-Eingaben behalten
     setDraft(beleg);
     lastSavedRef.current = incoming;
+    savedDraftRef.current = beleg;
   }, [beleg]);
 
   const isDirty = useMemo(() => stableStringify(draft) !== lastSavedRef.current, [draft]);
@@ -172,11 +175,11 @@ export function useBelegEditor<T extends Angebot | Rechnung>(kind: BelegKind, be
   );
 
   const save = useCallback(
-    async (opts?: { silent?: boolean }) => {
+    async () => {
       if (!isDirty) return;
       const fehler = pruefeDaten(kind, draft as unknown as Angebot | Rechnung);
       if (fehler) {
-        if (!opts?.silent) toast.error(fehler);
+        toast.error(fehler);
         return;
       }
       try {
@@ -187,9 +190,10 @@ export function useBelegEditor<T extends Angebot | Rechnung>(kind: BelegKind, be
           await updateRechnung.mutateAsync(payload as Partial<Rechnung>);
         }
         lastSavedRef.current = stableStringify(draft);
+        savedDraftRef.current = draft;
         // PDF-Cache (React Query) verwerfen → Detailseite holt neue Version.
         invalidatePdf(kind, draft.id);
-        if (!opts?.silent) toast.success("Gespeichert", { duration: 1500 });
+        toast.success("Gespeichert", { duration: 1500 });
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Speichern fehlgeschlagen");
       }
@@ -197,19 +201,9 @@ export function useBelegEditor<T extends Angebot | Rechnung>(kind: BelegKind, be
     [draft, isDirty, kind, updateAngebot, updateRechnung, invalidatePdf],
   );
 
-  // Autosave nach 1.5s ohne Änderung — silent (kein Toast).
-  useEffect(() => {
-    if (!isDirty) return;
-    const t = setTimeout(() => {
-      void save({ silent: true });
-    }, 1500);
-    return () => clearTimeout(t);
-  }, [draft, isDirty, save]);
-
   const discard = useCallback(() => {
-    setDraft(beleg);
-    lastSavedRef.current = JSON.stringify(beleg);
-  }, [beleg]);
+    setDraft(savedDraftRef.current);
+  }, []);
 
   // Click-to-edit: scrollt das Panel zum Feld + Highlight + Fokus.
   const focusField = useCallback((fieldId: string) => {

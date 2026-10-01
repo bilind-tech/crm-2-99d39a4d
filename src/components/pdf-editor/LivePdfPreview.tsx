@@ -35,6 +35,7 @@ interface CommonProps {
   rowActions?: RowAction;
   /** Aktionen für den `tabelle`-Hotspot. */
   tableActions?: TableAction;
+  empfaengerOben?: boolean;
 }
 
 type Props =
@@ -49,7 +50,7 @@ function semanticKey(obj: unknown): string {
 }
 
 export function LivePdfPreview(props: Props) {
-  const { draft, kunde, firma, ansprechpartner, objekt, renderEditor, kind, rowActions, tableActions } =
+  const { draft, kunde, firma, ansprechpartner, objekt, renderEditor, kind, rowActions, tableActions, empfaengerOben = false } =
     props;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,8 +75,8 @@ export function LivePdfPreview(props: Props) {
 
   // Aktueller semantischer Snapshot-Key des Drafts (+ Kontext).
   const currentKey = useMemo(
-    () => semanticKey({ draft, kunde, firma, ansprechpartner, objekt, kind }),
-    [draft, kunde, firma, ansprechpartner, objekt, kind],
+    () => semanticKey({ draft, kunde, firma, ansprechpartner, objekt, kind, empfaengerOben }),
+    [draft, kunde, firma, ansprechpartner, objekt, kind, empfaengerOben],
   );
 
   // Letzter erfolgreich gebauter Key → daraus leitet sich „aktuell?" ab.
@@ -96,8 +97,8 @@ export function LivePdfPreview(props: Props) {
   // der zuletzt gewünschte Key am Ende neu gebaut.
   const inFlightRef = useRef(false);
   const queuedKeyRef = useRef<string | null>(null);
-  const latestPropsRef = useRef({ draft, kunde, firma, ansprechpartner, objekt, kind });
-  latestPropsRef.current = { draft, kunde, firma, ansprechpartner, objekt, kind };
+  const latestPropsRef = useRef({ draft, kunde, firma, ansprechpartner, objekt, kind, empfaengerOben });
+  latestPropsRef.current = { draft, kunde, firma, ansprechpartner, objekt, kind, empfaengerOben };
 
   const runBuild = useCallback(async () => {
     if (inFlightRef.current) {
@@ -112,8 +113,8 @@ export function LivePdfPreview(props: Props) {
     try {
       const result =
         snap.kind === "angebot"
-          ? await generateAngebotPdf(snap.draft as Angebot, snap.kunde, snap.firma, snap.ansprechpartner, snap.objekt ?? null)
-          : await generateRechnungPdf(snap.draft as Rechnung, snap.kunde, snap.firma, snap.ansprechpartner, snap.objekt ?? null);
+          ? await generateAngebotPdf(snap.draft as Angebot, snap.kunde, snap.firma, snap.ansprechpartner, snap.objekt ?? null, { empfaengerOben: snap.empfaengerOben })
+          : await generateRechnungPdf(snap.draft as Rechnung, snap.kunde, snap.firma, snap.ansprechpartner, snap.objekt ?? null, { empfaengerOben: snap.empfaengerOben });
       if (!(result.blob instanceof Blob) || result.blob.size === 0) {
         throw new Error("PDF konnte nicht erzeugt werden (leerer Blob).");
       }
