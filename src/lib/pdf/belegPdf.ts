@@ -552,6 +552,12 @@ export const TABLE_COL_WIDTHS_STUNDEN = [181.2, 61.2, 91.2, 82.2] as const;
 
 /** Zusätzliche Luft über „Bei Zahlung bitte“ (pt). MUSS in beiden Vorlagen gleich sein. */
 const META_LUFT_OBEN = 5;
+const RECHNUNG_META_BREITE = 190;
+
+function metaWertSchriftgroesse(wert: string): number {
+  if (wert.length <= 16) return 9.5;
+  return Math.max(5, Math.floor((9.5 * 16 / wert.length) * 10) / 10);
+}
 
 function metaBox(
   meta: { label: string; wert: string }[],
@@ -598,16 +604,17 @@ function metaBox(
       },
       {
         text: m.wert,
-        fontSize: 9.5,
+        fontSize: metaWertSchriftgroesse(m.wert),
         alignment: "right",
         margin: [0, 1, 0, 1],
         lineHeight: 1.2,
+        noWrap: true,
       },
     ]);
   });
   return {
     id: "meta",
-    width: 210,
+    width: RECHNUNG_META_BREITE,
     // Rahmen-Oberkante rückt um META_LUFT_OBEN nach oben, der Text bleibt exakt
     // an seiner Stelle und die Gesamthöhe im Fluss ist unverändert.
     margin: [0, -META_LUFT_OBEN, 0, 0],
@@ -786,6 +793,9 @@ async function buildDoc(
     // Feste Breite verhindert, dass `noWrap` bei langen Absenderdaten die
     // rechte Meta-Box aus ihrer unveränderlichen Position drückt.
     width: ABSENDER_BREITE,
+    // Nur die Empfängerseite wandert im oberen Modus nach oben. Logo und
+    // Rechnungsdaten bleiben rechts in ihrer eigenen, festen Anordnung.
+    margin: [0, layoutOptionen.empfaengerOben ? -40 : 0, 0, 0],
     stack: [
       // Absenderzeile: feste Position, gleiche Höhe wie die erste Zeile der
       // Meta-Box rechts. Empfängerzeilen wachsen nur darunter nach unten.
@@ -821,12 +831,11 @@ async function buildDoc(
     pageBreakBefore,
     content: [
       {
-        margin: [0, layoutOptionen.empfaengerOben ? -40 : 0, 0, 0],
         columns: [
           kundeColumn,
           metaBox(meta, metaVariant, metaNote),
         ],
-        columnGap: metaVariant === "box" ? 45 : 20,
+        columnGap: metaVariant === "box" ? 65 : 20,
       },
       {
         id: "titel",
@@ -836,7 +845,7 @@ async function buildDoc(
         color: COLOR_TEXT,
         // Die kleinere Rechnungsüberschrift verändert die nachfolgenden
         // Positionen nicht: ihre geringere Zeilenhöhe wird unten ausgeglichen.
-        margin: [0, layoutOptionen.empfaengerOben ? 70 : 30, 0, istRechnung ? 17.75 : 14],
+        margin: [0, istRechnung ? 45 : 30, 0, istRechnung ? 17.75 : 14],
       },
       {
         stack: [
@@ -1005,7 +1014,6 @@ export async function generateRechnungPdf(
   const cached = lruGet(cacheKey);
   if (cached) return cached;
   const meta = [
-    { label: "Kundennummer:", wert: kunde.nummer },
     { label: "Rechnung-Nr.:", wert: rechnung.nummer },
     { label: "Rechnungsdatum:", wert: dt(rechnung.rechnungsdatum) },
   ];

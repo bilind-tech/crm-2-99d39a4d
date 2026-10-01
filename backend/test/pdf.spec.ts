@@ -118,16 +118,17 @@ describe("PDF-Rendering", () => {
     expect(absender.fontSize).toBeLessThanOrEqual(8);
     expect(absender.margin).toEqual([0, 0, 0, 8]);
     expect(titel.fontSize).toBe(19);
-    expect(titel.margin).toEqual([0, 30, 0, 17.75]);
+    expect(titel.margin).toEqual([0, 45, 0, 17.75]);
     expect(meta.layout.hLineWidth(0, meta)).toBe(0.6);
     expect(meta.layout.hLineWidth(1, meta)).toBe(0);
     // Mehr Luft zwischen oberer Rahmenlinie und „Bei Zahlung bitte" (6 + 5),
     // ohne dass sich der Kasten verschiebt (Ausgleich über negativen Rand).
     expect(meta.layout.paddingTop(0, meta)).toBe(11);
     expect(meta.margin[1]).toBe(-5);
-    expect(meta.width).toBe(210);
-    expect(doc.content[0].columnGap).toBe(45);
-    expect(meta.table.body.some((row: any[]) => row[0]?.text === "Kundennummer:" && row[1]?.text === k.nummer)).toBe(true);
+    expect(meta.width).toBe(190);
+    expect(doc.content[0].columnGap).toBe(65);
+    expect(meta.table.body.some((row: any[]) => row[0]?.text === "Kundennummer:")).toBe(false);
+    expect(meta.table.body.filter((row: any[]) => row[1]?.text).every((row: any[]) => row[1].noWrap === true)).toBe(true);
 
     const positions = doc.content[3].stack[0];
     const summen = doc.content[3].stack[1];
@@ -142,17 +143,18 @@ describe("PDF-Rendering", () => {
     expect(summen.table.body.at(-1)[0].bold).toBe(true);
   });
 
-  it("Empfänger-Modus: hebt nur den Kopfbereich an und gleicht den Titelabstand aus", () => {
+  it("Empfänger-Modus: hebt nur den Empfänger an und lässt die Metadaten unter dem Logo", () => {
     const k = createKunde({ typ: "firma", firmenname: "Oben GmbH", kuerzel: "OBE" });
     const r = createRechnung({ kundeId: k.id, titel: "Oben-Test",
       positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19 }] });
     const standard = rechnungDocDef({ rechnung: r, kunde: k, firma: loadFirmaForPdf(), logoDataUrl: null }) as any;
     const oben = rechnungDocDef({ rechnung: r, kunde: k, firma: loadFirmaForPdf(), logoDataUrl: null, empfaengerOben: true }) as any;
 
-    expect(standard.content[0].margin).toEqual([0, 0, 0, 0]);
-    expect(oben.content[0].margin).toEqual([0, -40, 0, 0]);
-    expect(standard.content[1].margin[1]).toBe(30);
-    expect(oben.content[1].margin[1]).toBe(70);
+    expect(standard.content[0].columns[0].margin).toEqual([0, 0, 0, 0]);
+    expect(oben.content[0].columns[0].margin).toEqual([0, -40, 0, 0]);
+    expect(oben.content[0].columns[1].margin).toEqual(standard.content[0].columns[1].margin);
+    expect(standard.content[1].margin[1]).toBe(45);
+    expect(oben.content[1].margin[1]).toBe(45);
     expect(oben.content[3].stack[0].table.widths).toEqual(standard.content[3].stack[0].table.widths);
   });
 
