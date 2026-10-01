@@ -222,7 +222,7 @@ function absenderzeile(f: Firmendaten) {
 
 const ABSENDER_BREITE = 230;
 const ABSENDER_SCHRIFT_MAX = 8;
-const ABSENDER_SCHRIFT_MIN = 5.5;
+const ABSENDER_SCHRIFT_MIN = 3;
 
 /**
  * Hält die Absenderzeile sicher innerhalb der linken Spalte. Die konservative

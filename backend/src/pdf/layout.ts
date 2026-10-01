@@ -84,7 +84,7 @@ function absenderzeile(f: FirmaForPdf): string {
 
 const ABSENDER_BREITE = 230;
 const ABSENDER_SCHRIFT_MAX = 8;
-const ABSENDER_SCHRIFT_MIN = 5.5;
+const ABSENDER_SCHRIFT_MIN = 3;
 
 /** Gleiche Einzeilen-Anpassung wie in der Browser-PDF-Vorlage. */
 function absenderSchriftgroesse(text: string): number {

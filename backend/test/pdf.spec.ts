@@ -152,7 +152,8 @@ describe("PDF-Rendering", () => {
     const absender = kundeSpalte.stack[0];
     expect(kundeSpalte.width).toBe(230);
     expect(absender.noWrap).toBe(true);
-    expect(absender.fontSize).toBe(5.5);
+    expect(absender.fontSize).toBeLessThan(5.5);
+    expect(absender.fontSize).toBeGreaterThanOrEqual(3);
   });
 
   it("Rechnung: nutzt gespeichertes Firmenlogo und ändert Cache-Hash bei Logo-Wechsel", async () => {
