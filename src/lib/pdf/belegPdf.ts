@@ -237,23 +237,6 @@ function header(firma: Firmendaten, logo: string | null) {
     margin: [55, 30, 55, 0] as [number, number, number, number],
     stack: [
       ...(logoNode ? [logoNode] : []),
-      {
-        columns: [
-          {
-            width: "*",
-            stack: [
-              {
-                text: absenderzeile(firma),
-                fontSize: 8,
-                color: COLOR_TEXT,
-                decoration: "underline",
-                margin: [0, 70, 0, 0],
-              },
-            ],
-          },
-          { width: 270, text: "" },
-        ],
-      },
     ],
   };
 }
@@ -284,8 +267,8 @@ function footer(firma: Firmendaten) {
               firma.strasse,
               [firma.plz, firma.ort].filter(Boolean).join(" ") || null,
             ]),
-            cell(["Bank", firma.bankName, firma.iban], "center"),
-            cell([firma.telefon, firma.mobil, firma.email], "center"),
+            cell(["Bankverbindung", firma.bankName, firma.iban], "left"),
+            cell([firma.telefon, firma.mobil, firma.email], "right"),
             cell(
               [
                 firma.handelsregister,
@@ -419,7 +402,7 @@ function leistungstabelle(
       bold: true,
       fontSize: 10,
       color: COLOR_TEXT,
-      alignment: "right",
+      alignment: "center",
       margin: [0, 6, 0, 6],
     },
   );
@@ -428,13 +411,13 @@ function leistungstabelle(
   positionen.forEach((p) => {
     const fallback = p.modus === "pauschal" ? "Pauschal" : "";
     const beschreibung = p.beschreibung || fallback;
-    const mittig = vertikalMittigMargin(beschreibung, showStunden ? 47 : 54);
+    const mittig = vertikalMittigMargin(beschreibung, showStunden ? 40 : 48);
     const row: unknown[] = [{ stack: [beschreibungBlock(beschreibung)], id: `pos:${p.id}` }];
     if (showStunden)
       row.push({ text: stundenText(p), fontSize: 10, alignment: "center", margin: mittig });
     row.push(
       { text: abrechnungsartText(p), fontSize: 10, alignment: "center", margin: mittig },
-      { text: eur(summe(p)), fontSize: 10, alignment: "right", margin: mittig },
+      { text: eur(summe(p)), fontSize: 10, alignment: "center", margin: mittig },
     );
     body.push(row);
   });
@@ -446,18 +429,18 @@ function leistungstabelle(
     body.push([
       { text: "Gesamtbetrag (netto)", colSpan: spanCols, fontSize: 10, bold: true },
       ...spanFiller,
-      { text: eur(totalsT.netto), fontSize: 10, alignment: "right", bold: true },
+      { text: eur(totalsT.netto), fontSize: 10, alignment: "center", bold: true },
     ]);
   } else {
     body.push([
       { text: `Zzgl. gesetzlicher Mehrwertsteuer ${steuersatz}%`, colSpan: spanCols, fontSize: 10 },
       ...spanFiller,
-      { text: eur(totalsT.steuer), fontSize: 10, alignment: "right" },
+      { text: eur(totalsT.steuer), fontSize: 10, alignment: "center" },
     ]);
     body.push([
       { text: "Gesamtbetrag inkl. MwSt.", colSpan: spanCols, fontSize: 10, bold: true },
       ...spanFiller,
-      { text: eur(totalsT.brutto), fontSize: 10, alignment: "right", bold: true },
+      { text: eur(totalsT.brutto), fontSize: 10, alignment: "center", bold: true },
     ]);
   }
 
@@ -474,8 +457,8 @@ function leistungstabelle(
   const summenBody = body.slice(body.length - summenZeilen);
 
   const tableLayout = {
-    hLineWidth: () => 0.6,
-    vLineWidth: () => 0.6,
+    hLineWidth: () => 0.8,
+    vLineWidth: () => 0.8,
     hLineColor: () => COLOR_TEXT,
     vLineColor: () => COLOR_TEXT,
     paddingTop: () => 8,
@@ -728,6 +711,15 @@ async function buildDoc(
     id: "kunde",
     width: "*",
     stack: [
+      // Absenderzeile: feste Position, gleiche Höhe wie die erste Zeile der
+      // Meta-Box rechts. Empfängerzeilen wachsen nur darunter nach unten.
+      {
+        text: absenderzeile(ctx.firma),
+        fontSize: 8,
+        color: COLOR_TEXT,
+        decoration: "underline",
+        margin: [0, 4, 0, 8],
+      },
       ...(ctx.empfaengerZeilen
         ? ctx.empfaengerZeilen
         : kundeAdresse(
