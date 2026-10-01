@@ -7,6 +7,7 @@ import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.
 import type { FirmaForPdf } from "./types.js";
 import { DEFAULT_FONT } from "./printer.js";
 import { descriptionLines, inlineText, plainText } from "./inlineFormat.js";
+import { LEERER_PLAN, MARKER_ENDE, markerId, rasterExtra, type LinienMesser, type RasterPlan } from "./linienRaster.js";
 
 const COLOR_TEXT = "#000000";
 const COLOR_MUTED = "#555555";
@@ -199,7 +200,24 @@ function vertikalMittigMargin(text: string, charsPerLine: number): [number, numb
   return [0, Math.max(0, Math.round(((anzahl - 1) * 12.5) / 2)), 0, 0];
 }
 
-function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false) {
+/** Raster-Optionen: Plan aus einer Vormessung + Messer für den aktuellen Durchlauf. */
+export interface RasterOptionen {
+  plan: RasterPlan;
+  messer?: LinienMesser;
+}
+
+const LINIE = 0.8;
+const PAD_POS = 8;
+const PAD_SUM = 6;
+
+function marginTop(cell: unknown): number {
+  const m = (cell as { margin?: unknown })?.margin;
+  return Array.isArray(m) && typeof m[1] === "number" ? m[1] : 0;
+}
+
+function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false, raster?: RasterOptionen) {
+  const plan = raster?.plan ?? LEERER_PLAN;
+  const messer = raster?.messer;
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
 
@@ -229,6 +247,13 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
     body.push(row);
   });
 
+  // Messpunkte: letzte Zelle jeder Zeile (Preis). Abstand Linie → Text.
+  body.forEach((row, i) => {
+    const cell = row[row.length - 1] as Record<string, unknown>;
+    cell.id = markerId("p", i);
+    if (messer) messer.offsets[markerId("p", i)] = LINIE + PAD_POS + rasterExtra(plan, "p", i) / 2 + marginTop(cell);
+  });
+
   const spanCols = colCount - 1;
   const spanFiller = Array.from({ length: spanCols - 1 }, () => ({}));
 
@@ -249,12 +274,13 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       // Der Summenblock zeichnet die gemeinsame Kante. So wird die Linie
       // über der Mehrwertsteuer nicht durch zwei Tabellen doppelt gezeichnet.
       hLineWidth: (i: number, node: { table: { body: unknown[][] } }) =>
-        i === node.table.body.length ? 0 : 0.8,
-      vLineWidth: () => 0.8,
+        i === node.table.body.length ? 0 : LINIE,
+      vLineWidth: () => LINIE,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      paddingTop: () => 8,
-      paddingBottom: () => 8,
+      // Zusatzabstand je Zeile (Linien-Raster), je zur Hälfte oben/unten.
+      paddingTop: (i: number) => PAD_POS + rasterExtra(plan, "p", i) / 2,
+      paddingBottom: (i: number) => PAD_POS + rasterExtra(plan, "p", i) / 2,
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },
@@ -281,6 +307,16 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
         ],
       ];
 
+  summenBody.forEach((row, i) => {
+    const cell = row[row.length - 1] as Record<string, unknown>;
+    cell.id = markerId("s", i);
+    if (messer) messer.offsets[markerId("s", i)] = LINIE + PAD_SUM + rasterExtra(plan, "s", i) / 2 + marginTop(cell);
+  });
+  if (messer) {
+    messer.zeilen.p = body.length;
+    messer.zeilen.s = summenBody.length;
+  }
+
   const summenTabelle = {
     table: {
       // Summenblock soll nicht durch Seitenumbruch zerschnitten werden.
@@ -289,19 +325,19 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       body: summenBody,
     },
     layout: {
-      hLineWidth: () => 0.8,
-      vLineWidth: () => 0.8,
+      hLineWidth: () => LINIE,
+      vLineWidth: () => LINIE,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      // Kompakter wie in der Referenzrechnung.
-      paddingTop: () => 6,
-      paddingBottom: () => 6,
+      // Kompakter wie in der Referenzrechnung (+ Zusatzabstand Linien-Raster).
+      paddingTop: (i: number) => PAD_SUM + rasterExtra(plan, "s", i) / 2,
+      paddingBottom: (i: number) => PAD_SUM + rasterExtra(plan, "s", i) / 2,
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },
   };
 
-  return { stack: [positionsTabelle, summenTabelle] };
+  return { margin: [0, plan.shift, 0, 0], stack: [positionsTabelle, summenTabelle] };
 }
 
 /** Zusätzliche Luft über „Bei Zahlung bitte“ (pt). MUSS in beiden Vorlagen gleich sein. */
@@ -488,9 +524,13 @@ interface BuildArgs {
   eigeneAnrede?: string;
   /** Manuell geschriebener Empfängerblock — ersetzt den automatischen Aufbau. */
   empfaengerZeilen?: string[];
+  raster?: RasterOptionen;
 }
 
+const OUTRO_ABSTAND = 16;
+
 function buildDoc(args: BuildArgs) {
+  if (args.raster?.messer) args.raster.messer.offsets[MARKER_ENDE] = LINIE + OUTRO_ABSTAND;
   const t = totals(args.positionen, args.rabattGesamt, args.steuersatz);
   const signatur = signaturFromFirma(args.firma);
   return {
@@ -499,6 +539,7 @@ function buildDoc(args: BuildArgs) {
     defaultStyle: { font: DEFAULT_FONT, fontSize: 10, color: COLOR_TEXT, lineHeight: 1.25 },
     header: header(args.firma, args.logoDataUrl),
     footer: footer(args.firma),
+    ...(args.raster?.messer ? { pageBreakBefore: args.raster.messer.pageBreakBefore } : {}),
     content: [
       {
         columns: [
@@ -533,10 +574,10 @@ function buildDoc(args: BuildArgs) {
           { text: inlineText(args.intro), margin: [0, 0, 0, 14] },
         ],
       },
-      leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true),
+      leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true, args.raster),
       {
         stack: [
-          { text: inlineText(args.outro), margin: [0, 16, 0, 0] },
+          { text: inlineText(args.outro), margin: [0, OUTRO_ABSTAND, 0, 0], id: MARKER_ENDE },
           { text: "Mit freundlichen Grüßen", margin: [0, 18, 0, 0] },
           ...signatur.map((s) => ({ text: s, margin: [0, 0, 0, 0], color: COLOR_TEXT })),
         ],
@@ -553,6 +594,7 @@ export function angebotDocDef(args: {
   ansprechpartner?: ApiAnsprechpartner;
   objekt?: ApiObjekt | null;
   logoDataUrl: string | null;
+  raster?: RasterOptionen;
 }) {
   const { angebot, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
   const opts = (angebot.optionen ?? {}) as {
@@ -589,6 +631,7 @@ export function angebotDocDef(args: {
     steuersatz: angebot.steuersatz,
     nurNetto: true,
     intro, outro,
+    raster: args.raster,
   });
 }
 
@@ -599,6 +642,7 @@ export function rechnungDocDef(args: {
   ansprechpartner?: ApiAnsprechpartner;
   objekt?: ApiObjekt | null;
   logoDataUrl: string | null;
+  raster?: RasterOptionen;
 }) {
   const { rechnung, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
   const opts = (rechnung.optionen ?? {}) as {
@@ -640,5 +684,6 @@ export function rechnungDocDef(args: {
     rabattGesamt: rechnung.rabattGesamt,
     steuersatz: rechnung.steuersatz,
     intro, outro,
+    raster: args.raster,
   });
 }
