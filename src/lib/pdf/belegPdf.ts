@@ -412,12 +412,11 @@ function leistungstabelle(
   const colCount = showStunden ? 4 : 3;
 
   const headerRow: unknown[] = [
-    { text: "Leistung", bold: true, fontSize: 10, color: COLOR_TEXT, margin: [0, 6, 0, 6] },
+    { text: "Leistung", fontSize: 10, color: COLOR_TEXT, margin: [0, 6, 0, 6] },
   ];
   if (showStunden) {
     headerRow.push({
       text: "Stunden",
-      bold: true,
       fontSize: 10,
       color: COLOR_TEXT,
       alignment: "center",
@@ -427,7 +426,6 @@ function leistungstabelle(
   headerRow.push(
     {
       text: "Abrechnungsart",
-      bold: true,
       fontSize: 10,
       color: COLOR_TEXT,
       alignment: "center",
@@ -435,7 +433,6 @@ function leistungstabelle(
     },
     {
       text: "Preis (netto)",
-      bold: true,
       fontSize: 10,
       color: COLOR_TEXT,
       alignment: "center",
@@ -610,7 +607,7 @@ function metaBox(
   });
   return {
     id: "meta",
-    width: 235,
+    width: 210,
     // Rahmen-Oberkante rückt um META_LUFT_OBEN nach oben, der Text bleibt exakt
     // an seiner Stelle und die Gesamthöhe im Fluss ist unverändert.
     margin: [0, -META_LUFT_OBEN, 0, 0],
@@ -654,6 +651,10 @@ interface BuildOptions {
   intro?: string;
   outro?: string;
   materialBereitgestellt?: boolean;
+}
+
+export interface PdfLayoutOptions {
+  empfaengerOben?: boolean;
 }
 
 export function defaultIntroAngebot(a: Angebot, opts: BuildOptions = {}) {
@@ -773,6 +774,7 @@ async function buildDoc(
   raster?: RasterOptionen,
   /** Bereits geladenes Logo (spart erneutes Laden bei mehreren Durchläufen). */
   vorgeladenesLogo?: string | null,
+  layoutOptionen: PdfLayoutOptions = {},
 ) {
   const logo =
     vorgeladenesLogo !== undefined ? vorgeladenesLogo : await resolveLogo(ctx.firma, logoOverride);
@@ -792,7 +794,7 @@ async function buildDoc(
         fontSize: absenderSchriftgroesse(absender),
         color: COLOR_TEXT,
         decoration: "underline",
-        margin: [0, 4, 0, 8],
+        margin: [0, 6, 0, 8],
         noWrap: true,
       },
       ...(ctx.empfaengerZeilen
@@ -819,12 +821,12 @@ async function buildDoc(
     pageBreakBefore,
     content: [
       {
-        margin: [0, 0, 0, 0],
+        margin: [0, layoutOptionen.empfaengerOben ? -40 : 0, 0, 0],
         columns: [
           kundeColumn,
           metaBox(meta, metaVariant, metaNote),
         ],
-        columnGap: 20,
+        columnGap: metaVariant === "box" ? 45 : 20,
       },
       {
         id: "titel",
@@ -834,7 +836,7 @@ async function buildDoc(
         color: COLOR_TEXT,
         // Die kleinere Rechnungsüberschrift verändert die nachfolgenden
         // Positionen nicht: ihre geringere Zeilenhöhe wird unten ausgeglichen.
-        margin: [0, 30, 0, istRechnung ? 17.75 : 14],
+        margin: [0, layoutOptionen.empfaengerOben ? 70 : 30, 0, istRechnung ? 17.75 : 14],
       },
       {
         stack: [
@@ -938,9 +940,10 @@ export async function generateAngebotPdf(
   firma: Firmendaten,
   ansprechpartner?: Ansprechpartner,
   objekt?: Objekt | null,
+  layoutOptionen: PdfLayoutOptions = {},
 ): Promise<PdfBuildResult> {
   const cacheKey =
-    "a:" + angebot.id + ":" + semanticPdfKey([angebot, kunde, firma, ansprechpartner ?? null, objekt ?? null]);
+    "a:" + angebot.id + ":" + semanticPdfKey([angebot, kunde, firma, ansprechpartner ?? null, objekt ?? null, layoutOptionen]);
   const cached = lruGet(cacheKey);
   if (cached) return cached;
   const meta = [
@@ -983,6 +986,7 @@ export async function generateAngebotPdf(
     pageBreakBefore,
     raster,
     logo,
+    layoutOptionen,
   ));
   lruSet(cacheKey, out);
   return out;
@@ -994,12 +998,17 @@ export async function generateRechnungPdf(
   firma: Firmendaten,
   ansprechpartner?: Ansprechpartner,
   objekt?: Objekt | null,
+  layoutOptionen: PdfLayoutOptions = {},
 ): Promise<PdfBuildResult> {
   const cacheKey =
-    "r:" + rechnung.id + ":" + semanticPdfKey([rechnung, kunde, firma, ansprechpartner ?? null, objekt ?? null]);
+    "r:" + rechnung.id + ":" + semanticPdfKey([rechnung, kunde, firma, ansprechpartner ?? null, objekt ?? null, layoutOptionen]);
   const cached = lruGet(cacheKey);
   if (cached) return cached;
-  const meta = [{ label: "Rechnungsdatum:", wert: dt(rechnung.rechnungsdatum) }];
+  const meta = [
+    { label: "Kundennummer:", wert: kunde.nummer },
+    { label: "Rechnung-Nr.:", wert: rechnung.nummer },
+    { label: "Rechnungsdatum:", wert: dt(rechnung.rechnungsdatum) },
+  ];
   const opts: BuildOptions = {
     intro: rechnung.optionen?.eigenesIntro || rechnung.introText,
     outro: rechnung.optionen?.eigenesOutro || rechnung.outroText,
@@ -1047,6 +1056,7 @@ export async function generateRechnungPdf(
     pageBreakBefore,
     raster,
     logo,
+    layoutOptionen,
   ));
   lruSet(cacheKey, out);
   return out;

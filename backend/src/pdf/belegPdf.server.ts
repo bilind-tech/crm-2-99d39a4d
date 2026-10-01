@@ -11,6 +11,8 @@ import { computeHash, invalidate, invalidateAll, logoFingerprint, readCached, wr
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
 import type { ApiAngebot, ApiRechnung } from "../belege/mappers.js";
 import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.js";
+import { getSetting } from "../settings/store.js";
+import type { PdfVorlageSettings } from "../settings/schemas.js";
 
 function safe(s: string): string {
   return s.replace(/[^\p{L}\p{N}\- _]/gu, "").replace(/\s+/g, " ").trim();
@@ -91,14 +93,15 @@ export async function renderAngebotPdf(angebotId: string): Promise<RenderResult 
   const obj: ApiObjekt | null = a.objektId ? (getObjekt(a.objektId) ?? null) : null;
   const firma = loadFirmaForPdf();
   const logoDataUrl = loadLogoDataUrl();
-  const hash = computeHash({ beleg: a, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoFingerprint: logoFingerprint(logoDataUrl) });
+  const pdfVorlage = getSetting<PdfVorlageSettings>("pdfVorlage") ?? { empfaengerOben: false };
+  const hash = computeHash({ beleg: a, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoFingerprint: logoFingerprint(logoDataUrl), pdfVorlage });
   const dateiname = dateinameAngebot(a, k);
 
   const cached = readCached("angebot", a.id, hash);
   if (cached) return { buffer: cached, hash, dateiname, fromCache: true };
 
   const buffer = await renderMitRaster((raster) =>
-    angebotDocDef({ angebot: a, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoDataUrl, raster }),
+    angebotDocDef({ angebot: a, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoDataUrl, raster, empfaengerOben: pdfVorlage.empfaengerOben }),
   );
   writeCached("angebot", a.id, hash, buffer);
   return { buffer, hash, dateiname, fromCache: false };
@@ -115,14 +118,15 @@ export async function renderRechnungPdf(rechnungId: string): Promise<RenderResul
   const obj: ApiObjekt | null = r.objektId ? (getObjekt(r.objektId) ?? null) : null;
   const firma = loadFirmaForPdf();
   const logoDataUrl = loadLogoDataUrl();
-  const hash = computeHash({ beleg: r, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoFingerprint: logoFingerprint(logoDataUrl) });
+  const pdfVorlage = getSetting<PdfVorlageSettings>("pdfVorlage") ?? { empfaengerOben: false };
+  const hash = computeHash({ beleg: r, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoFingerprint: logoFingerprint(logoDataUrl), pdfVorlage });
   const dateiname = dateinameRechnung(r, k);
 
   const cached = readCached("rechnung", r.id, hash);
   if (cached) return { buffer: cached, hash, dateiname, fromCache: true };
 
   const buffer = await renderMitRaster((raster) =>
-    rechnungDocDef({ rechnung: r, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoDataUrl, raster }),
+    rechnungDocDef({ rechnung: r, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoDataUrl, raster, empfaengerOben: pdfVorlage.empfaengerOben }),
   );
   writeCached("rechnung", r.id, hash, buffer);
   return { buffer, hash, dateiname, fromCache: false };

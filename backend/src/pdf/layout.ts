@@ -231,14 +231,14 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
   const colCount = showStunden ? 4 : 3;
 
   const headerRow: unknown[] = [
-    { text: "Leistung", bold: true, fontSize: 10, color: COLOR_TEXT, margin: [0, 6, 0, 6] },
+    { text: "Leistung", fontSize: 10, color: COLOR_TEXT, margin: [0, 6, 0, 6] },
   ];
   if (showStunden) {
-    headerRow.push({ text: "Stunden", bold: true, fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] });
+    headerRow.push({ text: "Stunden", fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] });
   }
   headerRow.push(
-    { text: "Abrechnungsart", bold: true, fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] },
-    { text: "Preis (netto)", bold: true, fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] },
+    { text: "Abrechnungsart", fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] },
+    { text: "Preis (netto)", fontSize: 10, color: COLOR_TEXT, alignment: "center", margin: [0, 6, 0, 6] },
   );
 
   const body: unknown[][] = [headerRow];
@@ -374,7 +374,7 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
     ]);
   });
   return {
-    width: 235,
+    width: 210,
     // Rahmen-Oberkante rückt um META_LUFT_OBEN nach oben, der Text bleibt exakt
     // an seiner Stelle und die Gesamthöhe im Fluss ist unverändert.
     margin: [0, -META_LUFT_OBEN, 0, 0],
@@ -519,6 +519,7 @@ interface BuildArgs {
   /** Manuell geschriebener Empfängerblock — ersetzt den automatischen Aufbau. */
   empfaengerZeilen?: string[];
   raster?: RasterOptionen;
+  empfaengerOben?: boolean;
 }
 
 function buildDoc(args: BuildArgs) {
@@ -534,6 +535,7 @@ function buildDoc(args: BuildArgs) {
     footer: footer(args.firma),
     content: [
       {
+        margin: [0, args.empfaengerOben ? -40 : 0, 0, 0],
         columns: [
           {
             // Feste Breite hält die rechte Meta-Box auch bei `noWrap`
@@ -546,7 +548,7 @@ function buildDoc(args: BuildArgs) {
                 fontSize: absenderSchriftgroesse(absender),
                 color: COLOR_TEXT,
                 decoration: "underline",
-                margin: [0, 4, 0, 8],
+                margin: [0, 6, 0, 8],
                 noWrap: true,
               },
               ...(args.empfaengerZeilen
@@ -566,7 +568,7 @@ function buildDoc(args: BuildArgs) {
           },
           metaBox(args.meta, args.metaVariant, args.metaNote),
         ],
-        columnGap: 20,
+        columnGap: args.metaVariant === "box" ? 45 : 20,
       },
       {
         text: args.titel,
@@ -574,7 +576,7 @@ function buildDoc(args: BuildArgs) {
         bold: true,
         color: COLOR_TEXT,
         // Kleinere Schrift, aber identische Gesamthöhe dieses Abschnitts.
-        margin: [0, 30, 0, istRechnung ? 17.75 : 14],
+        margin: [0, args.empfaengerOben ? 70 : 30, 0, istRechnung ? 17.75 : 14],
       },
       {
         stack: [
@@ -603,6 +605,7 @@ export function angebotDocDef(args: {
   objekt?: ApiObjekt | null;
   logoDataUrl: string | null;
   raster?: RasterOptionen;
+  empfaengerOben?: boolean;
 }) {
   const { angebot, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
   const opts = (angebot.optionen ?? {}) as {
@@ -640,6 +643,7 @@ export function angebotDocDef(args: {
     nurNetto: true,
     intro, outro,
     raster: args.raster,
+    empfaengerOben: args.empfaengerOben,
   });
 }
 
@@ -651,6 +655,7 @@ export function rechnungDocDef(args: {
   objekt?: ApiObjekt | null;
   logoDataUrl: string | null;
   raster?: RasterOptionen;
+  empfaengerOben?: boolean;
 }) {
   const { rechnung, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
   const opts = (rechnung.optionen ?? {}) as {
@@ -674,6 +679,7 @@ export function rechnungDocDef(args: {
   const customOutro = opts.eigenesOutro || rechnung.outroText;
   const outro = customOutro ? customOutro : zahlungsSatz;
   const meta: { label: string; wert: string }[] = [
+    { label: "Kundennummer:", wert: kunde.nummer },
     { label: "Rechnung-Nr.:", wert: rechnung.nummer },
     { label: "Rechnungsdatum:", wert: dt(rechnung.rechnungsdatum) },
   ];
@@ -693,5 +699,6 @@ export function rechnungDocDef(args: {
     steuersatz: rechnung.steuersatz,
     intro, outro,
     raster: args.raster,
+    empfaengerOben: args.empfaengerOben,
   });
 }
