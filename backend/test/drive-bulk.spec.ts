@@ -14,7 +14,7 @@ const { createKunde } = await import("../src/kunden/repo.js");
 const { createAngebot } = await import("../src/belege/angebote-repo.js");
 const { createRechnung } = await import("../src/belege/rechnungen-repo.js");
 const { backfillOneDetailed } = await import("../src/drive/backfill.js");
-const { getBySha } = await import("../src/drive/upload-repo.js");
+const { getBySha, markErfolg, rescheduleKnownVersion, updateRenderedVersion } = await import("../src/drive/upload-repo.js");
 
 function ensureDir(p: string) {
   if (!existsSync(p)) mkdirSync(p, { recursive: true, mode: 0o700 });
@@ -55,5 +55,18 @@ describe("Drive-Sammelupload", () => {
       `SELECT beleg_art AS art, COUNT(*) AS n FROM drive_upload_queue WHERE beleg_id IN (?, ?) GROUP BY beleg_art`,
     ).all(rechnung.id, angebot.id) as { art: string; n: number }[];
     expect(counts).toEqual(expect.arrayContaining([{ art: "angebot", n: 1 }, { art: "rechnung", n: 1 }]));
+  });
+
+  it("kann bekannte Fassungen wieder einplanen und speichert den tatsächlich hochgeladenen Hash", async () => {
+    const rechnung = createRechnung({ kundeId, titel: "Wiederholung", positionen: [{ beschreibung: "R", menge: 1, einzelpreisNetto: 10 }] });
+    const first = await backfillOneDetailed("rechnung", rechnung.id);
+    const row = getBySha("rechnung", rechnung.id, first.pdfSha256 ?? "");
+    expect(row).not.toBeNull();
+    markErfolg(row!.id, "drive-file-1", "https://drive.test/file-1");
+    expect(rescheduleKnownVersion(row!.id)).toBe(true);
+    updateRenderedVersion(row!.id, "neuer-hash", "Neu.pdf");
+    const changed = getBySha("rechnung", rechnung.id, "neuer-hash");
+    expect(changed?.status).toBe("pending");
+    expect(changed?.driveFileId).toBe("drive-file-1");
   });
 });

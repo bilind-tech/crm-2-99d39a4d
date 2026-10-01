@@ -166,6 +166,15 @@ export function markErfolg(id: string, fileId: string, webLink?: string): void {
   });
 }
 
+/** Speichert die tatsächlich hochgeladene Fassung bei Änderungen während der Queue-Wartezeit. */
+export function updateRenderedVersion(id: string, pdfSha256: string, dateiName: string): void {
+  getDatabase().prepare(
+    `UPDATE drive_upload_queue
+        SET pdf_sha256=?, datei_name=?, geaendert_am=datetime('now')
+      WHERE id=?`,
+  ).run(pdfSha256, dateiName, id);
+}
+
 export function markFehler(id: string, error: string): void {
   const db = getDatabase();
   const cur = getById(id);
