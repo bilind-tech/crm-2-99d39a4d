@@ -1,8 +1,4 @@
-// pdfmake serverseitig: einmaliger PdfPrinter mit Standard-PDF-Schriften (Helvetica).
-// PDFKit liefert die 14 Standard-PDF-Fonts intern; kein VFS nötig.
-//
-// Hinweis: Im Frontend wird "Roboto" verwendet, im Backend "Helvetica".
-// Strukturelles Layout ist identisch — minimale Glyphen-Unterschiede sind akzeptabel.
+// pdfmake serverseitig: einmaliger PdfPrinter mit lokal mitgelieferter Roboto-Schrift.
 
 import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
@@ -32,6 +28,25 @@ function findMadani(): string | null {
 
 const MADANI_PATH = findMadani();
 
+function findRoboto(file: string): string | null {
+  const requireCjs = createRequire(import.meta.url);
+  try {
+    const packageJson = requireCjs.resolve("pdfmake/package.json");
+    const candidate = path.join(path.dirname(packageJson), "fonts", "Roboto", file);
+    return existsSync(candidate) ? candidate : null;
+  } catch {
+    return null;
+  }
+}
+
+const ROBOTO = {
+  normal: findRoboto("Roboto-Regular.ttf"),
+  bold: findRoboto("Roboto-Medium.ttf"),
+  italics: findRoboto("Roboto-Italic.ttf"),
+  bolditalics: findRoboto("Roboto-MediumItalic.ttf"),
+};
+const HAS_ROBOTO = Object.values(ROBOTO).every((value) => value !== null);
+
 /** Schriftfamilie für den Stundenzettel — fällt auf Helvetica zurück. */
 export const STUNDENZETTEL_FONT = MADANI_PATH ? "Madani" : "Helvetica";
 
@@ -43,6 +58,15 @@ const FONTS: Record<string, Record<string, string>> = {
     bolditalics: "Helvetica-BoldOblique",
   },
 };
+
+if (HAS_ROBOTO) {
+  FONTS.Roboto = {
+    normal: ROBOTO.normal as string,
+    bold: ROBOTO.bold as string,
+    italics: ROBOTO.italics as string,
+    bolditalics: ROBOTO.bolditalics as string,
+  };
+}
 
 if (MADANI_PATH) {
   // Die DEMO-Schrift hat nur einen Schnitt — bold/italic zeigen auf dieselbe Datei.
@@ -66,4 +90,4 @@ export function getPrinter(): AnyPrinter {
   return printerSingleton;
 }
 
-export const DEFAULT_FONT = "Helvetica";
+export const DEFAULT_FONT = HAS_ROBOTO ? "Roboto" : "Helvetica";

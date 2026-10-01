@@ -14,7 +14,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useKunde, useFirmendaten, useObjekt } from "@/hooks/useApi";
+import { useKunde, useFirmendaten, useObjekt, usePdfVorlage } from "@/hooks/useApi";
 import { generateAngebotPdf, generateRechnungPdf } from "@/lib/pdf/belegPdf";
 import { fetchBackendPdf } from "@/lib/pdf/backendPdf";
 import type { Angebot, Rechnung, Kunde, Firmendaten, Ansprechpartner, Objekt } from "@/lib/api/types";
@@ -52,6 +52,7 @@ function pdfDependencySignature(
   ansprechpartner: Ansprechpartner | undefined,
   objekt: Objekt | null | undefined,
   firma?: Firmendaten,
+  empfaengerOben = false,
 ): string {
   if (!beleg) return "noop";
   return [
@@ -88,6 +89,7 @@ function pdfDependencySignature(
     firma?.hasLogo ? "logo-ja" : "logo-nein",
     firma?.logoUpdatedAt ?? "",
     firma?.logoUrl ? firma.logoUrl.length.toString() : "",
+    empfaengerOben ? "empfaenger-oben" : "empfaenger-normal",
   ].join("|");
 }
 
@@ -109,11 +111,12 @@ async function buildAngebot(
   ansprechpartner?: Ansprechpartner,
   objekt?: Objekt | null,
   cacheBust?: string,
+  empfaengerOben = false,
 ): Promise<PdfData> {
   const backend = await fetchBackendPdf("angebot", angebot.id, undefined, cacheBust);
   if (backend) return { blob: backend.blob, fileName: backend.dateiname };
   const { blob } = await withTimeout(
-    generateAngebotPdf(angebot, kunde, firma, ansprechpartner, objekt ?? null),
+    generateAngebotPdf(angebot, kunde, firma, ansprechpartner, objekt ?? null, { empfaengerOben }),
     PDF_TIMEOUT_MS,
     "PDF-Erstellung",
   );
@@ -127,11 +130,12 @@ async function buildRechnung(
   ansprechpartner?: Ansprechpartner,
   objekt?: Objekt | null,
   cacheBust?: string,
+  empfaengerOben = false,
 ): Promise<PdfData> {
   const backend = await fetchBackendPdf("rechnung", rechnung.id, undefined, cacheBust);
   if (backend) return { blob: backend.blob, fileName: backend.dateiname };
   const { blob } = await withTimeout(
-    generateRechnungPdf(rechnung, kunde, firma, ansprechpartner, objekt ?? null),
+    generateRechnungPdf(rechnung, kunde, firma, ansprechpartner, objekt ?? null, { empfaengerOben }),
     PDF_TIMEOUT_MS,
     "PDF-Erstellung",
   );
@@ -189,18 +193,19 @@ interface UsePdfResult {
 export function useAngebotPdf(angebot?: Angebot): UsePdfResult {
   const { data: kunde } = useKunde(angebot?.kundeId ?? "");
   const { data: firma } = useFirmendaten();
+  const { data: pdfVorlage } = usePdfVorlage();
   const objektQuery = useObjekt(angebot?.objektId ?? "");
   const objekt = objektQuery.data ?? objektAusKunde(kunde, angebot?.objektId) ?? null;
   const ansprechpartner = (kunde as (Kunde & { ansprechpartner?: Ansprechpartner[] }) | undefined)
     ?.ansprechpartner?.find((a) => a.id === angebot?.ansprechpartnerId);
   const needsObjekt = !!angebot?.objektId;
   const objektReady = !needsObjekt || !!objekt || objektQuery.isError;
-  const enabled = !!angebot && !!kunde && !!firma && objektReady;
-  const dependencySignature = pdfDependencySignature(angebot, kunde, ansprechpartner, objekt, firma);
+  const enabled = !!angebot && !!kunde && !!firma && !!pdfVorlage && objektReady;
+  const dependencySignature = pdfDependencySignature(angebot, kunde, ansprechpartner, objekt, firma, pdfVorlage?.empfaengerOben);
 
   const query = useQuery({
     queryKey: angebot ? pdfQueryKey("angebot", angebot.id, dependencySignature) : ["pdf", "angebot", "noop"],
-    queryFn: () => buildAngebot(angebot!, kunde!, firma!, ansprechpartner, objekt ?? null, dependencySignature),
+    queryFn: () => buildAngebot(angebot!, kunde!, firma!, ansprechpartner, objekt ?? null, dependencySignature, pdfVorlage?.empfaengerOben),
     enabled,
     staleTime: Infinity,
     gcTime: 30 * 60 * 1000,
@@ -231,18 +236,19 @@ export function useAngebotPdf(angebot?: Angebot): UsePdfResult {
 export function useRechnungPdf(rechnung?: Rechnung): UsePdfResult {
   const { data: kunde } = useKunde(rechnung?.kundeId ?? "");
   const { data: firma } = useFirmendaten();
+  const { data: pdfVorlage } = usePdfVorlage();
   const objektQuery = useObjekt(rechnung?.objektId ?? "");
   const objekt = objektQuery.data ?? objektAusKunde(kunde, rechnung?.objektId) ?? null;
   const ansprechpartner = (kunde as (Kunde & { ansprechpartner?: Ansprechpartner[] }) | undefined)
     ?.ansprechpartner?.find((a) => a.id === rechnung?.ansprechpartnerId);
   const needsObjekt = !!rechnung?.objektId;
   const objektReady = !needsObjekt || !!objekt || objektQuery.isError;
-  const enabled = !!rechnung && !!kunde && !!firma && objektReady;
-  const dependencySignature = pdfDependencySignature(rechnung, kunde, ansprechpartner, objekt, firma);
+  const enabled = !!rechnung && !!kunde && !!firma && !!pdfVorlage && objektReady;
+  const dependencySignature = pdfDependencySignature(rechnung, kunde, ansprechpartner, objekt, firma, pdfVorlage?.empfaengerOben);
 
   const query = useQuery({
     queryKey: rechnung ? pdfQueryKey("rechnung", rechnung.id, dependencySignature) : ["pdf", "rechnung", "noop"],
-    queryFn: () => buildRechnung(rechnung!, kunde!, firma!, ansprechpartner, objekt ?? null, dependencySignature),
+    queryFn: () => buildRechnung(rechnung!, kunde!, firma!, ansprechpartner, objekt ?? null, dependencySignature, pdfVorlage?.empfaengerOben),
     enabled,
     staleTime: Infinity,
     gcTime: 30 * 60 * 1000,

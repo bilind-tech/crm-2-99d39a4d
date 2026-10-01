@@ -33,8 +33,9 @@ export function computeHash(parts: {
   ansprechpartner?: ApiAnsprechpartner;
   objekt?: ApiObjekt | null;
   logoFingerprint: string | null;
+  pdfVorlage?: { empfaengerOben?: boolean };
 }): string {
-  const { beleg, kunde, firma, ansprechpartner, objekt, logoFingerprint } = parts;
+  const { beleg, kunde, firma, ansprechpartner, objekt, logoFingerprint, pdfVorlage } = parts;
   const payload = {
     renderVersion: PDF_RENDER_CACHE_VERSION,
     nummer: beleg.nummer,
@@ -65,6 +66,7 @@ export function computeHash(parts: {
     obj: objekt ? { s: objekt.strasse, p: objekt.plz, o: objekt.ort, l: objekt.land } : null,
     firma,
     logo: logoFingerprint,
+    pdfVorlage: { empfaengerOben: pdfVorlage?.empfaengerOben === true },
   };
   return crypto.createHash("sha256").update(JSON.stringify(payload)).digest("hex").slice(0, 16);
 }

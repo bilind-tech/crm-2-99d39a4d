@@ -116,6 +116,7 @@ describe("PDF-Rendering", () => {
     expect(kundeSpalte.width).toBe(230);
     expect(absender.noWrap).toBe(true);
     expect(absender.fontSize).toBeLessThanOrEqual(8);
+    expect(absender.margin).toEqual([0, 0, 0, 8]);
     expect(titel.fontSize).toBe(19);
     expect(titel.margin).toEqual([0, 30, 0, 17.75]);
     expect(meta.layout.hLineWidth(0, meta)).toBe(0.6);
@@ -124,6 +125,9 @@ describe("PDF-Rendering", () => {
     // ohne dass sich der Kasten verschiebt (Ausgleich über negativen Rand).
     expect(meta.layout.paddingTop(0, meta)).toBe(11);
     expect(meta.margin[1]).toBe(-5);
+    expect(meta.width).toBe(210);
+    expect(doc.content[0].columnGap).toBe(45);
+    expect(meta.table.body.some((row: any[]) => row[0]?.text === "Kundennummer:" && row[1]?.text === k.nummer)).toBe(true);
 
     const positions = doc.content[3].stack[0];
     const summen = doc.content[3].stack[1];
@@ -134,6 +138,34 @@ describe("PDF-Rendering", () => {
     // Ohne Raster-Plan: Standard-Innenabstände.
     expect(summen.layout.paddingTop(0)).toBe(6);
     expect(summen.layout.paddingBottom(0)).toBe(6);
+    expect(positions.table.body[0].every((cell: { bold?: boolean }) => cell.bold !== true)).toBe(true);
+    expect(summen.table.body.at(-1)[0].bold).toBe(true);
+  });
+
+  it("Empfänger-Modus: hebt nur den Kopfbereich an und gleicht den Titelabstand aus", () => {
+    const k = createKunde({ typ: "firma", firmenname: "Oben GmbH", kuerzel: "OBE" });
+    const r = createRechnung({ kundeId: k.id, titel: "Oben-Test",
+      positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19 }] });
+    const standard = rechnungDocDef({ rechnung: r, kunde: k, firma: loadFirmaForPdf(), logoDataUrl: null }) as any;
+    const oben = rechnungDocDef({ rechnung: r, kunde: k, firma: loadFirmaForPdf(), logoDataUrl: null, empfaengerOben: true }) as any;
+
+    expect(standard.content[0].margin).toEqual([0, 0, 0, 0]);
+    expect(oben.content[0].margin).toEqual([0, -40, 0, 0]);
+    expect(standard.content[1].margin[1]).toBe(30);
+    expect(oben.content[1].margin[1]).toBe(70);
+    expect(oben.content[3].stack[0].table.widths).toEqual(standard.content[3].stack[0].table.widths);
+  });
+
+  it("PDF-Vorlageneinstellung ändert den Cache-Hash", async () => {
+    const k = createKunde({ typ: "firma", firmenname: "Cache Layout GmbH", kuerzel: "CLG" });
+    const r = createRechnung({ kundeId: k.id, titel: "Layout-Cache",
+      positionen: [{ beschreibung: "Service", menge: 1, einzelpreisNetto: 100, steuersatz: 19 }] });
+    setSetting("pdfVorlage", { empfaengerOben: false });
+    const normal = await renderRechnungPdf(r.id);
+    setSetting("pdfVorlage", { empfaengerOben: true });
+    const oben = await renderRechnungPdf(r.id);
+    expect(oben?.hash).not.toBe(normal?.hash);
+    expect(oben?.fromCache).toBe(false);
   });
 
   it("Absenderzeile: bleibt bei langen Firmendaten einzeilig und wird passend verkleinert", () => {
