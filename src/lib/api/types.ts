@@ -697,6 +697,10 @@ export interface AppearanceEinstellungen {
   akzentfarbe: string; // hex
 }
 
+export interface PdfVorlageEinstellungen {
+  empfaengerOben: boolean;
+}
+
 export interface BackupEinstellungen {
   autoBackup: boolean;
   zeitpunkt: string; // "03:00"

@@ -32,6 +32,7 @@ import type {
   Nummernkreise,
   Objekt,
   Positionsvorlage,
+  PdfVorlageEinstellungen,
   Rechnung,
   SicherheitsEinstellungen,
   SmtpEinstellungen,
@@ -70,6 +71,7 @@ export const qk = {
     nummernkreise: ["einstellungen", "nummernkreise"] as const,
     sicherheit: ["einstellungen", "sicherheit"] as const,
     erscheinung: ["einstellungen", "erscheinung"] as const,
+    pdfVorlage: ["einstellungen", "pdfVorlage"] as const,
     backup: ["einstellungen", "backup"] as const,
     backupHistorie: ["einstellungen", "backup", "historie"] as const,
     googleDrive: ["einstellungen", "googleDrive"] as const,
@@ -957,6 +959,23 @@ export const useUpdateErscheinung = () => {
     mutationFn: (data: Partial<AppearanceEinstellungen>) =>
       api.patch<AppearanceEinstellungen>("/einstellungen/erscheinung", data),
     onSuccess: () => qc.invalidateQueries({ queryKey: qk.einstellungen.erscheinung }),
+  });
+};
+
+export const usePdfVorlage = () =>
+  useQuery({
+    queryKey: qk.einstellungen.pdfVorlage,
+    queryFn: () => api.get<PdfVorlageEinstellungen>("/einstellungen/pdfVorlage"),
+  });
+export const useUpdatePdfVorlage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (data: Partial<PdfVorlageEinstellungen>) =>
+      api.patch<PdfVorlageEinstellungen>("/einstellungen/pdfVorlage", data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.einstellungen.pdfVorlage });
+      qc.invalidateQueries({ queryKey: ["pdf"] });
+    },
   });
 };
 

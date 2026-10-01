@@ -74,6 +74,11 @@ export const ErscheinungSchema = z.object({
   density: z.enum(["compact", "comfortable"]).default("comfortable"),
 });
 
+export const PdfVorlageSchema = z.object({
+  empfaengerOben: z.coerce.boolean().default(false),
+});
+export type PdfVorlageSettings = z.infer<typeof PdfVorlageSchema>;
+
 export const BackupPlanSchema = z.object({
   dailyEnabled: z.coerce.boolean().default(true),
   dailyAtHour: cInt(0, 23, 3),
@@ -184,6 +189,7 @@ export const AREAS: Record<string, Area> = {
   nummernkreise: { key: "nummernkreise", schema: NummernkreiseSchema, encrypted: false },
   sicherheit: { key: "sicherheit", schema: SicherheitSchema, encrypted: false },
   erscheinung: { key: "erscheinung", schema: ErscheinungSchema, encrypted: false },
+  pdfVorlage: { key: "pdfVorlage", schema: PdfVorlageSchema, encrypted: false },
   backup: { key: "backup", schema: BackupPlanSchema, encrypted: false },
   googleDrive: { key: "googleDrive", schema: GoogleDriveSchema, encrypted: false },
   mahnung: { key: "mahnung", schema: MahnungSchema, encrypted: false },
