@@ -223,7 +223,7 @@ export type { RasterOptionen };
 
 const LINIE = TABELLEN_LINIE;
 const PAD_POS = 5;
-const PAD_SUM = 5;
+const PAD_KOPF_SUMME = 7.5;
 
 function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false, raster?: RasterOptionen, istAngebot = false) {
   const plan = raster?.plan ?? LEERER_PLAN;
@@ -280,8 +280,11 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
       // Zusatzabstand je Zeile (Linien-Raster), je zur Hälfte oben/unten.
-      paddingTop: (i: number) => PAD_POS + rasterExtra(plan, "p", i) / 2,
-      paddingBottom: (i: number) => PAD_POS + rasterExtra(plan, "p", i) / 2 + rasterExtraUnten(plan, "p", i),
+      paddingTop: (i: number) => (i === 0 ? PAD_KOPF_SUMME : PAD_POS) + rasterExtra(plan, "p", i) / 2,
+      paddingBottom: (i: number) =>
+        (i === 0 ? PAD_KOPF_SUMME : PAD_POS) +
+        rasterExtra(plan, "p", i) / 2 +
+        rasterExtraUnten(plan, "p", i),
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },
@@ -322,9 +325,9 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       vLineWidth: () => LINIE,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      // Kompakter wie in der Referenzrechnung (+ Zusatzabstand Linien-Raster).
-      paddingTop: (i: number) => PAD_SUM + rasterExtra(plan, "s", i) / 2,
-      paddingBottom: (i: number) => PAD_SUM + rasterExtra(plan, "s", i) / 2,
+      // Luftig wie in der Referenzrechnung (+ Zusatzabstand Linien-Raster).
+      paddingTop: (i: number) => PAD_KOPF_SUMME + rasterExtra(plan, "s", i) / 2,
+      paddingBottom: (i: number) => PAD_KOPF_SUMME + rasterExtra(plan, "s", i) / 2,
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },

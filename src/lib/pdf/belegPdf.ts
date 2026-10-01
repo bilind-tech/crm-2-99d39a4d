@@ -408,7 +408,8 @@ function leistungstabelle(
   raster?: RasterOptionen,
   istAngebot = false,
 ) {
-  const kompakterInnenabstand = 5;
+  const positionsInnenabstand = 5;
+  const kopfUndSummenInnenabstand = 7.5;
   const plan = raster?.plan ?? LEERER_PLAN;
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
@@ -496,8 +497,12 @@ function leistungstabelle(
     hLineColor: () => COLOR_TEXT,
     vLineColor: () => COLOR_TEXT,
     // Zusatzabstand je Zeile (Linien-Raster, siehe linienRaster.ts), je zur Hälfte oben/unten.
-    paddingTop: (i: number) => kompakterInnenabstand + rasterExtra(plan, "p", i) / 2,
-    paddingBottom: (i: number) => kompakterInnenabstand + rasterExtra(plan, "p", i) / 2 + rasterExtraUnten(plan, "p", i),
+    paddingTop: (i: number) =>
+      (i === 0 ? kopfUndSummenInnenabstand : positionsInnenabstand) + rasterExtra(plan, "p", i) / 2,
+    paddingBottom: (i: number) =>
+      (i === 0 ? kopfUndSummenInnenabstand : positionsInnenabstand) +
+      rasterExtra(plan, "p", i) / 2 +
+      rasterExtraUnten(plan, "p", i),
     paddingLeft: () => 8,
     paddingRight: () => 8,
   };
@@ -524,8 +529,8 @@ function leistungstabelle(
     },
     layout: {
       ...tableLayout,
-      paddingTop: (i: number) => kompakterInnenabstand + rasterExtra(plan, "s", i) / 2,
-      paddingBottom: (i: number) => kompakterInnenabstand + rasterExtra(plan, "s", i) / 2,
+      paddingTop: (i: number) => kopfUndSummenInnenabstand + rasterExtra(plan, "s", i) / 2,
+      paddingBottom: (i: number) => kopfUndSummenInnenabstand + rasterExtra(plan, "s", i) / 2,
     },
   };
 
