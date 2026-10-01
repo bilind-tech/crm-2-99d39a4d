@@ -474,7 +474,13 @@ function leistungstabelle(
       body: positionsBody,
       heights: (row: number) => (row === 0 ? 22 : undefined),
     },
-    layout: tableLayout,
+    layout: {
+      ...tableLayout,
+      // Der Summenblock zeichnet die gemeinsame Kante. So liegt an dieser
+      // Stelle nicht die Abschlusslinie der Leistungstabelle doppelt darüber.
+      hLineWidth: (i: number, node: { table: { body: unknown[][] } }) =>
+        i === node.table.body.length ? 0 : 0.8,
+    },
   };
   const summenTabelle = {
     table: {
@@ -482,7 +488,12 @@ function leistungstabelle(
       widths,
       body: summenBody,
     },
-    layout: tableLayout,
+    layout: {
+      ...tableLayout,
+      // Die kompakteren Summenzeilen entsprechen der Referenzrechnung.
+      paddingTop: () => 6,
+      paddingBottom: () => 6,
+    },
   };
 
   return {
@@ -567,17 +578,19 @@ function metaBox(
         i === 0 || i === node.table.widths.length ? 0.6 : 0,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      // Mehr Luft direkt am Außenrahmen, bei identischer Gesamthöhe des Blocks.
+       // Mehr Luft über dem Zahlungshinweis, bei identischer Gesamthöhe des Blocks.
       paddingTop: (i: number, node: { table: { body: unknown[][] } }) => {
         const last = node.table.body.length - 1;
-        if (i === 0) return 4;
-        if (i === 1 || i === last) return 1;
+         if (i === 0) return 6;
+         if (i === 1) return 0;
+         if (i === last) return 1;
         return 2;
       },
       paddingBottom: (i: number, node: { table: { body: unknown[][] } }) => {
         const last = node.table.body.length - 1;
         if (i === last) return 4;
-        if (i === 0 || i === last - 1) return 1;
+         if (i === 0) return 0;
+         if (i === last - 1) return 1;
         return 2;
       },
       paddingLeft: () => 8,

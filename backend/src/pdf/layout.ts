@@ -242,7 +242,10 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       heights: (row: number) => (row === 0 ? 22 : undefined),
     },
     layout: {
-      hLineWidth: () => 0.8,
+      // Der Summenblock zeichnet die gemeinsame Kante. So wird die Linie
+      // über der Mehrwertsteuer nicht durch zwei Tabellen doppelt gezeichnet.
+      hLineWidth: (i: number, node: { table: { body: unknown[][] } }) =>
+        i === node.table.body.length ? 0 : 0.8,
       vLineWidth: () => 0.8,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
@@ -286,8 +289,9 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       vLineWidth: () => 0.8,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      paddingTop: () => 8,
-      paddingBottom: () => 8,
+      // Kompakter wie in der Referenzrechnung.
+      paddingTop: () => 6,
+      paddingBottom: () => 6,
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },
@@ -346,17 +350,19 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
       vLineWidth: (i: number, node: { table: { widths: unknown[] } }) => (i === 0 || i === node.table.widths.length ? 0.6 : 0),
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      // Mehr Luft direkt am Außenrahmen, bei identischer Gesamthöhe des Blocks.
+      // Mehr Luft über dem Zahlungshinweis, bei identischer Gesamthöhe des Blocks.
       paddingTop: (i: number, node: { table: { body: unknown[][] } }) => {
         const last = node.table.body.length - 1;
-        if (i === 0) return 4;
-        if (i === 1 || i === last) return 1;
+        if (i === 0) return 6;
+        if (i === 1) return 0;
+        if (i === last) return 1;
         return 2;
       },
       paddingBottom: (i: number, node: { table: { body: unknown[][] } }) => {
         const last = node.table.body.length - 1;
         if (i === last) return 4;
-        if (i === 0 || i === last - 1) return 1;
+        if (i === 0) return 0;
+        if (i === last - 1) return 1;
         return 2;
       },
       paddingLeft: () => 8,
