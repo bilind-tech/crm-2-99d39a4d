@@ -102,6 +102,16 @@ export function getLatestErfolg(belegArt: BelegArt, belegId: string): DriveUploa
   return r ? map(r) : null;
 }
 
+/** Aktueller Queue-Eintrag für exakt diese gerenderte Fassung. */
+export function getBySha(belegArt: BelegArt, belegId: string, pdfSha256: string): DriveUpload | null {
+  const r = getDatabase().prepare(
+    `SELECT * FROM drive_upload_queue
+     WHERE beleg_art = ? AND beleg_id = ? AND pdf_sha256 = ?
+     ORDER BY erstellt_am DESC LIMIT 1`,
+  ).get(belegArt, belegId, pdfSha256) as Row | undefined;
+  return r ? map(r) : null;
+}
+
 export interface ListFilter { status?: DriveUploadStatus; belegId?: string; belegArt?: BelegArt; limit?: number; offset?: number }
 export function listUploads(f: ListFilter = {}): DriveUpload[] {
   const where: string[] = []; const params: unknown[] = [];
@@ -156,6 +166,15 @@ export function markErfolg(id: string, fileId: string, webLink?: string): void {
   });
 }
 
+/** Speichert die tatsächlich hochgeladene Fassung bei Änderungen während der Queue-Wartezeit. */
+export function updateRenderedVersion(id: string, pdfSha256: string, dateiName: string): void {
+  getDatabase().prepare(
+    `UPDATE drive_upload_queue
+        SET pdf_sha256=?, datei_name=?, geaendert_am=datetime('now')
+      WHERE id=?`,
+  ).run(pdfSha256, dateiName, id);
+}
+
 export function markFehler(id: string, error: string): void {
   const db = getDatabase();
   const cur = getById(id);
@@ -185,5 +204,20 @@ export function retry(id: string): boolean {
   return getDatabase().prepare(
     `UPDATE drive_upload_queue SET status='pending', naechster_versuch_at=datetime('now'), geaendert_am=datetime('now')
      WHERE id=? AND status IN ('fehler','manuell','pending')`,
+  ).run(id).changes > 0;
+}
+
+/**
+ * Plant eine bereits bekannte PDF-Fassung erneut ein. Das ist insbesondere
+ * nötig, wenn ein Beleg zwischen zwei Fassungen wieder auf einen älteren
+ * Inhalt zurückgesetzt wurde. Die bestehende Zeile bleibt erhalten, damit
+ * ihre Drive-Datei beim Ersetzen weiterverwendet werden kann.
+ */
+export function rescheduleKnownVersion(id: string): boolean {
+  return getDatabase().prepare(
+    `UPDATE drive_upload_queue
+        SET status='pending', fehler_text=NULL, abgeschlossen_am=NULL,
+            naechster_versuch_at=datetime('now'), geaendert_am=datetime('now')
+      WHERE id=? AND status NOT IN ('pending','running')`,
   ).run(id).changes > 0;
 }

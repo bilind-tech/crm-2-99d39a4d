@@ -208,6 +208,7 @@ export function AngebotForm({ onClose, defaultKundeId, defaultObjektId }: Props)
           positionen={positionen}
           onChange={setPositionen}
           defaultSteuersatz={steuersatz}
+          belegArt="angebot"
         />
       </div>
 

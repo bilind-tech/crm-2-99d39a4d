@@ -56,7 +56,7 @@ export function EditorPanel({
           <StammdatenPanel kind={kind} draft={draft} kunde={kunde} set={set} setOption={setOption} />
         </TabsContent>
         <TabsContent value="positionen" className="m-0">
-          <PositionenPanel draft={draft} set={set} />
+          <PositionenPanel draft={draft} kind={kind} set={set} />
         </TabsContent>
         <TabsContent value="texte" className="m-0">
           <TexteOptionenPanel draft={draft} setOption={setOption} />

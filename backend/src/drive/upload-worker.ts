@@ -1,7 +1,7 @@
 // Drive-Worker: pollt drive_upload_queue und lädt PDFs / Dokumente hoch.
 import cron from "node-cron";
 import crypto from "node:crypto";
-import { claimDue, getLatestErfolg, markErfolg, markFehler, type DriveUpload } from "./upload-repo.js";
+import { claimDue, getLatestErfolg, markErfolg, markFehler, updateRenderedVersion, type DriveUpload } from "./upload-repo.js";
 import { renderAngebotPdf, renderRechnungPdf } from "../pdf/belegPdf.server.js";
 import {
   ensureFolderPath, uploadFile,
@@ -113,13 +113,11 @@ async function processBeleg(row: DriveUpload): Promise<void> {
     name: fileName,
     data: pdf.buffer,
     mimeType: "application/pdf",
-    replaceFileId: prev?.driveFileId ?? undefined,
+    replaceFileId: prev?.driveFileId ?? row.driveFileId ?? undefined,
   });
+  if (sha !== row.pdfSha256) updateRenderedVersion(row.id, sha, pdf.dateiname);
   markErfolg(row.id, out.id, out.webViewLink);
   setStatusOk();
-  if (sha !== row.pdfSha256) {
-    // PDF wurde zwischenzeitlich neu gerendert — nicht kritisch.
-  }
 }
 
 // ---------- Ordner-Spiegelung (Pfad-Helper) ----------

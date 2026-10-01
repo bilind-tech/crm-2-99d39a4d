@@ -402,6 +402,17 @@ export function localPreviewMutate<T>(method: string, path: string, body?: unkno
   if (method === "POST" && cleanPath === "/drive/uploads/enqueue") {
     return { ok: true } as T;
   }
+  if (method === "POST" && cleanPath === "/drive/uploads/bulk-status") {
+    const input = (body ?? {}) as { belegIds?: string[] };
+    return {
+      verbunden: previewGoogleDrive.verbunden,
+      items: (input.belegIds ?? []).map((belegId) => ({ belegId, status: "missing" })),
+    } as T;
+  }
+  if (method === "POST" && cleanPath === "/drive/uploads/bulk-enqueue") {
+    const input = (body ?? {}) as { belegIds?: string[] };
+    return { ok: true, total: input.belegIds?.length ?? 0, enqueued: input.belegIds?.length ?? 0, alreadyQueued: 0, alreadySynced: 0, failed: 0 } as T;
+  }
 
   if (method === "POST" && cleanPath === "/angebote") {
     const input = (body ?? {}) as Partial<Angebot>;

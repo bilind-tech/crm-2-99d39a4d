@@ -36,6 +36,7 @@ interface Props {
   positionen: PositionDraft[];
   onChange: (next: PositionDraft[]) => void;
   defaultSteuersatz?: number;
+  belegArt?: "angebot" | "rechnung";
 }
 
 const EINHEITEN: { value: Einheit; label: string }[] = [
@@ -84,6 +85,7 @@ export function PositionenEditor({
   positionen,
   onChange,
   defaultSteuersatz = 19,
+  belegArt = "rechnung",
 }: Props) {
   const totals = summen(positionen);
 
@@ -110,6 +112,7 @@ export function PositionenEditor({
             position={p}
             onChange={(patch) => update(i, patch)}
             onRemove={() => remove(i)}
+            belegArt={belegArt}
           />
         ))}
         {positionen.length === 0 && (
@@ -165,9 +168,10 @@ interface CardProps {
   position: PositionDraft;
   onChange: (patch: Partial<PositionDraft>) => void;
   onRemove: () => void;
+  belegArt: "angebot" | "rechnung";
 }
 
-function PositionCard({ index, position: p, onChange, onRemove }: CardProps) {
+function PositionCard({ index, position: p, onChange, onRemove, belegArt }: CardProps) {
   const istPauschal = p.modus === "pauschal";
   const istStunden = p.modus === "stunden";
 
@@ -207,7 +211,7 @@ function PositionCard({ index, position: p, onChange, onRemove }: CardProps) {
 
       <div className="mb-3">
         <label className="mb-1 block text-[11px] font-medium text-muted-foreground">
-          Abrechnungsart (Spalten-Text)
+          {belegArt === "angebot" ? "Ausführungen (Spalten-Text)" : "Abrechnungsart (Spalten-Text)"}
         </label>
         <Input
           value={p.abrechnungsartLabel}

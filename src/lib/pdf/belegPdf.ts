@@ -33,7 +33,7 @@ import {
 // Aufgabe. Hier vermeidet der LRU rein clientseitig wiederholtes pdfmake-
 // Rendern, wenn dieselbe Beleg-Version mehrfach geöffnet wird.
 const PDF_LRU_MAX = 50;
-const PDF_RENDER_VERSION = "2026-07-25-logo-spacing-v5";
+const PDF_RENDER_VERSION = "2026-10-01-document-layout-v6";
 const pdfLru = new Map<string, { blob: Blob; hotspots: RuntimeHotspot[] }>();
 
 const VOLATILE_PDF_KEYS = new Set([
@@ -283,10 +283,10 @@ function footer(firma: Firmendaten) {
     ) => ({
       stack: lines
         .filter(Boolean)
-        .map((l) => ({ text: l as string, fontSize: 7, color: COLOR_TEXT, alignment })),
+        .map((l) => ({ text: l as string, fontSize: 8, color: COLOR_TEXT, alignment })),
     });
     return {
-      margin: [55, 0, 55, 12] as [number, number, number, number],
+      margin: [55, 0, 55, 5] as [number, number, number, number],
       stack: [
         {
           canvas: [
@@ -302,7 +302,7 @@ function footer(firma: Firmendaten) {
               [firma.plz, firma.ort].filter(Boolean).join(" ") || null,
             ]),
             cell(["Bankverbindung", firma.bankName, firma.iban], "left"),
-            cell([firma.telefon, firma.mobil, firma.email], "right"),
+            cell([firma.telefon, firma.mobil, firma.email], "left"),
             cell(
               [
                 firma.handelsregister,
@@ -310,7 +310,7 @@ function footer(firma: Firmendaten) {
                 firma.webseite,
                 firma.geschaeftsfuehrer ? `Geschäftsführer: ${firma.geschaeftsfuehrer}` : null,
               ],
-              "right",
+              "left",
             ),
           ],
           columnGap: 12,
@@ -406,13 +406,14 @@ function leistungstabelle(
   steuersatz: number,
   nurNetto = false,
   raster?: RasterOptionen,
+  istAngebot = false,
 ) {
   const plan = raster?.plan ?? LEERER_PLAN;
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
 
   const headerRow: unknown[] = [
-    { text: "Leistung", fontSize: 10, color: COLOR_TEXT, margin: [0, 6, 0, 6] },
+    { text: "Leistung", fontSize: 10, color: COLOR_TEXT },
   ];
   if (showStunden) {
     headerRow.push({
@@ -420,23 +421,20 @@ function leistungstabelle(
       fontSize: 10,
       color: COLOR_TEXT,
       alignment: "center",
-      margin: [0, 6, 0, 6],
     });
   }
   headerRow.push(
     {
-      text: "Abrechnungsart",
+      text: istAngebot ? "Ausführungen" : "Abrechnungsart",
       fontSize: 10,
       color: COLOR_TEXT,
       alignment: "center",
-      margin: [0, 6, 0, 6],
     },
     {
       text: "Preis (netto)",
       fontSize: 10,
       color: COLOR_TEXT,
       alignment: "center",
-      margin: [0, 6, 0, 6],
     },
   );
 
@@ -508,7 +506,7 @@ function leistungstabelle(
       headerRows: 1,
       widths,
       body: positionsBody,
-      heights: (row: number) => (row === 0 ? 22 : undefined),
+      heights: (row: number) => (row === 0 ? 30 : undefined),
     },
     layout: {
       ...tableLayout,
@@ -523,12 +521,12 @@ function leistungstabelle(
       dontBreakRows: true,
       widths,
       body: summenBody,
+      heights: () => 30,
     },
     layout: {
       ...tableLayout,
-      // Die kompakteren Summenzeilen entsprechen der Referenzrechnung.
-      paddingTop: (i: number) => 6 + rasterExtra(plan, "s", i) / 2,
-      paddingBottom: (i: number) => 6 + rasterExtra(plan, "s", i) / 2,
+      paddingTop: (i: number) => 8 + rasterExtra(plan, "s", i) / 2,
+      paddingBottom: (i: number) => 8 + rasterExtra(plan, "s", i) / 2,
     },
   };
 
@@ -824,7 +822,7 @@ async function buildDoc(
   };
   return {
     pageSize: "A4" as const,
-    pageMargins: [55, 155, 55, 100] as [number, number, number, number],
+    pageMargins: [55, 155, 55, 105] as [number, number, number, number],
     defaultStyle: { font: "Roboto", fontSize: 10, color: COLOR_TEXT, lineHeight: 1.25 },
     header: header(ctx.firma, logo),
     footer: footer(ctx.firma),
@@ -840,29 +838,30 @@ async function buildDoc(
       {
         id: "titel",
         text: titel,
-        fontSize: istRechnung ? 19 : 22,
+        fontSize: istRechnung ? 17 : 20,
         bold: true,
         color: COLOR_TEXT,
         // Die kleinere Rechnungsüberschrift verändert die nachfolgenden
         // Positionen nicht: ihre geringere Zeilenhöhe wird unten ausgeglichen.
-        margin: [0, istRechnung ? 45 : 30, 0, istRechnung ? 17.75 : 14],
+        margin: [0, istRechnung ? 45 : 30, 0, istRechnung ? 20.25 : 16.5],
       },
       {
         stack: [
           {
             id: "anrede",
             text: anrede(ctx.kunde, ctx.ansprechpartner, ctx.eigeneAnrede),
+            fontSize: 11,
             margin: [0, 0, 0, 8],
           },
-          { id: "intro", text: inlineText(intro), margin: [0, 0, 0, 14] },
+          { id: "intro", text: inlineText(intro), fontSize: 11, margin: [0, 0, 0, 14] },
         ],
       },
-      leistungstabelle(beleg.positionen, t, beleg.steuersatz, beleg.nurNetto === true, raster),
+      leistungstabelle(beleg.positionen, t, beleg.steuersatz, beleg.nurNetto === true, raster, !istRechnung),
       {
         id: "outro",
         stack: [
-          { text: inlineText(outro), margin: [0, 16, 0, 0] },
-          { text: "Mit freundlichen Grüßen", margin: [0, 18, 0, 0] },
+          { text: inlineText(outro), fontSize: 11, margin: [0, 16, 0, 0] },
+          { text: "Mit freundlichen Grüßen", fontSize: 11, margin: [0, 18, 0, 0] },
           ...signatur.map((s) => ({ text: s, margin: [0, 0, 0, 0], color: COLOR_TEXT })),
         ],
         unbreakable: true,

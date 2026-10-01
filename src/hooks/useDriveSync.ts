@@ -2,11 +2,57 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api/client";
+import { errorToMessage } from "@/lib/api/piClient";
 
 export type OrdnerDriveStatusMap = Record<
   string,
   { status: "synced" | "pending" | "error" | "none"; error?: string; syncedAt?: string }
 >;
+
+export type BulkDriveItemStatus = "missing" | "pending" | "running" | "synced" | "error" | "not-found";
+export interface BulkDriveStatusResponse {
+  verbunden: boolean;
+  items: { belegId: string; status: BulkDriveItemStatus; currentSha?: string; error?: string }[];
+}
+
+export function useBulkDriveStatus(
+  belegArt: "angebot" | "rechnung",
+  belegIds: string[],
+) {
+  return useQuery({
+    queryKey: ["drive", "bulk-status", belegArt, belegIds] as const,
+    queryFn: () => api.post<BulkDriveStatusResponse>("/drive/uploads/bulk-status", { belegArt, belegIds }),
+    enabled: belegIds.length > 0,
+    staleTime: 3_000,
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      return items.some((item) => item.status === "pending" || item.status === "running") ? 4_000 : false;
+    },
+  });
+}
+
+export function useBulkDriveUpload() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { belegArt: "angebot" | "rechnung"; belegIds: string[] }) =>
+      api.post<{ ok: true; total: number; enqueued: number; alreadyQueued: number; alreadySynced: number; failed: number }>(
+        "/drive/uploads/bulk-enqueue",
+        input,
+      ),
+    onSuccess: (result, input) => {
+      if (result.failed > 0) {
+        toast.warning(`${result.failed} Beleg(e) konnten nicht vorbereitet werden`);
+      } else if (result.enqueued > 0 || result.alreadyQueued > 0) {
+        toast.success("Drive-Sicherung wurde gestartet");
+      } else {
+        toast.success("Alles ist bereits in Google Drive");
+      }
+      void qc.invalidateQueries({ queryKey: ["drive", "bulk-status", input.belegArt] });
+      void qc.invalidateQueries({ queryKey: ["drive", "uploads"] });
+    },
+    onError: (error) => toast.error(errorToMessage(error, "Drive-Sicherung konnte nicht gestartet werden")),
+  });
+}
 
 /** Retry-Upload für ein Dokument (oder Beleg) — enqueued neuen Versuch. */
 export function useDriveRetry() {

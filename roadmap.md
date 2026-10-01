@@ -18,3 +18,6 @@
 - [x] Belegnummer läuft pro Kunde und Belegart durchgehend weiter (kein Monats-Reset, Migration 043)
 - [x] Rechnungen und Angebote öffnen sich mit dem aktuellen Monat als Filter
 - [x] Rechnungs-Infokasten und Leistungstabelle gegen Referenzbilder vereinheitlichen und prüfen
+- [x] Rechnungs- und Angebots-PDF: Zeilenhöhen, Typografie, Footer und Angebots-Ausführungen verfeinern
+- [x] Gefilterte Rechnungen und Angebote gesammelt und statusgenau in Google Drive sichern
+- [x] PDF-, Drive-, Browser- und Update-Sicherheit vollständig prüfen
