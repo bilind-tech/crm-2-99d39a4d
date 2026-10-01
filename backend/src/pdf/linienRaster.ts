@@ -47,6 +47,8 @@ export const MARKER_ENDE = "__ln:ende";
 export function createLinienMesser() {
   const offsets: Record<string, number> = {};
   const hits = new Map<string, { page: number; top: number }>();
+  /** Anzahl Zeilen der Leistungstabelle (p) und des Summenblocks (s). */
+  const zeilen = { p: 0, s: 0 };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pageBreakBefore = (node: any): boolean => {
     try {
@@ -60,7 +62,7 @@ export function createLinienMesser() {
     }
     return false;
   };
-  return { offsets, hits, pageBreakBefore };
+  return { offsets, hits, zeilen, pageBreakBefore };
 }
 export type LinienMesser = ReturnType<typeof createLinienMesser>;
 
@@ -76,7 +78,10 @@ interface Linie {
   y: number;
 }
 
-function linienAusMessung(m: LinienMesser, zeilenP: number, zeilenS: number): Linie[] | null {
+function linienAusMessung(m: LinienMesser): Linie[] | null {
+  const zeilenP = m.zeilen.p;
+  const zeilenS = m.zeilen.s;
+  if (zeilenP <= 0 || zeilenS <= 0) return null;
   const ids: { id: string; key: string }[] = [];
   for (let i = 0; i < zeilenP; i++) ids.push({ id: markerId("p", i), key: `p:${i}` });
   for (let i = 0; i < zeilenS; i++) ids.push({ id: markerId("s", i), key: `s:${i}` });
@@ -92,8 +97,8 @@ function linienAusMessung(m: LinienMesser, zeilenP: number, zeilenS: number): Li
 }
 
 /** true, wenn alle gemessenen Linien exakt auf dem Raster liegen. */
-export function liegtImRaster(m: LinienMesser, zeilenP: number, zeilenS: number): boolean {
-  const linien = linienAusMessung(m, zeilenP, zeilenS);
+export function liegtImRaster(m: LinienMesser): boolean {
+  const linien = linienAusMessung(m);
   if (!linien) return true; // nichts messbar → nichts zu korrigieren
   return linien.every((l) => Math.abs(aufRaster(l.y) - l.y) < 0.01);
 }
@@ -104,11 +109,9 @@ export function liegtImRaster(m: LinienMesser, zeilenP: number, zeilenS: number)
  */
 export function verbessereRasterPlan(
   m: LinienMesser,
-  zeilenP: number,
-  zeilenS: number,
   bisher: RasterPlan,
 ): RasterPlan | null {
-  const linien = linienAusMessung(m, zeilenP, zeilenS);
+  const linien = linienAusMessung(m);
   if (!linien || linien.length === 0) return null;
   const plan: RasterPlan = { shift: bisher.shift, extra: { ...bisher.extra } };
   let verschiebung = 0;
