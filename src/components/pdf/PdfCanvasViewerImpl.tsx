@@ -12,6 +12,7 @@ import { Document, Page } from "react-pdf";
 import "react-pdf/dist/Page/AnnotationLayer.css";
 import "react-pdf/dist/Page/TextLayer.css";
 import { configurePdfWorker } from "@/lib/pdf/pdfjsWorker";
+import { aktuellesPixelVerhaeltnis, rasterGenaueBreite } from "@/lib/pdf/vorschauBreite";
 import { Loader2, AlertCircle, Download, ExternalLink, RefreshCw } from "lucide-react";
 
 configurePdfWorker();
@@ -99,9 +100,16 @@ export function PdfCanvasViewer({
     setAttempt(0);
   }, [pdfUrl, pdfBlob]);
 
+  // Bildschirm-Pixelverhältnis erst nach dem Laden lesen (kein Hydration-Mismatch).
+  const [pixelVerhaeltnis, setPixelVerhaeltnis] = useState(1);
+  useEffect(() => {
+    setPixelVerhaeltnis(aktuellesPixelVerhaeltnis());
+  }, [containerWidth]);
+
   const renderWidth = useMemo(
-    () => Math.min(Math.max(containerWidth - 16, 280), maxWidth),
-    [containerWidth, maxWidth],
+    () =>
+      rasterGenaueBreite(Math.min(Math.max(containerWidth - 16, 280), maxWidth), pixelVerhaeltnis),
+    [containerWidth, maxWidth, pixelVerhaeltnis],
   );
 
   const pages = useMemo(() => {
@@ -239,6 +247,7 @@ export function PdfCanvasViewer({
               <Page
                 pageNumber={pageNum}
                 width={renderWidth}
+                devicePixelRatio={pixelVerhaeltnis}
                 renderAnnotationLayer={false}
                 renderTextLayer={false}
               />

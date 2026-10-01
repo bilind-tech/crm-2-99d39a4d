@@ -7,7 +7,7 @@ import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.
 import type { FirmaForPdf } from "./types.js";
 import { DEFAULT_FONT } from "./printer.js";
 import { descriptionLines, inlineText, plainText } from "./inlineFormat.js";
-import { LEERER_PLAN, TABELLEN_LINIE, rasterExtra, type RasterOptionen } from "./linienRaster.js";
+import { LEERER_PLAN, TABELLEN_LINIE, rasterExtra, rasterExtraUnten, type RasterOptionen } from "./linienRaster.js";
 
 const COLOR_TEXT = "#000000";
 const COLOR_MUTED = "#555555";
@@ -241,10 +241,10 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
   const spanFiller = Array.from({ length: spanCols - 1 }, () => ({}));
 
   // Feste Breiten statt "*": Jede Spalte belegt inkl. Innenabstand (2×8) und
-  // Linie (0,8) genau ein Vielfaches von 4 pt. So liegen alle senkrechten
+  // Linie (0,8) genau ein Vielfaches von 3 pt (linienRaster.ts). So liegen alle senkrechten
   // Linien im selben Raster und wirken überall gleich dick.
   // MUSS identisch mit src/lib/pdf/belegPdf.ts (TABLE_COL_WIDTHS_*) bleiben.
-  const widths = showStunden ? [183.2, 59.2, 91.2, 83.2] : [227.2, 111.2, 95.2];
+  const widths = showStunden ? [181.2, 61.2, 91.2, 82.2] : [226.2, 109.2, 97.2];
 
   const positionsTabelle = {
     table: {
@@ -263,7 +263,7 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       vLineColor: () => COLOR_TEXT,
       // Zusatzabstand je Zeile (Linien-Raster), je zur Hälfte oben/unten.
       paddingTop: (i: number) => PAD_POS + rasterExtra(plan, "p", i) / 2,
-      paddingBottom: (i: number) => PAD_POS + rasterExtra(plan, "p", i) / 2,
+      paddingBottom: (i: number) => PAD_POS + rasterExtra(plan, "p", i) / 2 + rasterExtraUnten(plan, "p", i),
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },

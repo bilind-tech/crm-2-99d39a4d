@@ -16,6 +16,17 @@ import logoUrl from "@/assets/logo.png";
 import { getBackendUrl } from "@/lib/api/backendUrl";
 import { A4, createHotspotTracker, type RuntimeHotspot } from "./hotspotTracker";
 import { descriptionLines, inlineText, plainText } from "./inlineFormat";
+import {
+  LEERER_PLAN,
+  TABELLEN_LINIE,
+  liegtImRaster,
+  rasterExtra,
+  rasterExtraUnten,
+  verbessereRasterPlan,
+  waagerechteLinienAusPdf,
+  type RasterOptionen,
+  type RasterPlan,
+} from "./linienRaster";
 
 // ───────── Mock-LRU-Cache (nur Lovable-Preview) ────────────────────────────
 // Im Pi-Backend übernimmt der Disk-Cache (`backend/src/pdf/cache.ts`) diese
@@ -371,7 +382,9 @@ function leistungstabelle(
   totalsT: { netto: number; steuer: number; brutto: number },
   steuersatz: number,
   nurNetto = false,
+  raster?: RasterOptionen,
 ) {
+  const plan = raster?.plan ?? LEERER_PLAN;
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
 
@@ -456,13 +469,16 @@ function leistungstabelle(
   const positionsBody = body.slice(0, body.length - summenZeilen);
   const summenBody = body.slice(body.length - summenZeilen);
 
+  if (raster) raster.zeilen = { p: positionsBody.length, s: summenBody.length };
+
   const tableLayout = {
-    hLineWidth: () => 0.8,
-    vLineWidth: () => 0.8,
+    hLineWidth: () => TABELLEN_LINIE,
+    vLineWidth: () => TABELLEN_LINIE,
     hLineColor: () => COLOR_TEXT,
     vLineColor: () => COLOR_TEXT,
-    paddingTop: () => 8,
-    paddingBottom: () => 8,
+    // Zusatzabstand je Zeile (Linien-Raster, siehe linienRaster.ts), je zur Hälfte oben/unten.
+    paddingTop: (i: number) => 8 + rasterExtra(plan, "p", i) / 2,
+    paddingBottom: (i: number) => 8 + rasterExtra(plan, "p", i) / 2 + rasterExtraUnten(plan, "p", i),
     paddingLeft: () => 8,
     paddingRight: () => 8,
   };
@@ -479,7 +495,7 @@ function leistungstabelle(
       // Der Summenblock zeichnet die gemeinsame Kante. So liegt an dieser
       // Stelle nicht die Abschlusslinie der Leistungstabelle doppelt darüber.
       hLineWidth: (i: number, node: { table: { body: unknown[][] } }) =>
-        i === node.table.body.length ? 0 : 0.8,
+        i === node.table.body.length ? 0 : TABELLEN_LINIE,
     },
   };
   const summenTabelle = {
@@ -491,25 +507,26 @@ function leistungstabelle(
     layout: {
       ...tableLayout,
       // Die kompakteren Summenzeilen entsprechen der Referenzrechnung.
-      paddingTop: () => 6,
-      paddingBottom: () => 6,
+      paddingTop: (i: number) => 6 + rasterExtra(plan, "s", i) / 2,
+      paddingBottom: (i: number) => 6 + rasterExtra(plan, "s", i) / 2,
     },
   };
 
   return {
     id: "tabelle",
+    margin: [0, plan.shift, 0, 0],
     stack: [positionsTabelle, summenTabelle],
   };
 }
 
 /** Spaltenbreiten der Leistungstabelle in pdfmake-Punkten.
  *  Feste Breiten statt "*": Jede Spalte belegt inkl. Innenabstand (2×8) und
- *  Linie (0,8) genau ein Vielfaches von 4 pt. Dadurch liegen ALLE senkrechten
- *  Linien im selben Raster und werden in jeder Vorschau gleich dick gezeichnet.
- *  Gesamtbreite 484,8 pt (passt in die 485,28 pt Inhaltsbreite).
+ *  Linie (0,8) genau ein Vielfaches von 3 pt (Linien-Raster, siehe linienRaster.ts).
+ *  Dadurch liegen ALLE senkrechten Linien im selben Raster und werden gleich
+ *  dick gezeichnet. Gesamtbreite 483,8 pt (passt in die 485,28 pt Inhaltsbreite).
  *  MUSS identisch mit backend/src/pdf/layout.ts bleiben. */
-export const TABLE_COL_WIDTHS_STANDARD = [227.2, 111.2, 95.2] as const;
-export const TABLE_COL_WIDTHS_STUNDEN = [183.2, 59.2, 91.2, 83.2] as const;
+export const TABLE_COL_WIDTHS_STANDARD = [226.2, 109.2, 97.2] as const;
+export const TABLE_COL_WIDTHS_STUNDEN = [181.2, 61.2, 91.2, 82.2] as const;
 
 // ───────── Meta-Box ────────────────────────────────────────────────────────
 
@@ -730,8 +747,12 @@ async function buildDoc(
   logoOverride: string | null,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   pageBreakBefore?: (currentNode: any) => boolean,
+  raster?: RasterOptionen,
+  /** Bereits geladenes Logo (spart erneutes Laden bei mehreren Durchläufen). */
+  vorgeladenesLogo?: string | null,
 ) {
-  const logo = await resolveLogo(ctx.firma, logoOverride);
+  const logo =
+    vorgeladenesLogo !== undefined ? vorgeladenesLogo : await resolveLogo(ctx.firma, logoOverride);
   const t = totals(beleg.positionen, beleg.rabattGesamt, beleg.steuersatz);
   const kundeColumn = {
     id: "kunde",
@@ -795,7 +816,7 @@ async function buildDoc(
           { id: "intro", text: inlineText(intro), margin: [0, 0, 0, 14] },
         ],
       },
-      leistungstabelle(beleg.positionen, t, beleg.steuersatz, beleg.nurNetto === true),
+      leistungstabelle(beleg.positionen, t, beleg.steuersatz, beleg.nurNetto === true, raster),
       {
         id: "outro",
         stack: [
@@ -807,6 +828,49 @@ async function buildDoc(
       },
     ],
   };
+}
+
+type RasterBuild = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  pageBreakBefore: ((currentNode: any) => boolean) | undefined,
+  raster: RasterOptionen,
+) => Promise<unknown>;
+
+/**
+ * Setzt den Beleg so, dass alle Linien der Leistungstabelle auf dem
+ * Linien-Raster liegen (gleich dicke Linien in jeder Vorschau, siehe
+ * linienRaster.ts). Messdurchläufe sind unkomprimiert, das gelieferte PDF ist
+ * normal komprimiert. Jeder Fehler bei der Feinausrichtung führt einfach zum
+ * normalen PDF — niemals zu einem Abbruch.
+ */
+async function renderMitRaster(build: RasterBuild): Promise<PdfBuildResult> {
+  let plan: RasterPlan = LEERER_PLAN;
+  try {
+    for (let runde = 0; runde < 3; runde++) {
+      const raster: RasterOptionen = { plan };
+      const probe = (await build(undefined, raster)) as Record<string, unknown>;
+      probe.compress = false;
+      // Kopf (Logo) und Fuß liegen fest im Seitenrand und beeinflussen das
+      // Layout nicht — beim Messen weglassen, das spart viel Zeit.
+      delete probe.header;
+      delete probe.footer;
+      const { blob } = await renderPdf(probe, []);
+      const text = new TextDecoder("latin1").decode(await blob.arrayBuffer());
+      const linien = waagerechteLinienAusPdf(text);
+      if (liegtImRaster(linien, raster.zeilen)) break;
+      const naechster = verbessereRasterPlan(linien, raster.zeilen, plan);
+      if (!naechster) break;
+      plan = naechster;
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.warn("[belegPdf] Linien-Feinausrichtung übersprungen", err);
+    plan = LEERER_PLAN;
+  }
+  const tracker = createHotspotTracker(A4);
+  const doc = await build(tracker.pageBreakBefore, { plan });
+  const result = await renderPdf(doc, []);
+  return { blob: result.blob, hotspots: tracker.build() };
 }
 
 async function renderPdf(doc: unknown, hotspots: RuntimeHotspot[]): Promise<PdfBuildResult> {
@@ -860,8 +924,8 @@ export async function generateAngebotPdf(
     materialBereitgestellt: angebot.optionen?.materialBereitgestellt ?? true,
   };
   const effFirma = mergeFirma(firma, angebot.optionen?.firmaOverride);
-  const tracker = createHotspotTracker(A4);
-  const doc = await buildDoc(
+  const logo = await resolveLogo(effFirma, angebot.optionen?.logoOverride ?? null);
+  const out = await renderMitRaster((pageBreakBefore, raster) => buildDoc(
     {
       firma: effFirma,
       kunde,
@@ -886,10 +950,10 @@ export async function generateAngebotPdf(
     defaultOutroAngebot(angebot, opts),
     signaturFromFirma(effFirma),
     angebot.optionen?.logoOverride ?? null,
-    tracker.pageBreakBefore,
-  );
-  const result = await renderPdf(doc, []);
-  const out = { blob: result.blob, hotspots: tracker.build() };
+    pageBreakBefore,
+    raster,
+    logo,
+  ));
   lruSet(cacheKey, out);
   return out;
 }
@@ -912,7 +976,6 @@ export async function generateRechnungPdf(
     materialBereitgestellt: rechnung.optionen?.materialBereitgestellt ?? true,
   };
   const effFirma = mergeFirma(firma, rechnung.optionen?.firmaOverride);
-  const tracker = createHotspotTracker(A4);
   const t = totals(rechnung.positionen, rechnung.rabattGesamt, rechnung.steuersatz);
   // Tage zwischen Rechnungsdatum und Fälligkeit
   let tage = 14;
@@ -926,7 +989,8 @@ export async function generateRechnungPdf(
   // Rechnung: kein Material-Standardsatz (nur im Angebot).
   const fullOutro = opts.outro ? opts.outro : zahlungsSatz;
   const headerNote = "Bei Zahlung bitte\ndie Rechnungs-Nr. angeben";
-  const doc = await buildDoc(
+  const logo = await resolveLogo(effFirma, rechnung.optionen?.logoOverride ?? null);
+  const out = await renderMitRaster((pageBreakBefore, raster) => buildDoc(
     {
       firma: effFirma,
       kunde,
@@ -950,10 +1014,10 @@ export async function generateRechnungPdf(
     fullOutro,
     signaturFromFirma(effFirma),
     rechnung.optionen?.logoOverride ?? null,
-    tracker.pageBreakBefore,
-  );
-  const result = await renderPdf(doc, []);
-  const out = { blob: result.blob, hotspots: tracker.build() };
+    pageBreakBefore,
+    raster,
+    logo,
+  ));
   lruSet(cacheKey, out);
   return out;
 }
