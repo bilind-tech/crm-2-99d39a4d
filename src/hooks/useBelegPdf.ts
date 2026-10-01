@@ -14,7 +14,7 @@
 
 import { useEffect, useRef } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useKunde, useFirmendaten, useObjekt } from "@/hooks/useApi";
+import { useKunde, useFirmendaten, useObjekt, usePdfVorlage } from "@/hooks/useApi";
 import { generateAngebotPdf, generateRechnungPdf } from "@/lib/pdf/belegPdf";
 import { fetchBackendPdf } from "@/lib/pdf/backendPdf";
 import type { Angebot, Rechnung, Kunde, Firmendaten, Ansprechpartner, Objekt } from "@/lib/api/types";
