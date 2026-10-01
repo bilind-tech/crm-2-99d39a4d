@@ -4,18 +4,21 @@
 // genauen Lage mal kräftig (1 voller Bildpunkt), mal blass (auf 2 Bildpunkte
 // verteilt). Dadurch wirken gleich dicke Linien unterschiedlich dick.
 //
-// Lösung: ALLE Tabellenlinien liegen auf demselben 4-pt-Raster
-// (Koordinate ≡ 3 mod 4, exakt wie die linke Tabellenkante bei x = 55).
+// Lösung: ALLE Tabellenlinien liegen auf demselben 4-pt-Raster (Mitte der
+// Linie ≡ 3,4 mod 4 — exakt wie die linke Tabellenkante bei x = 55,4).
 //  - Senkrecht: feste Spaltenbreiten (je Spalte ein Vielfaches von 4 pt).
-//  - Waagerecht: Die Tabelle wird einmal probeweise gesetzt, die echten
-//    Linienpositionen werden gemessen, und dann bekommt jede Zeile ein paar
-//    Zehntel bis max. 4 pt zusätzlichen Innenabstand (je zur Hälfte oben und
-//    unten), damit die nächste Linie genau auf dem Raster landet.
+//  - Waagerecht: Der Beleg wird einmal unkomprimiert probegesetzt, die echten
+//    Linien werden direkt aus dem PDF gelesen, und jede Zeile bekommt einen
+//    kleinen Zusatzabstand (max. 4 pt, je zur Hälfte oben und unten), damit
+//    die nächste Linie genau auf dem Raster landet.
 //
 // Reine Rechenlogik ohne Abhängigkeiten. MUSS identisch mit
 // src/lib/pdf/linienRaster.ts bleiben (Browser-Vorschau).
 
+/** Stärke aller Linien der Leistungstabelle (pt). */
+export const TABELLEN_LINIE = 0.8;
 export const RASTER_PT = 4;
+/** Linien-Oberkante ≡ 3 (mod 4) → Linien-Mitte ≡ 3,4 wie die senkrechten Linien. */
 export const RASTER_PHASE = 3;
 const EPS = 0.005;
 
@@ -29,115 +32,95 @@ export interface RasterPlan {
 
 export const LEERER_PLAN: RasterPlan = { shift: 0, extra: {} };
 
+/** Optionen, die die Vorlage beim Bauen erhält. `zeilen` füllt die Vorlage aus. */
+export interface RasterOptionen {
+  plan: RasterPlan;
+  zeilen?: { p: number; s: number };
+}
+
 export function rasterExtra(plan: RasterPlan, tabelle: "p" | "s", zeile: number): number {
-  return plan.extra[`${tabelle}:${zeile}`] ?? 0;
+  const v = plan.extra[`${tabelle}:${zeile}`];
+  return typeof v === "number" && Number.isFinite(v) && v > 0 ? v : 0;
 }
-
-/** Messpunkt-ID für eine Tabellenzeile bzw. das Tabellenende. */
-export function markerId(tabelle: "p" | "s", zeile: number): string {
-  return `__ln:${tabelle}:${zeile}`;
-}
-export const MARKER_ENDE = "__ln:ende";
-
-/**
- * Sammelt während des Setzens (pdfmake `pageBreakBefore`) die Positionen der
- * Messpunkte. `offsets[id]` = Abstand von der Linien-Oberkante bis zum
- * Messpunkt; wird beim Bauen der Tabelle eingetragen.
- */
-export function createLinienMesser() {
-  const offsets: Record<string, number> = {};
-  const hits = new Map<string, { page: number; top: number }>();
-  /** Anzahl Zeilen der Leistungstabelle (p) und des Summenblocks (s). */
-  const zeilen = { p: 0, s: 0 };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pageBreakBefore = (node: any): boolean => {
-    try {
-      const id: unknown = node?.id;
-      if (typeof id !== "string" || !id.startsWith("__ln:") || hits.has(id)) return false;
-      const sp = node?.startPosition;
-      if (!sp || typeof sp.top !== "number" || typeof sp.pageNumber !== "number") return false;
-      hits.set(id, { page: sp.pageNumber, top: sp.top });
-    } catch {
-      /* Messung ist optional — niemals das Setzen stören */
-    }
-    return false;
-  };
-  return { offsets, hits, zeilen, pageBreakBefore };
-}
-export type LinienMesser = ReturnType<typeof createLinienMesser>;
 
 function aufRaster(y: number): number {
   const k = Math.ceil((y - RASTER_PHASE - EPS) / RASTER_PT);
   return RASTER_PHASE + k * RASTER_PT;
 }
 
-interface Linie {
-  /** Zeile, deren Höhe den Abstand ZU dieser Linie bestimmt (vorherige Zeile). */
-  vorZeile: string | null;
-  page: number;
-  y: number;
-}
-
-function linienAusMessung(m: LinienMesser): Linie[] | null {
-  const zeilenP = m.zeilen.p;
-  const zeilenS = m.zeilen.s;
-  if (zeilenP <= 0 || zeilenS <= 0) return null;
-  const ids: { id: string; key: string }[] = [];
-  for (let i = 0; i < zeilenP; i++) ids.push({ id: markerId("p", i), key: `p:${i}` });
-  for (let i = 0; i < zeilenS; i++) ids.push({ id: markerId("s", i), key: `s:${i}` });
-  ids.push({ id: MARKER_ENDE, key: "ende" });
-  const out: Linie[] = [];
-  for (let k = 0; k < ids.length; k++) {
-    const hit = m.hits.get(ids[k].id);
-    const off = m.offsets[ids[k].id];
-    if (!hit || typeof off !== "number" || !Number.isFinite(off)) return null;
-    out.push({ vorZeile: k === 0 ? null : ids[k - 1].key, page: hit.page, y: hit.top - off });
-  }
-  return out;
-}
-
-/** true, wenn alle gemessenen Linien exakt auf dem Raster liegen. */
-export function liegtImRaster(m: LinienMesser): boolean {
-  const linien = linienAusMessung(m);
-  if (!linien) return true; // nichts messbar → nichts zu korrigieren
-  return linien.every((l) => Math.abs(aufRaster(l.y) - l.y) < 0.01);
+function runde(n: number): number {
+  return Math.round(n * 10000) / 10000;
 }
 
 /**
- * Berechnet aus einer Messung den verbesserten Plan. Liefert `null`, wenn die
- * Messung unvollständig ist (dann bleibt das PDF unverändert).
+ * Liest aus einem UNKOMPRIMIERTEN pdfmake-PDF die Oberkanten aller
+ * waagerechten Tabellenlinien (Stärke TABELLEN_LINIE) in Zeichenreihenfolge.
+ * Liefert `null`, wenn die Tabelle über mehrere Seiten läuft oder nichts
+ * Eindeutiges gefunden wurde — dann wird nicht ausgerichtet.
+ */
+export function waagerechteLinienAusPdf(pdfText: string): number[] | null {
+  const re = /(?:^|\n)([\d.]+) w\n(?:[^\n]*\n){0,6}?(-?[\d.]+) (-?[\d.]+) m\n(-?[\d.]+) (-?[\d.]+) l\n/g;
+  const out: number[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(pdfText))) {
+    const w = Number(m[1]);
+    if (Math.abs(w - TABELLEN_LINIE) > 1e-6) continue;
+    const y1 = Number(m[3]);
+    const y2 = Number(m[5]);
+    if (!Number.isFinite(y1) || Math.abs(y1 - y2) > 1e-6) continue; // nur waagerecht
+    const top = y1 - TABELLEN_LINIE / 2;
+    const last = out[out.length - 1];
+    if (last !== undefined && Math.abs(last - top) < 0.001) continue; // weiteres Teilstück
+    if (last !== undefined && top < last) return null; // neue Seite → nicht anfassen
+    out.push(top);
+  }
+  return out.length > 0 ? out : null;
+}
+
+function zeilenSchluessel(zeilen: { p: number; s: number }): string[] {
+  const keys: string[] = [];
+  for (let i = 0; i < zeilen.p; i++) keys.push(`p:${i}`);
+  for (let i = 0; i < zeilen.s; i++) keys.push(`s:${i}`);
+  return keys;
+}
+
+function passend(linien: number[] | null, zeilen: { p: number; s: number } | undefined): linien is number[] {
+  if (!linien || !zeilen || zeilen.p <= 0 || zeilen.s <= 0) return false;
+  return linien.length === zeilen.p + zeilen.s + 1;
+}
+
+/** true, wenn nichts (mehr) zu korrigieren ist. */
+export function liegtImRaster(linien: number[] | null, zeilen: { p: number; s: number } | undefined): boolean {
+  if (!passend(linien, zeilen)) return true;
+  return linien.every((y) => Math.abs(aufRaster(y) - y) < 0.01);
+}
+
+/**
+ * Berechnet aus den gemessenen Linien den verbesserten Plan.
+ * `null` = Messung nicht eindeutig → PDF bleibt wie es ist.
  */
 export function verbessereRasterPlan(
-  m: LinienMesser,
+  linien: number[] | null,
+  zeilen: { p: number; s: number } | undefined,
   bisher: RasterPlan,
 ): RasterPlan | null {
-  const linien = linienAusMessung(m);
-  if (!linien || linien.length === 0) return null;
+  if (!passend(linien, zeilen)) return null;
+  const keys = zeilenSchluessel(zeilen!);
   const plan: RasterPlan = { shift: bisher.shift, extra: { ...bisher.extra } };
+  const d0 = aufRaster(linien[0]) - linien[0];
   let verschiebung = 0;
-  for (let k = 0; k < linien.length; k++) {
-    const l = linien[k];
-    if (k === 0) {
-      const d = aufRaster(l.y) - l.y;
-      if (d > EPS) plan.shift = runde(plan.shift + d);
-      verschiebung = d > EPS ? d : 0;
-      continue;
-    }
-    if (l.page !== linien[k - 1].page) {
-      // Neue Seite: Die Zeile beginnt am Seitenanfang (liegt bereits im Raster).
-      verschiebung = 0;
-      continue;
-    }
-    const pos = l.y + verschiebung;
+  if (d0 > EPS) {
+    plan.shift = runde(plan.shift + d0);
+    verschiebung = d0;
+  }
+  for (let k = 1; k < linien.length; k++) {
+    const pos = linien[k] + verschiebung;
     const e = aufRaster(pos) - pos;
-    if (e > EPS && l.vorZeile) {
-      plan.extra[l.vorZeile] = runde((plan.extra[l.vorZeile] ?? 0) + e);
+    if (e > EPS) {
+      const key = keys[k - 1];
+      plan.extra[key] = runde((plan.extra[key] ?? 0) + e);
       verschiebung += e;
     }
   }
   return plan;
-}
-
-function runde(n: number): number {
-  return Math.round(n * 10000) / 10000;
 }
