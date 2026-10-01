@@ -218,7 +218,7 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
   positionen.forEach((p) => {
     const fallback = p.modus === "pauschal" ? "Pauschal" : "";
     const beschreibung = p.beschreibung || fallback;
-    const mittig = vertikalMittigMargin(beschreibung, showStunden ? 47 : 54);
+    const mittig = vertikalMittigMargin(beschreibung, showStunden ? 40 : 48);
     const row: unknown[] = [{ stack: [beschreibungBlock(beschreibung)] }];
     if (showStunden)
       row.push({ text: stundenText(p), fontSize: 10, alignment: "center", margin: mittig });
