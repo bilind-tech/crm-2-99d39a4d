@@ -136,13 +136,16 @@ describe("PDF-Rendering", () => {
     expect(positions.layout.hLineWidth(positions.table.body.length, positions)).toBe(0);
     expect(summen.layout.hLineWidth(0, summen)).toBe(0.8);
     expect(summen.layout.vLineWidth(0, summen)).toBe(0.8);
-    // Ohne Raster-Plan: Standard-Innenabstände.
+    // Kopf- und Summenzeilen sind luftig wie in der Referenz; Positionszeilen
+    // richten ihre Höhe weiterhin nur nach ihrem tatsächlichen Inhalt.
     expect(positions.table.heights).toBeUndefined();
     expect(summen.table.heights).toBeUndefined();
-    expect(positions.layout.paddingTop(0)).toBe(5);
-    expect(positions.layout.paddingBottom(0)).toBe(5);
-    expect(summen.layout.paddingTop(0)).toBe(5);
-    expect(summen.layout.paddingBottom(0)).toBe(5);
+    expect(positions.layout.paddingTop(0)).toBe(7.5);
+    expect(positions.layout.paddingBottom(0)).toBe(7.5);
+    expect(positions.layout.paddingTop(1)).toBe(5);
+    expect(positions.layout.paddingBottom(1)).toBe(5);
+    expect(summen.layout.paddingTop(0)).toBe(7.5);
+    expect(summen.layout.paddingBottom(0)).toBe(7.5);
     expect(positions.table.body[0].every((cell: { bold?: boolean }) => cell.bold !== true)).toBe(true);
     expect(summen.table.body.at(-1)[0].bold).toBe(true);
   });

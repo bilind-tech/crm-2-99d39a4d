@@ -22,3 +22,4 @@
 - [x] Gefilterte Rechnungen und Angebote gesammelt und statusgenau in Google Drive sichern
 - [x] PDF-, Drive-, Browser- und Update-Sicherheit vollständig prüfen
 - [x] Tabellenzeilen, vertikale Textausrichtung, Fließtext und Footer sichtbar nachkorrigieren und erneut prüfen
+- [ ] Tabellenkopf und Summenzeilen nach der neuen Referenz wieder ausgewogen luftiger setzen und sichtbar prüfen
