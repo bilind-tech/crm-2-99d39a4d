@@ -60,7 +60,15 @@ export function LivePdfPreview(props: Props) {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const measure = () => setContainerWidth(el.clientWidth);
+    // Schwelle + rAF: verhindert die Chrome-Scrollbalken-Schleife (Flackern).
+    let raf = 0;
+    const measure = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const w = el.clientWidth;
+        if (w > 0) setContainerWidth((alt) => (alt === 0 || Math.abs(alt - w) > 24 ? w : alt));
+      });
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
@@ -69,6 +77,7 @@ export function LivePdfPreview(props: Props) {
     }, 1000);
     return () => {
       ro.disconnect();
+      cancelAnimationFrame(raf);
       clearTimeout(fallback);
     };
   }, []);
@@ -201,6 +210,7 @@ export function LivePdfPreview(props: Props) {
   return (
     <div
       ref={containerRef}
+      style={{ scrollbarGutter: "stable" }}
       className="relative h-full overflow-y-auto bg-muted/30 px-2 py-3 sm:px-4"
     >
       {/* Status-Leiste: aktuell / nicht aktuell / wird aktualisiert */}
