@@ -7,7 +7,7 @@ import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.
 import type { FirmaForPdf } from "./types.js";
 import { DEFAULT_FONT } from "./printer.js";
 import { descriptionLines, inlineText, plainText } from "./inlineFormat.js";
-import { LEERER_PLAN, MARKER_ENDE, markerId, rasterExtra, type LinienMesser, type RasterPlan } from "./linienRaster.js";
+import { LEERER_PLAN, TABELLEN_LINIE, rasterExtra, type RasterOptionen } from "./linienRaster.js";
 
 const COLOR_TEXT = "#000000";
 const COLOR_MUTED = "#555555";
@@ -200,24 +200,14 @@ function vertikalMittigMargin(text: string, charsPerLine: number): [number, numb
   return [0, Math.max(0, Math.round(((anzahl - 1) * 12.5) / 2)), 0, 0];
 }
 
-/** Raster-Optionen: Plan aus einer Vormessung + Messer für den aktuellen Durchlauf. */
-export interface RasterOptionen {
-  plan: RasterPlan;
-  messer?: LinienMesser;
-}
+export type { RasterOptionen };
 
-const LINIE = 0.8;
+const LINIE = TABELLEN_LINIE;
 const PAD_POS = 8;
 const PAD_SUM = 6;
 
-function marginTop(cell: unknown): number {
-  const m = (cell as { margin?: unknown })?.margin;
-  return Array.isArray(m) && typeof m[1] === "number" ? m[1] : 0;
-}
-
 function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false, raster?: RasterOptionen) {
   const plan = raster?.plan ?? LEERER_PLAN;
-  const messer = raster?.messer;
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
 
@@ -245,13 +235,6 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       { text: eur(summe(p)), fontSize: 10, alignment: "center", margin: mittig },
     );
     body.push(row);
-  });
-
-  // Messpunkte: letzte Zelle jeder Zeile (Preis). Abstand Linie → Text.
-  body.forEach((row, i) => {
-    const cell = row[row.length - 1] as Record<string, unknown>;
-    cell.id = markerId("p", i);
-    if (messer) messer.offsets[markerId("p", i)] = LINIE + PAD_POS + rasterExtra(plan, "p", i) / 2 + marginTop(cell);
   });
 
   const spanCols = colCount - 1;
@@ -307,15 +290,7 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
         ],
       ];
 
-  summenBody.forEach((row, i) => {
-    const cell = row[row.length - 1] as Record<string, unknown>;
-    cell.id = markerId("s", i);
-    if (messer) messer.offsets[markerId("s", i)] = LINIE + PAD_SUM + rasterExtra(plan, "s", i) / 2 + marginTop(cell);
-  });
-  if (messer) {
-    messer.zeilen.p = body.length;
-    messer.zeilen.s = summenBody.length;
-  }
+  if (raster) raster.zeilen = { p: body.length, s: summenBody.length };
 
   const summenTabelle = {
     table: {
@@ -527,10 +502,7 @@ interface BuildArgs {
   raster?: RasterOptionen;
 }
 
-const OUTRO_ABSTAND = 16;
-
 function buildDoc(args: BuildArgs) {
-  if (args.raster?.messer) args.raster.messer.offsets[MARKER_ENDE] = LINIE + OUTRO_ABSTAND;
   const t = totals(args.positionen, args.rabattGesamt, args.steuersatz);
   const signatur = signaturFromFirma(args.firma);
   return {
@@ -539,7 +511,6 @@ function buildDoc(args: BuildArgs) {
     defaultStyle: { font: DEFAULT_FONT, fontSize: 10, color: COLOR_TEXT, lineHeight: 1.25 },
     header: header(args.firma, args.logoDataUrl),
     footer: footer(args.firma),
-    ...(args.raster?.messer ? { pageBreakBefore: args.raster.messer.pageBreakBefore } : {}),
     content: [
       {
         columns: [
@@ -577,7 +548,7 @@ function buildDoc(args: BuildArgs) {
       leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true, args.raster),
       {
         stack: [
-          { text: inlineText(args.outro), margin: [0, OUTRO_ABSTAND, 0, 0], id: MARKER_ENDE },
+          { text: inlineText(args.outro), margin: [0, 16, 0, 0] },
           { text: "Mit freundlichen Grüßen", margin: [0, 18, 0, 0] },
           ...signatur.map((s) => ({ text: s, margin: [0, 0, 0, 0], color: COLOR_TEXT })),
         ],

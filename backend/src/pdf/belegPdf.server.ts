@@ -6,8 +6,7 @@ import { getKunde, getAnsprechpartner, getObjekt } from "../kunden/repo.js";
 import { angebotDocDef, rechnungDocDef } from "./layout.js";
 import { angebotsdatumVon } from "../belege/angebotsdatum.js";
 import { renderPdf } from "./render.js";
-import { createLinienMesser, LEERER_PLAN, liegtImRaster, verbessereRasterPlan, type RasterPlan } from "./linienRaster.js";
-import type { RasterOptionen } from "./layout.js";
+import { LEERER_PLAN, liegtImRaster, verbessereRasterPlan, waagerechteLinienAusPdf, type RasterOptionen, type RasterPlan } from "./linienRaster.js";
 import { computeHash, invalidate, invalidateAll, logoFingerprint, readCached, writeCached, type BelegArt } from "./cache.js";
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
 import type { ApiAngebot, ApiRechnung } from "../belege/mappers.js";
@@ -44,23 +43,30 @@ function dateinameRechnung(r: ApiRechnung, k: ApiKunde): string {
 }
 
 /**
- * Setzt den Beleg so oft (max. 3×), bis alle Tabellenlinien auf dem
- * Linien-Raster liegen. Jede Runde ist ein vollständiges, gültiges PDF —
- * schlägt die Feinausrichtung fehl, wird einfach das letzte PDF verwendet.
+ * Setzt den Beleg so, dass alle Linien der Leistungstabelle auf dem
+ * Linien-Raster liegen (siehe linienRaster.ts). Messdurchläufe sind
+ * unkomprimiert, damit die Linien direkt lesbar sind; das ausgelieferte PDF
+ * wird normal komprimiert gesetzt. Jeder Fehler bei der Feinausrichtung führt
+ * einfach zum normalen PDF — niemals zu einem Abbruch.
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function renderMitRaster(build: (raster: RasterOptionen) => any): Promise<Buffer> {
+export async function renderMitRaster(build: (raster: RasterOptionen) => any): Promise<Buffer> {
   let plan: RasterPlan = LEERER_PLAN;
-  let buffer: Buffer | null = null;
-  for (let runde = 0; runde < 3; runde++) {
-    const messer = createLinienMesser();
-    buffer = await renderPdf(build({ plan, messer }));
-    if (runde === 2 || liegtImRaster(messer)) break;
-    const naechster = verbessereRasterPlan(messer, plan);
-    if (!naechster) break;
-    plan = naechster;
+  try {
+    for (let runde = 0; runde < 3; runde++) {
+      const raster: RasterOptionen = { plan };
+      const probe = build(raster);
+      probe.compress = false;
+      const linien = waagerechteLinienAusPdf((await renderPdf(probe)).toString("latin1"));
+      if (liegtImRaster(linien, raster.zeilen)) break;
+      const naechster = verbessereRasterPlan(linien, raster.zeilen, plan);
+      if (!naechster) break;
+      plan = naechster;
+    }
+  } catch {
+    plan = LEERER_PLAN;
   }
-  return buffer!;
+  return await renderPdf(build({ plan }));
 }
 
 export interface RenderResult {
