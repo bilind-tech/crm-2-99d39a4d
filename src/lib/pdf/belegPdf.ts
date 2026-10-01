@@ -502,13 +502,19 @@ function leistungstabelle(
   };
 }
 
-/** Spaltenbreiten der Leistungstabelle in pdfmake-Punkten. Wird im
- *  Inline-Editor wiederverwendet, damit die Editor-Reihe optisch auf der
- *  PDF-Zeile sitzt. */
-export const TABLE_COL_WIDTHS_STANDARD = ["*", 110, 95] as const;
-export const TABLE_COL_WIDTHS_STUNDEN = ["*", 60, 90, 85] as const;
+/** Spaltenbreiten der Leistungstabelle in pdfmake-Punkten.
+ *  Feste Breiten statt "*": Jede Spalte belegt inkl. Innenabstand (2×8) und
+ *  Linie (0,8) genau ein Vielfaches von 4 pt. Dadurch liegen ALLE senkrechten
+ *  Linien im selben Raster und werden in jeder Vorschau gleich dick gezeichnet.
+ *  Gesamtbreite 484,8 pt (passt in die 485,28 pt Inhaltsbreite).
+ *  MUSS identisch mit backend/src/pdf/layout.ts bleiben. */
+export const TABLE_COL_WIDTHS_STANDARD = [227.2, 111.2, 95.2] as const;
+export const TABLE_COL_WIDTHS_STUNDEN = [183.2, 59.2, 91.2, 83.2] as const;
 
 // ───────── Meta-Box ────────────────────────────────────────────────────────
+
+/** Zusätzliche Luft über „Bei Zahlung bitte“ (pt). MUSS in beiden Vorlagen gleich sein. */
+const META_LUFT_OBEN = 5;
 
 function metaBox(
   meta: { label: string; wert: string }[],
@@ -565,6 +571,9 @@ function metaBox(
   return {
     id: "meta",
     width: 235,
+    // Rahmen-Oberkante rückt um META_LUFT_OBEN nach oben, der Text bleibt exakt
+    // an seiner Stelle und die Gesamthöhe im Fluss ist unverändert.
+    margin: [0, -META_LUFT_OBEN, 0, 0],
     table: {
       widths: ["auto", "*"],
       body,
@@ -581,7 +590,7 @@ function metaBox(
        // Mehr Luft über dem Zahlungshinweis, bei identischer Gesamthöhe des Blocks.
       paddingTop: (i: number, node: { table: { body: unknown[][] } }) => {
         const last = node.table.body.length - 1;
-         if (i === 0) return 6;
+         if (i === 0) return 6 + META_LUFT_OBEN;
          if (i === 1) return 0;
          if (i === last) return 1;
         return 2;

@@ -6,6 +6,7 @@ import { getKunde, getAnsprechpartner, getObjekt } from "../kunden/repo.js";
 import { angebotDocDef, rechnungDocDef } from "./layout.js";
 import { angebotsdatumVon } from "../belege/angebotsdatum.js";
 import { renderPdf } from "./render.js";
+import { LEERER_PLAN, liegtImRaster, verbessereRasterPlan, waagerechteLinienAusPdf, type RasterOptionen, type RasterPlan } from "./linienRaster.js";
 import { computeHash, invalidate, invalidateAll, logoFingerprint, readCached, writeCached, type BelegArt } from "./cache.js";
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
 import type { ApiAngebot, ApiRechnung } from "../belege/mappers.js";
@@ -41,6 +42,33 @@ function dateinameRechnung(r: ApiRechnung, k: ApiKunde): string {
   return `${teile.join(" ")}.pdf`.replace(/\s+/g, " ");
 }
 
+/**
+ * Setzt den Beleg so, dass alle Linien der Leistungstabelle auf dem
+ * Linien-Raster liegen (siehe linienRaster.ts). Messdurchläufe sind
+ * unkomprimiert, damit die Linien direkt lesbar sind; das ausgelieferte PDF
+ * wird normal komprimiert gesetzt. Jeder Fehler bei der Feinausrichtung führt
+ * einfach zum normalen PDF — niemals zu einem Abbruch.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export async function renderMitRaster(build: (raster: RasterOptionen) => any): Promise<Buffer> {
+  let plan: RasterPlan = LEERER_PLAN;
+  try {
+    for (let runde = 0; runde < 3; runde++) {
+      const raster: RasterOptionen = { plan };
+      const probe = build(raster);
+      probe.compress = false;
+      const linien = waagerechteLinienAusPdf((await renderPdf(probe)).toString("latin1"));
+      if (liegtImRaster(linien, raster.zeilen)) break;
+      const naechster = verbessereRasterPlan(linien, raster.zeilen, plan);
+      if (!naechster) break;
+      plan = naechster;
+    }
+  } catch {
+    plan = LEERER_PLAN;
+  }
+  return await renderPdf(build({ plan }));
+}
+
 export interface RenderResult {
   buffer: Buffer;
   hash: string;
@@ -65,8 +93,9 @@ export async function renderAngebotPdf(angebotId: string): Promise<RenderResult 
   const cached = readCached("angebot", a.id, hash);
   if (cached) return { buffer: cached, hash, dateiname, fromCache: true };
 
-  const docDef = angebotDocDef({ angebot: a, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoDataUrl });
-  const buffer = await renderPdf(docDef);
+  const buffer = await renderMitRaster((raster) =>
+    angebotDocDef({ angebot: a, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoDataUrl, raster }),
+  );
   writeCached("angebot", a.id, hash, buffer);
   return { buffer, hash, dateiname, fromCache: false };
 }
@@ -88,8 +117,9 @@ export async function renderRechnungPdf(rechnungId: string): Promise<RenderResul
   const cached = readCached("rechnung", r.id, hash);
   if (cached) return { buffer: cached, hash, dateiname, fromCache: true };
 
-  const docDef = rechnungDocDef({ rechnung: r, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoDataUrl });
-  const buffer = await renderPdf(docDef);
+  const buffer = await renderMitRaster((raster) =>
+    rechnungDocDef({ rechnung: r, kunde: k, firma, ansprechpartner: ap, objekt: obj, logoDataUrl, raster }),
+  );
   writeCached("rechnung", r.id, hash, buffer);
   return { buffer, hash, dateiname, fromCache: false };
 }

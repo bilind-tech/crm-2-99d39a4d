@@ -7,6 +7,7 @@ import type { ApiKunde, ApiAnsprechpartner, ApiObjekt } from "../kunden/mappers.
 import type { FirmaForPdf } from "./types.js";
 import { DEFAULT_FONT } from "./printer.js";
 import { descriptionLines, inlineText, plainText } from "./inlineFormat.js";
+import { LEERER_PLAN, TABELLEN_LINIE, rasterExtra, type RasterOptionen } from "./linienRaster.js";
 
 const COLOR_TEXT = "#000000";
 const COLOR_MUTED = "#555555";
@@ -199,7 +200,14 @@ function vertikalMittigMargin(text: string, charsPerLine: number): [number, numb
   return [0, Math.max(0, Math.round(((anzahl - 1) * 12.5) / 2)), 0, 0];
 }
 
-function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false) {
+export type { RasterOptionen };
+
+const LINIE = TABELLEN_LINIE;
+const PAD_POS = 8;
+const PAD_SUM = 6;
+
+function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; steuer: number; brutto: number }, steuersatz: number, nurNetto = false, raster?: RasterOptionen) {
+  const plan = raster?.plan ?? LEERER_PLAN;
   const showStunden = hasStundenPositionen(positionen);
   const colCount = showStunden ? 4 : 3;
 
@@ -232,7 +240,11 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
   const spanCols = colCount - 1;
   const spanFiller = Array.from({ length: spanCols - 1 }, () => ({}));
 
-  const widths = showStunden ? ["*", 60, 90, 85] : ["*", 110, 95];
+  // Feste Breiten statt "*": Jede Spalte belegt inkl. Innenabstand (2×8) und
+  // Linie (0,8) genau ein Vielfaches von 4 pt. So liegen alle senkrechten
+  // Linien im selben Raster und wirken überall gleich dick.
+  // MUSS identisch mit src/lib/pdf/belegPdf.ts (TABLE_COL_WIDTHS_*) bleiben.
+  const widths = showStunden ? [183.2, 59.2, 91.2, 83.2] : [227.2, 111.2, 95.2];
 
   const positionsTabelle = {
     table: {
@@ -245,12 +257,13 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       // Der Summenblock zeichnet die gemeinsame Kante. So wird die Linie
       // über der Mehrwertsteuer nicht durch zwei Tabellen doppelt gezeichnet.
       hLineWidth: (i: number, node: { table: { body: unknown[][] } }) =>
-        i === node.table.body.length ? 0 : 0.8,
-      vLineWidth: () => 0.8,
+        i === node.table.body.length ? 0 : LINIE,
+      vLineWidth: () => LINIE,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      paddingTop: () => 8,
-      paddingBottom: () => 8,
+      // Zusatzabstand je Zeile (Linien-Raster), je zur Hälfte oben/unten.
+      paddingTop: (i: number) => PAD_POS + rasterExtra(plan, "p", i) / 2,
+      paddingBottom: (i: number) => PAD_POS + rasterExtra(plan, "p", i) / 2,
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },
@@ -277,6 +290,8 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
         ],
       ];
 
+  if (raster) raster.zeilen = { p: body.length, s: summenBody.length };
+
   const summenTabelle = {
     table: {
       // Summenblock soll nicht durch Seitenumbruch zerschnitten werden.
@@ -285,20 +300,23 @@ function leistungstabelle(positionen: ApiPosition[], totalsT: { netto: number; s
       body: summenBody,
     },
     layout: {
-      hLineWidth: () => 0.8,
-      vLineWidth: () => 0.8,
+      hLineWidth: () => LINIE,
+      vLineWidth: () => LINIE,
       hLineColor: () => COLOR_TEXT,
       vLineColor: () => COLOR_TEXT,
-      // Kompakter wie in der Referenzrechnung.
-      paddingTop: () => 6,
-      paddingBottom: () => 6,
+      // Kompakter wie in der Referenzrechnung (+ Zusatzabstand Linien-Raster).
+      paddingTop: (i: number) => PAD_SUM + rasterExtra(plan, "s", i) / 2,
+      paddingBottom: (i: number) => PAD_SUM + rasterExtra(plan, "s", i) / 2,
       paddingLeft: () => 8,
       paddingRight: () => 8,
     },
   };
 
-  return { stack: [positionsTabelle, summenTabelle] };
+  return { margin: [0, plan.shift, 0, 0], stack: [positionsTabelle, summenTabelle] };
 }
+
+/** Zusätzliche Luft über „Bei Zahlung bitte“ (pt). MUSS in beiden Vorlagen gleich sein. */
+const META_LUFT_OBEN = 5;
 
 function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plain", headerNote?: string) {
   if (variant === "plain") {
@@ -338,6 +356,9 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
   });
   return {
     width: 235,
+    // Rahmen-Oberkante rückt um META_LUFT_OBEN nach oben, der Text bleibt exakt
+    // an seiner Stelle und die Gesamthöhe im Fluss ist unverändert.
+    margin: [0, -META_LUFT_OBEN, 0, 0],
     table: {
       widths: ["auto", "*"],
       body,
@@ -353,7 +374,7 @@ function metaBox(meta: { label: string; wert: string }[], variant: "box" | "plai
       // Mehr Luft über dem Zahlungshinweis, bei identischer Gesamthöhe des Blocks.
       paddingTop: (i: number, node: { table: { body: unknown[][] } }) => {
         const last = node.table.body.length - 1;
-        if (i === 0) return 6;
+        if (i === 0) return 6 + META_LUFT_OBEN;
         if (i === 1) return 0;
         if (i === last) return 1;
         return 2;
@@ -478,6 +499,7 @@ interface BuildArgs {
   eigeneAnrede?: string;
   /** Manuell geschriebener Empfängerblock — ersetzt den automatischen Aufbau. */
   empfaengerZeilen?: string[];
+  raster?: RasterOptionen;
 }
 
 function buildDoc(args: BuildArgs) {
@@ -523,7 +545,7 @@ function buildDoc(args: BuildArgs) {
           { text: inlineText(args.intro), margin: [0, 0, 0, 14] },
         ],
       },
-      leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true),
+      leistungstabelle(args.positionen, t, args.steuersatz, args.nurNetto === true, args.raster),
       {
         stack: [
           { text: inlineText(args.outro), margin: [0, 16, 0, 0] },
@@ -543,6 +565,7 @@ export function angebotDocDef(args: {
   ansprechpartner?: ApiAnsprechpartner;
   objekt?: ApiObjekt | null;
   logoDataUrl: string | null;
+  raster?: RasterOptionen;
 }) {
   const { angebot, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
   const opts = (angebot.optionen ?? {}) as {
@@ -579,6 +602,7 @@ export function angebotDocDef(args: {
     steuersatz: angebot.steuersatz,
     nurNetto: true,
     intro, outro,
+    raster: args.raster,
   });
 }
 
@@ -589,6 +613,7 @@ export function rechnungDocDef(args: {
   ansprechpartner?: ApiAnsprechpartner;
   objekt?: ApiObjekt | null;
   logoDataUrl: string | null;
+  raster?: RasterOptionen;
 }) {
   const { rechnung, kunde, firma, ansprechpartner, objekt, logoDataUrl } = args;
   const opts = (rechnung.optionen ?? {}) as {
@@ -630,5 +655,6 @@ export function rechnungDocDef(args: {
     rabattGesamt: rechnung.rabattGesamt,
     steuersatz: rechnung.steuersatz,
     intro, outro,
+    raster: args.raster,
   });
 }
