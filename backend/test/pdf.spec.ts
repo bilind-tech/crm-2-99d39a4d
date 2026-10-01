@@ -110,8 +110,10 @@ describe("PDF-Rendering", () => {
     }) as any;
 
     const meta = doc.content[0].columns[1];
-    const absender = doc.content[0].columns[0].stack[0];
+    const kundeSpalte = doc.content[0].columns[0];
+    const absender = kundeSpalte.stack[0];
     const titel = doc.content[1];
+    expect(kundeSpalte.width).toBe(230);
     expect(absender.noWrap).toBe(true);
     expect(absender.fontSize).toBeLessThanOrEqual(8);
     expect(titel.fontSize).toBe(19);
@@ -146,7 +148,9 @@ describe("PDF-Rendering", () => {
       ort: "Sankt Augustin",
     };
     const doc = rechnungDocDef({ rechnung: r, kunde: k, firma, logoDataUrl: null }) as any;
-    const absender = doc.content[0].columns[0].stack[0];
+    const kundeSpalte = doc.content[0].columns[0];
+    const absender = kundeSpalte.stack[0];
+    expect(kundeSpalte.width).toBe(230);
     expect(absender.noWrap).toBe(true);
     expect(absender.fontSize).toBe(5.5);
   });

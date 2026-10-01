@@ -536,7 +536,9 @@ function buildDoc(args: BuildArgs) {
       {
         columns: [
           {
-            width: "*",
+            // Feste Breite hält die rechte Meta-Box auch bei `noWrap`
+            // unverrückbar an ihrer vorgesehenen Position.
+            width: ABSENDER_BREITE,
             stack: [
               // Absenderzeile fest auf Höhe der ersten Meta-Zeile.
               {

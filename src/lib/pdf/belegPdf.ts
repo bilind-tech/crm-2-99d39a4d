@@ -781,7 +781,9 @@ async function buildDoc(
   const istRechnung = titel === "Rechnung";
   const kundeColumn = {
     id: "kunde",
-    width: "*",
+    // Feste Breite verhindert, dass `noWrap` bei langen Absenderdaten die
+    // rechte Meta-Box aus ihrer unveränderlichen Position drückt.
+    width: ABSENDER_BREITE,
     stack: [
       // Absenderzeile: feste Position, gleiche Höhe wie die erste Zeile der
       // Meta-Box rechts. Empfängerzeilen wachsen nur darunter nach unten.
