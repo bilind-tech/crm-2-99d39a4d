@@ -1,7 +1,7 @@
 // Zielstunden-Ausgleich in ganzen Stunden.
 //
 // Ziel: die Monatssumme trifft EXAKT die konfigurierten Zielstunden.
-// Vorgehen: Differenz in 1-Stunden-Schritte zerlegen und auf pseudo-zufällig
+// Vorgehen: Differenz in 0,5-Stunden-Schritte zerlegen und auf pseudo-zufällig
 // gemischte normale Arbeitstage verteilen (mehrere Durchläufe erlaubt, ein Tag
 // kann also auch 2h abweichen, wenn nötig).
 //
@@ -50,15 +50,18 @@ function istNormalerArbeitstag(t: GenerierterTag): boolean {
   return !!t.beginn && !!t.ende;
 }
 
-/** Versucht `deltaMin` (+60 oder −60) auf den Tag anzuwenden. true = angewendet. */
+/** Versucht `deltaMin` (+30 oder −30) auf den Tag anzuwenden. true = angewendet. */
 function passeTagAn(t: GenerierterTag, deltaMin: number): boolean {
   const hatZwei = !!t.beginn2 && !!t.ende2;
   const reihenfolge: Array<1 | 2> = hatZwei ? [2, 1] : [1];
 
   for (const blockNr of reihenfolge) {
     if (blockNr === 2) {
-      const start2 = toMin(t.beginn2!);
-      const neu = toMin(t.ende2!) + deltaMin;
+      const beginn2 = t.beginn2;
+      const ende2 = t.ende2;
+      if (!beginn2 || !ende2) continue;
+      const start2 = toMin(beginn2);
+      const neu = toMin(ende2) + deltaMin;
       const laenge = neu - start2;
       if (laenge < 60 || laenge > 12 * 60) continue;
       if (neu > 24 * 60) continue;
@@ -66,9 +69,12 @@ function passeTagAn(t: GenerierterTag, deltaMin: number): boolean {
       t.stunden += deltaMin / 60;
       return true;
     }
-    const start1 = toMin(t.beginn!);
+    const beginn = t.beginn;
+    const ende = t.ende;
+    if (!beginn || !ende) continue;
+    const start1 = toMin(beginn);
     const pause = t.pause ?? 0;
-    const neu = toMin(t.ende!) + deltaMin;
+    const neu = toMin(ende) + deltaMin;
     const laengeNet = neu - start1 - pause;
     if (laengeNet < 60 || laengeNet > 12 * 60) continue;
     if (neu > 24 * 60) continue;
@@ -102,7 +108,7 @@ export function pruefeZiel(tage: GenerierterTag[], ziel: number | null | undefin
 }
 
 /**
- * Verteilt die Differenz zum Ziel als ±1 volle Stunde auf zufällige
+ * Verteilt die Differenz zum Ziel als ±0,5 Stunden auf zufällige
  * Arbeitstage. Mutiert `tage` in-place und gibt die neue Summe zurück.
  */
 export function wendeZielausgleichAn(
@@ -114,15 +120,15 @@ export function wendeZielausgleichAn(
   const kandidaten = mische(tage.filter(istNormalerArbeitstag), rnd);
   if (kandidaten.length === 0) return summeStunden(tage);
 
-  // Anzahl der nötigen 1h-Schritte; Sicherheitslimit gegen Endlosschleifen.
-  const maxSchritte = kandidaten.length * 12 + 24;
+  // Anzahl der nötigen Halbstunden-Schritte; Sicherheitslimit gegen Endlosschleifen.
+  const maxSchritte = kandidaten.length * 24 + 48;
   let schritte = 0;
 
   for (;;) {
-    const diff = Math.round(ziel - summeStunden(tage));
-    if (diff === 0) break;
-    const richtung = diff > 0 ? 60 : -60;
-    const brauchen = Math.abs(diff);
+    const diffHalbstunden = Math.round((ziel - summeStunden(tage)) * 2);
+    if (diffHalbstunden === 0) break;
+    const richtung = diffHalbstunden > 0 ? 30 : -30;
+    const brauchen = Math.abs(diffHalbstunden);
 
     let angepasst = 0;
     for (const tag of kandidaten) {

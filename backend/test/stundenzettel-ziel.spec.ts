@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { berechneNormalenTag } from "../src/stundenzettel/berechnung.js";
 import { generiereStundenzettel } from "../src/stundenzettel/generieren.js";
 import { pruefeZiel, summeStunden } from "../src/stundenzettel/zielausgleich.js";
 import { DEFAULT_ARBEITSZEIT, type Mitarbeiter } from "../src/stundenzettel/types.js";
+import { ArbeitsZeitConfigSchema } from "../src/stundenzettel/validation.js";
 
 function ma(ziel: number | null): Mitarbeiter {
   return {
@@ -42,5 +44,38 @@ describe("Zielstunden-Ausgleich", () => {
   it("ohne Ziel bleibt die Summe unverändert", () => {
     const z = generiereStundenzettel(ma(null), 2026, 7, []);
     expect(pruefeZiel(z.tage, null).erfuellt).toBe(true);
+  });
+
+  it("rechnet 90 Minuten als 1,5 Stunden", () => {
+    const tag = berechneNormalenTag(
+      { aktiv: true, beginn: "15:30", ende: "17:00", pause: 0, block2: null },
+      DEFAULT_ARBEITSZEIT.standardZeiten,
+    );
+    expect(tag.stunden).toBe(1.5);
+    expect(tag.ende).toBe("17:00");
+  });
+
+  it("rundet je Zeitblock auf die vorherige halbe Stunde ab", () => {
+    const tag = berechneNormalenTag(
+      { aktiv: true, beginn: "08:00", ende: "10:50", pause: 0, block2: { beginn: "12:00", ende: "13:40" } },
+      DEFAULT_ARBEITSZEIT.standardZeiten,
+    );
+    expect(tag.stunden).toBe(4);
+    expect(tag.ende).toBe("10:30");
+    expect(tag.ende2).toBe("13:30");
+  });
+
+  it("erreicht auch ein halbstündiges Monatsziel exakt", () => {
+    const z = generiereStundenzettel(ma(120.5), 2026, 7, []);
+    expect(summeStunden(z.tage)).toBe(120.5);
+    expect(pruefeZiel(z.tage, 120.5).erfuellt).toBe(true);
+  });
+
+  it("akzeptiert Monatsziele in Halbstunden", () => {
+    const config = { ...DEFAULT_ARBEITSZEIT, zielStundenProMonat: 40.5 };
+    expect(ArbeitsZeitConfigSchema.safeParse(config).success).toBe(true);
+    expect(
+      ArbeitsZeitConfigSchema.safeParse({ ...config, zielStundenProMonat: 40.25 }).success,
+    ).toBe(false);
   });
 });

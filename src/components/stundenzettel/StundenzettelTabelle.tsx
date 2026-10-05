@@ -1,6 +1,6 @@
 // Editierbare Monats-Tabelle eines Stundenzettels (Phase 3).
 // Zeiten/Pause/Bemerkung sind editierbar; Stunden werden lokal
-// nach derselben Ganze-Stunden-Regel wie im Backend berechnet.
+// nach derselben Halbstunden-Regel wie im Backend berechnet.
 
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Save, Trash2 } from "lucide-react";
@@ -18,19 +18,20 @@ function toMin(t?: string): number | null {
   return h * 60 + m;
 }
 
-/** Ganze Stunden je Block (Floor), Pause nur von Block 1 abgezogen. */
+/** Halbe Stunden je Block (Floor), Pause nur von Block 1 abgezogen. */
 function berechneStunden(t: GenerierterTag): number {
+  if (t.bemerkung && (TAG_STATUS as readonly string[]).includes(t.bemerkung)) return 0;
   const s1 = toMin(t.beginn);
   const e1 = toMin(t.ende);
   let min = 0;
   if (s1 != null && e1 != null && e1 > s1) {
     const netto = Math.max(0, e1 - s1 - (t.pause ?? 0));
-    min += Math.floor(netto / 60) * 60;
+    min += Math.floor(netto / 30) * 30;
   }
   const s2 = toMin(t.beginn2);
   const e2 = toMin(t.ende2);
   if (s2 != null && e2 != null && e2 > s2) {
-    min += Math.floor((e2 - s2) / 60) * 60;
+    min += Math.floor((e2 - s2) / 30) * 30;
   }
   return min / 60;
 }
@@ -49,6 +50,16 @@ export const TAG_STATUS = [
   "Schule",
 ] as const;
 
+function editierbarerStand(t: GenerierterTag): string {
+  return JSON.stringify({
+    beginn: t.beginn ?? null,
+    ende: t.ende ?? null,
+    pause: t.pause ?? null,
+    stunden: t.stunden,
+    bemerkung: t.bemerkung ?? null,
+  });
+}
+
 export function StundenzettelTabelle({
   zettel,
   name,
@@ -61,17 +72,26 @@ export function StundenzettelTabelle({
   monat: number;
 }) {
   const [tage, setTage] = useState<GenerierterTag[]>(zettel.tage);
-  const [dirty, setDirty] = useState(false);
+  const [gespeicherteTage, setGespeicherteTage] = useState<GenerierterTag[]>(zettel.tage);
   const patch = usePatchZettel(jahr, monat);
   const del = useDeleteZettel(jahr, monat);
   const { confirm, dialog } = useConfirm();
 
   useEffect(() => {
     setTage(zettel.tage);
-    setDirty(false);
+    setGespeicherteTage(zettel.tage);
   }, [zettel]);
 
   const gesamt = useMemo(() => tage.reduce((s, t) => s + (t.stunden || 0), 0), [tage]);
+  const geaenderteTage = useMemo(() => {
+    const gespeichert = new Map(gespeicherteTage.map((t) => [t.datum, editierbarerStand(t)]));
+    return new Set(
+      tage
+        .filter((t) => gespeichert.get(t.datum) !== editierbarerStand(t))
+        .map((t) => t.datum),
+    );
+  }, [gespeicherteTage, tage]);
+  const dirty = geaenderteTage.size > 0;
 
   function setFeld(idx: number, feld: keyof GenerierterTag, value: string) {
     setTage((prev) => {
@@ -89,12 +109,15 @@ export function StundenzettelTabelle({
         feld === "ende2"
       ) {
         t[feld] = value === "" ? undefined : value;
+        if (feld === "beginn" || feld === "ende") {
+          t.beginn2 = undefined;
+          t.ende2 = undefined;
+        }
       }
       t.stunden = berechneStunden(t);
       next[idx] = t;
       return next;
     });
-    setDirty(true);
   }
 
   /** Status setzt die Bemerkung und leert bei Abwesenheit alle Zeiten. */
@@ -110,22 +133,19 @@ export function StundenzettelTabelle({
         t.bemerkung = status;
         t.beginn = undefined;
         t.ende = undefined;
-        t.beginn2 = undefined;
-        t.ende2 = undefined;
         t.pause = undefined;
       }
       t.stunden = berechneStunden(t);
       next[idx] = t;
       return next;
     });
-    setDirty(true);
   }
 
   async function speichern() {
     if (!zettel.id) return;
     try {
       await patch.mutateAsync({ id: zettel.id, tage });
-      setDirty(false);
+      setGespeicherteTage(tage.map((tag) => ({ ...tag })));
       toast.success("Stundenzettel gespeichert");
     } catch (e) {
       toast.error((e as Error).message || "Speichern fehlgeschlagen");
@@ -134,6 +154,7 @@ export function StundenzettelTabelle({
 
   function loeschen() {
     if (!zettel.id) return;
+    const zettelId = zettel.id;
     confirm(
       {
         title: "Stundenzettel löschen?",
@@ -143,7 +164,7 @@ export function StundenzettelTabelle({
       },
       async () => {
         try {
-          await del.mutateAsync(zettel.id!);
+          await del.mutateAsync(zettelId);
           toast.success("Gelöscht");
         } catch (e) {
           toast.error((e as Error).message || "Löschen fehlgeschlagen");
@@ -177,17 +198,15 @@ export function StundenzettelTabelle({
       </div>
 
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[720px] text-sm">
+        <table className="w-full min-w-[610px] table-fixed text-sm">
           <thead className="bg-muted/50 text-xs text-muted-foreground">
             <tr>
-              <th className="px-2 py-2 text-left font-medium">Tag</th>
-              <th className="px-2 py-2 text-left font-medium">Beginn</th>
-              <th className="px-2 py-2 text-left font-medium">Ende</th>
-              <th className="px-2 py-2 text-left font-medium">Beginn 2</th>
-              <th className="px-2 py-2 text-left font-medium">Ende 2</th>
-              <th className="px-2 py-2 text-left font-medium">Pause</th>
-              <th className="px-2 py-2 text-right font-medium">Std.</th>
-              <th className="px-2 py-2 text-left font-medium">Status</th>
+              <th className="w-[62px] px-2 py-2 text-left font-medium">Tag</th>
+              <th className="w-[112px] px-2 py-2 text-left font-medium">Beginn</th>
+              <th className="w-[112px] px-2 py-2 text-left font-medium">Ende</th>
+              <th className="w-[80px] px-2 py-2 text-left font-medium">Pause</th>
+              <th className="w-[58px] px-2 py-2 text-right font-medium">Std.</th>
+              <th className="w-[112px] px-2 py-2 text-left font-medium">Status</th>
               <th className="px-2 py-2 text-left font-medium">Bemerkung</th>
             </tr>
           </thead>
@@ -197,7 +216,11 @@ export function StundenzettelTabelle({
               return (
                 <tr
                   key={t.datum}
-                  className={cn("border-t border-border", we && "bg-muted/30")}
+                  className={cn(
+                    "border-t border-border transition-colors",
+                    we && "bg-muted/30",
+                    geaenderteTage.has(t.datum) && "bg-muted hover:bg-muted",
+                  )}
                 >
                   <td className="whitespace-nowrap px-2 py-1.5 text-xs">
                     <span className="font-medium">{tagNr(t.datum)}.</span>{" "}
@@ -205,13 +228,14 @@ export function StundenzettelTabelle({
                       {WOCHENTAG_LABEL[t.wochentag].slice(0, 2)}
                     </span>
                   </td>
-                  {(["beginn", "ende", "beginn2", "ende2"] as const).map((f) => (
+                  {(["beginn", "ende"] as const).map((f) => (
                     <td key={f} className="px-1 py-1">
                       <Input
                         type="time"
                         value={t[f] ?? ""}
                         onChange={(e) => setFeld(i, f, e.target.value)}
-                        className="h-8 w-[110px] text-xs"
+                        step={1800}
+                        className="h-8 w-full min-w-[96px] text-xs"
                       />
                     </td>
                   ))}
@@ -227,7 +251,7 @@ export function StundenzettelTabelle({
                     />
                   </td>
                   <td className="px-2 py-1 text-right text-xs font-medium tabular-nums">
-                    {t.stunden || ""}
+                    {t.stunden ? t.stunden.toLocaleString("de-DE") : ""}
                   </td>
                   <td className="px-1 py-1">
                     <select
@@ -238,7 +262,7 @@ export function StundenzettelTabelle({
                       }
                       onChange={(e) => setStatus(i, e.target.value)}
                       aria-label="Status"
-                      className="h-8 w-[110px] rounded-md border border-input bg-background px-2 text-xs"
+                      className="h-8 w-full min-w-[96px] rounded-md border border-input bg-background px-2 text-xs"
                     >
                       <option value="">Arbeit</option>
                       {TAG_STATUS.map((s) => (

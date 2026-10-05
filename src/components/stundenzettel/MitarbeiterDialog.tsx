@@ -221,6 +221,7 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
                 type="number"
                 min={0}
                 max={500}
+                step={0.5}
                 value={cfg.zielStundenProMonat ?? ""}
                 onChange={(e) => {
                   const v = e.target.value;
@@ -230,7 +231,7 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
               />
               <p className="text-[11px] text-muted-foreground">
                 Leer = kein Zielausgleich. Sonst verteilt das System die Differenz automatisch
-                als ±1 volle Stunde auf einzelne Arbeitstage, bis die Monatssumme exakt dem
+                in halben Stunden auf einzelne Arbeitstage, bis die Monatssumme exakt dem
                 Ziel entspricht.
               </p>
               {zielHinweis ? (

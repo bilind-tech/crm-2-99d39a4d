@@ -55,17 +55,23 @@ function passeTagAn(t: GenerierterTag, deltaMin: number): boolean {
   const reihenfolge: Array<1 | 2> = hatZwei ? [2, 1] : [1];
   for (const blockNr of reihenfolge) {
     if (blockNr === 2) {
-      const start2 = toMin(t.beginn2!);
-      const neu = toMin(t.ende2!) + deltaMin;
+      const beginn2 = t.beginn2;
+      const ende2 = t.ende2;
+      if (!beginn2 || !ende2) continue;
+      const start2 = toMin(beginn2);
+      const neu = toMin(ende2) + deltaMin;
       const laenge = neu - start2;
       if (laenge < 60 || laenge > 12 * 60 || neu > 24 * 60) continue;
       t.ende2 = fromMin(neu);
       t.stunden += deltaMin / 60;
       return true;
     }
-    const start1 = toMin(t.beginn!);
+    const beginn = t.beginn;
+    const ende = t.ende;
+    if (!beginn || !ende) continue;
+    const start1 = toMin(beginn);
     const pause = t.pause ?? 0;
-    const neu = toMin(t.ende!) + deltaMin;
+    const neu = toMin(ende) + deltaMin;
     const laengeNet = neu - start1 - pause;
     if (laengeNet < 60 || laengeNet > 12 * 60 || neu > 24 * 60) continue;
     if (t.beginn2 && neu > toMin(t.beginn2)) continue;
@@ -107,13 +113,13 @@ export function wendeZielausgleichAn(
   const kandidaten = mische(tage.filter(istNormalerArbeitstag), rnd);
   if (kandidaten.length === 0) return summeStunden(tage);
 
-  const maxSchritte = kandidaten.length * 12 + 24;
+  const maxSchritte = kandidaten.length * 24 + 48;
   let schritte = 0;
   for (;;) {
-    const diff = Math.round(ziel - summeStunden(tage));
-    if (diff === 0) break;
-    const richtung = diff > 0 ? 60 : -60;
-    const brauchen = Math.abs(diff);
+    const diffHalbstunden = Math.round((ziel - summeStunden(tage)) * 2);
+    if (diffHalbstunden === 0) break;
+    const richtung = diffHalbstunden > 0 ? 30 : -30;
+    const brauchen = Math.abs(diffHalbstunden);
     let angepasst = 0;
     for (const tag of kandidaten) {
       if (angepasst >= brauchen) break;
@@ -137,16 +143,16 @@ export function schaetzeMonatsspanne(cfg: ArbeitsZeitConfig): { min: number; max
       const s = cfg.standardZeiten;
       const brutto = toMin(s.arbeitsende) - toMin(s.arbeitsbeginn);
       const pause = brutto > s.pauseAbStunden * 60 ? s.pauseDauer : 0;
-      return Math.max(0, Math.floor((brutto - pause) / 60));
+      return Math.max(0, Math.floor((brutto - pause) / 30) / 2);
     }
     const z = cfg.wochentagZeiten[w];
     if (!z?.aktiv) return 0;
     if ((w === "samstag" || w === "sonntag") && !cfg.arbeitetAmWochenende) return 0;
     const brutto = toMin(z.ende) - toMin(z.beginn);
     const pause = brutto > cfg.standardZeiten.pauseAbStunden * 60 ? z.pause : 0;
-    let h = Math.max(0, Math.floor((brutto - pause) / 60));
+    let h = Math.max(0, Math.floor((brutto - pause) / 30) / 2);
     if (z.block2?.beginn && z.block2?.ende) {
-      h += Math.max(0, Math.floor((toMin(z.block2.ende) - toMin(z.block2.beginn)) / 60));
+      h += Math.max(0, Math.floor((toMin(z.block2.ende) - toMin(z.block2.beginn)) / 30) / 2);
     }
     return h;
   };

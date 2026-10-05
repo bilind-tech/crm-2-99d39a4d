@@ -40,7 +40,7 @@ export const ArbeitsZeitConfigSchema = z.object({
   standardZeiten: StandardZeitSchema,
   wochentagZeiten: WochentagRecord,
   arbeitstage: z.array(z.enum(WOCHENTAGE as [Wochentag, ...Wochentag[]])),
-  zielStundenProMonat: z.number().int().min(0).max(500).nullable(),
+  zielStundenProMonat: z.number().min(0).max(500).multipleOf(0.5).nullable(),
 });
 
 export const MitarbeiterInputSchema = z.object({

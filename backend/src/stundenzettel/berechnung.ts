@@ -1,5 +1,5 @@
 // Deterministische Tages-Berechnung in Minuten (Integer).
-// Ganze-Stunden-Regel: `Math.floor` je Block, Endzeit wird passend
+// Halbstunden-Regel: `Math.floor` je Block, Endzeit wird passend
 // zurückgerechnet. Pause zählt nur für Block 1 und nur, wenn Block 1
 // länger als die konfigurierte Schwelle ist.
 
@@ -23,12 +23,12 @@ export interface BerechneterTag {
   beginn2?: string;
   ende2?: string;
   pause?: number;
-  stunden: number; // ganze Stunden
+  stunden: number; // halbe Stunden
 }
 
 /**
  * Ermittelt Zeiten und Stunden für einen normalen Arbeitstag.
- * Wendet sofort die Ganze-Stunden-Regel an (Floor je Block).
+ * Wendet sofort die Halbstunden-Regel an (Floor je Block).
  */
 export function berechneNormalenTag(
   zeit: WochentagZeit,
@@ -41,7 +41,7 @@ export function berechneNormalenTag(
   const schwelle = standard.pauseAbStunden * 60;
   const pauseAngewendet = block1Gross > schwelle ? Math.max(0, Math.round(zeit.pause)) : 0;
   const block1Net = Math.max(0, block1Gross - pauseAngewendet);
-  const block1Floor = Math.floor(block1Net / 60) * 60;
+  const block1Floor = Math.floor(block1Net / 30) * 30;
   const end1Final = start1 + block1Floor + pauseAngewendet;
 
   let block2Floor = 0;
@@ -51,7 +51,7 @@ export function berechneNormalenTag(
     const start2 = toMin(zeit.block2.beginn);
     const end2Roh = toMin(zeit.block2.ende);
     const block2Gross = Math.max(0, end2Roh - start2);
-    block2Floor = Math.floor(block2Gross / 60) * 60;
+    block2Floor = Math.floor(block2Gross / 30) * 30;
     beginn2 = fromMin(start2);
     ende2 = fromMin(start2 + block2Floor);
   }
@@ -69,7 +69,7 @@ export function berechneNormalenTag(
 
 /**
  * Stunden, die ein Wochentag "eigentlich" bringen würde (für bezahlte
- * Feiertage an Arbeitstagen). Nutzt dieselbe Ganze-Stunden-Regel.
+ * Feiertage an Arbeitstagen). Nutzt dieselbe Halbstunden-Regel.
  */
 export function normStundenFuerWochentag(
   zeit: WochentagZeit,

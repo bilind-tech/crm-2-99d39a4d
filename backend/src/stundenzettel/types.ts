@@ -96,7 +96,7 @@ export interface GenerierterTag {
   ende2?: string;
   /** Angewendete Pause in Minuten (nur wenn Block 1 > Schwelle). */
   pause?: number;
-  /** Ganze Stunden nach Floor + optionalem Zielausgleich. */
+  /** Halbe Stunden nach Floor + optionalem Zielausgleich. */
   stunden: number;
   /** Feiertagsname, "Samstag"/"Sonntag" oder frei ("Krank", "Urlaub"). */
   bemerkung?: string;
