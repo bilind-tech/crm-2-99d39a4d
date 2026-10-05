@@ -452,6 +452,12 @@ function defaultOutroAngebot(a: ApiAngebot, outro?: string, materialBereitgestel
 function defaultIntroRechnung(_r: ApiRechnung, intro?: string): string {
   if (intro) return intro;
   const monat = rechnungsMonat(_r);
+  const opt = (_r.optionen ?? {}) as { wiederkehrend?: boolean };
+  if (_r.dauerauftragId || opt.wiederkehrend === true) {
+    return monat
+      ? `hiermit übersenden wir Ihnen laut Vertrag die Rechnung v. ${monat} für folgende Leistungen:`
+      : `hiermit übersenden wir Ihnen laut Vertrag die Rechnung für folgende Leistungen:`;
+  }
   const vertrag = _r.vertrag;
   if (vertrag && vertrag.startDatum) {
     const bez = vertrag.bezeichnung?.trim();

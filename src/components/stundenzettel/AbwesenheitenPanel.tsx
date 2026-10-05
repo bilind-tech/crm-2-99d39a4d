@@ -1,7 +1,8 @@
 // Abwesenheiten (Urlaub, Krank, Sonstiges) eintragen — auch über mehrere Monate.
 // Urlaub/Krank zählen mit den normalen Tagesstunden; das Monatsziel bleibt.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { DateInput } from "@/components/ui/date-input";
 import { Loader2, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -51,19 +52,26 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
   const [bis, setBis] = useState("");
   const [notiz, setNotiz] = useState("");
   const [filter, setFilter] = useState(ALLE);
+  const [versucht, setVersucht] = useState(false);
+  const vonRef = useRef<HTMLInputElement>(null);
+  const bisRef = useRef<HTMLInputElement>(null);
 
   const nameVon = useMemo(() => new Map(mitarbeiter.map((m) => [m.id, m.name])), [mitarbeiter]);
   const gefiltert = filter === ALLE ? liste : liste.filter((a) => a.mitarbeiterId === filter);
 
-  const fehler =
-    !mitarbeiterId ? "Bitte Mitarbeiter wählen"
-    : !von || !bis ? "Bitte „Von“ und „Bis“ vollständig eintragen"
-    : !/^\d{4}-\d{2}-\d{2}$/.test(von) || !/^\d{4}-\d{2}-\d{2}$/.test(bis) ? "Datum ist unvollständig"
-    : bis < von ? "„Bis“ liegt vor „Von“"
-    : anzahlTage(von, bis) > 367 ? "Höchstens 1 Jahr am Stück"
-    : null;
+  function pruefe(m: string, v: string, b: string): string | null {
+    const ok = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d) && !Number.isNaN(Date.parse(`${d}T00:00:00Z`));
+    if (!m) return "Bitte Mitarbeiter wählen";
+    if (!v || !b) return "Bitte „Von“ und „Bis“ vollständig eintragen";
+    if (!ok(v) || !ok(b)) return "Datum ist unvollständig";
+    if (b < v) return "„Bis“ liegt vor „Von“";
+    if (anzahlTage(v, b) > 367) return "Höchstens 1 Jahr am Stück";
+    return null;
+  }
+  const fehler = pruefe(mitarbeiterId, von, bis);
 
   function reset() {
+    setVersucht(false);
     setEditId(null);
     setArt("urlaub");
     setVon("");
@@ -81,14 +89,21 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
   }
 
   async function absenden() {
-    if (fehler) {
-      toast.error(fehler);
+    // Direkt aus den Feldern lesen: Safari meldet getippte Daten teils verspätet.
+    const v = vonRef.current?.value || von;
+    const b = bisRef.current?.value || bis;
+    if (v !== von) setVon(v);
+    if (b !== bis) setBis(b);
+    const f = pruefe(mitarbeiterId, v, b);
+    if (f) {
+      setVersucht(true);
+      toast.error(f);
       return;
     }
     try {
       await speichern.mutateAsync({
         id: editId ?? undefined,
-        input: { mitarbeiterId, art, von, bis, notiz: notiz.trim() || null },
+        input: { mitarbeiterId, art, von: v, bis: b, notiz: notiz.trim() || null },
       });
       toast.success(editId ? "Abwesenheit aktualisiert" : "Abwesenheit eingetragen");
       reset();
@@ -141,21 +156,29 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="abw-von">Von</Label>
-          <Input
+          <DateInput
             id="abw-von"
-            type="date"
+            ref={vonRef}
             value={von}
-            onChange={(e) => {
-              const v = e.target.value;
+            className="h-10"
+            onInput={(e) => setVon((e.target as HTMLInputElement).value)}
+            onChange={(v) => {
               setVon(v);
               if (v && (!bis || bis < v)) setBis(v);
             }}
-            onBlur={(e) => setVon(e.target.value)}
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="abw-bis">Bis</Label>
-          <Input id="abw-bis" type="date" value={bis} min={von || undefined} onChange={(e) => setBis(e.target.value)} onBlur={(e) => setBis(e.target.value)} />
+          <DateInput
+            id="abw-bis"
+            ref={bisRef}
+            value={bis}
+            className="h-10"
+            min={von || undefined}
+            onInput={(e) => setBis((e.target as HTMLInputElement).value)}
+            onChange={setBis}
+          />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="abw-notiz">Notiz (optional)</Label>
@@ -175,7 +198,7 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
           {editId && (
             <Button variant="ghost" onClick={reset}>Abbrechen</Button>
           )}
-          {fehler && (mitarbeiterId || von || bis) && (
+          {fehler && versucht && (
             <span className="text-xs font-medium text-destructive">{fehler}</span>
           )}
           {!fehler && (
