@@ -55,17 +55,17 @@ function passeTagAn(t: GenerierterTag, deltaMin: number): boolean {
   const reihenfolge: Array<1 | 2> = hatZwei ? [2, 1] : [1];
   for (const blockNr of reihenfolge) {
     if (blockNr === 2) {
-      const start2 = toMin(t.beginn2!);
-      const neu = toMin(t.ende2!) + deltaMin;
+      const start2 = toMin(t.beginn2 ?? "00:00");
+      const neu = toMin(t.ende2 ?? "00:00") + deltaMin;
       const laenge = neu - start2;
       if (laenge < 60 || laenge > 12 * 60 || neu > 24 * 60) continue;
       t.ende2 = fromMin(neu);
       t.stunden += deltaMin / 60;
       return true;
     }
-    const start1 = toMin(t.beginn!);
+    const start1 = toMin(t.beginn ?? "00:00");
     const pause = t.pause ?? 0;
-    const neu = toMin(t.ende!) + deltaMin;
+    const neu = toMin(t.ende ?? "00:00") + deltaMin;
     const laengeNet = neu - start1 - pause;
     if (laengeNet < 60 || laengeNet > 12 * 60 || neu > 24 * 60) continue;
     if (t.beginn2 && neu > toMin(t.beginn2)) continue;
@@ -107,13 +107,13 @@ export function wendeZielausgleichAn(
   const kandidaten = mische(tage.filter(istNormalerArbeitstag), rnd);
   if (kandidaten.length === 0) return summeStunden(tage);
 
-  const maxSchritte = kandidaten.length * 12 + 24;
+  const maxSchritte = kandidaten.length * 24 + 48;
   let schritte = 0;
   for (;;) {
-    const diff = Math.round(ziel - summeStunden(tage));
-    if (diff === 0) break;
-    const richtung = diff > 0 ? 60 : -60;
-    const brauchen = Math.abs(diff);
+    const diffHalbstunden = Math.round((ziel - summeStunden(tage)) * 2);
+    if (diffHalbstunden === 0) break;
+    const richtung = diffHalbstunden > 0 ? 30 : -30;
+    const brauchen = Math.abs(diffHalbstunden);
     let angepasst = 0;
     for (const tag of kandidaten) {
       if (angepasst >= brauchen) break;

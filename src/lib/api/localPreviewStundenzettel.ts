@@ -108,7 +108,7 @@ function minuten(hhmm: string): number {
 
 function stundenAus(beginn: string, ende: string, pause: number): number {
   const diff = minuten(ende) - minuten(beginn) - (pause || 0);
-  return Math.max(0, Math.round((diff / 60) * 100) / 100);
+  return Math.max(0, Math.floor(diff / 30) / 2);
 }
 
 function wochentagVon(d: Date): Wochentag {
