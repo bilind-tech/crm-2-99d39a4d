@@ -4,6 +4,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
 import type {
+  Abwesenheit,
+  AbwesenheitInput,
   CustomFeiertag,
   FeiertageResponse,
   GenerierenErgebnis,
@@ -17,6 +19,7 @@ export const qkStz = {
   mitarbeiter: ["stz", "mitarbeiter"] as const,
   feiertage: (jahr: number) => ["stz", "feiertage", jahr] as const,
   zettel: (jahr: number, monat: number) => ["stz", "zettel", jahr, monat] as const,
+  abwesenheiten: ["stz", "abwesenheiten"] as const,
 };
 
 // ---------- Mitarbeiter ----------
@@ -172,5 +175,44 @@ export function useArchivieren() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dokumente"] });
     },
+  });
+}
+// ---------- Abwesenheiten (Urlaub/Krank) ----------
+
+export function useAbwesenheiten() {
+  return useQuery({
+    queryKey: qkStz.abwesenheiten,
+    queryFn: async () => {
+      const r = await api.get<{ abwesenheiten: Abwesenheit[] }>("/abwesenheiten");
+      return r.abwesenheiten;
+    },
+  });
+}
+
+function useAbwesenheitInvalidate() {
+  const qc = useQueryClient();
+  return () => {
+    qc.invalidateQueries({ queryKey: qkStz.abwesenheiten });
+    qc.invalidateQueries({ queryKey: ["stz", "zettel"] });
+    qc.invalidateQueries({ queryKey: ["dokumente"] });
+  };
+}
+
+export function useSpeichereAbwesenheit() {
+  const inv = useAbwesenheitInvalidate();
+  return useMutation({
+    mutationFn: ({ id, input }: { id?: string; input: AbwesenheitInput }) =>
+      id
+        ? api.put<Abwesenheit>(`/abwesenheiten/${id}`, input)
+        : api.post<Abwesenheit>("/abwesenheiten", input),
+    onSuccess: inv,
+  });
+}
+
+export function useDeleteAbwesenheit() {
+  const inv = useAbwesenheitInvalidate();
+  return useMutation({
+    mutationFn: (id: string) => api.delete<{ ok: true }>(`/abwesenheiten/${id}`),
+    onSuccess: inv,
   });
 }

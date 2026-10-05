@@ -149,3 +149,37 @@ export const DEFAULT_ARBEITSZEIT: ArbeitsZeitConfig = {
   arbeitstage: ["montag", "dienstag", "mittwoch", "donnerstag", "freitag"],
   zielStundenProMonat: null,
 };
+export type AbwesenheitArt = "urlaub" | "krank" | "sonstiges";
+
+export const ABWESENHEIT_LABEL: Record<AbwesenheitArt, string> = {
+  urlaub: "Urlaub",
+  krank: "Krank",
+  sonstiges: "Sonstiges",
+};
+
+export interface Abwesenheit {
+  id: string;
+  mitarbeiterId: string;
+  art: AbwesenheitArt;
+  von: string;
+  bis: string;
+  notiz: string | null;
+  erstelltAm: string;
+  aktualisiertAm: string;
+}
+
+export interface AbwesenheitInput {
+  mitarbeiterId: string;
+  art: AbwesenheitArt;
+  von: string;
+  bis: string;
+  notiz?: string | null;
+}
+
+/** Bemerkung im Stundenzettel/PDF — identisch zum Backend. */
+export function abwesenheitBemerkung(a: Pick<Abwesenheit, "art" | "notiz">): string {
+  if (a.art === "urlaub") return "Urlaub";
+  if (a.art === "krank") return "Krank";
+  const n = (a.notiz ?? "").trim();
+  return n ? n.slice(0, 60) : "Abwesend";
+}
