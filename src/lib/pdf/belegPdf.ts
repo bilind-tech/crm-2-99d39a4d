@@ -687,6 +687,19 @@ export function defaultOutroAngebot(a: Angebot, opts: BuildOptions = {}) {
 export function defaultIntroRechnung(_r: Rechnung, opts: BuildOptions = {}) {
   if (opts.intro) return opts.intro;
   const monat = monatFromRechnung(_r);
+  // Identisch zu backend/src/pdf/layout.ts → defaultIntroRechnung.
+  if (_r.dauerauftragId || _r.optionen?.wiederkehrend === true) {
+    return monat
+      ? `hiermit übersenden wir Ihnen laut Vertrag die Rechnung v. ${monat} für folgende Leistungen:`
+      : `hiermit übersenden wir Ihnen laut Vertrag die Rechnung für folgende Leistungen:`;
+  }
+  const vertrag = _r.vertrag;
+  if (vertrag && vertrag.startDatum) {
+    const bez = vertrag.bezeichnung?.trim();
+    const kern = bez ? `gemäß unserem Vertrag »${bez}«` : `gemäß unserem Vertrag`;
+    if (monat) return `${kern} berechnen wir Ihnen für ${monat} folgende Leistungen:`;
+    return `${kern} berechnen wir Ihnen folgende Leistungen:`;
+  }
   if (monat) {
     return `hiermit übersenden wir Ihnen die Rechnung v. ${monat} für folgende Leistungen:`;
   }
