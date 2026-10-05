@@ -3,6 +3,7 @@ import { berechneNormalenTag } from "../src/stundenzettel/berechnung.js";
 import { generiereStundenzettel } from "../src/stundenzettel/generieren.js";
 import { pruefeZiel, summeStunden } from "../src/stundenzettel/zielausgleich.js";
 import { DEFAULT_ARBEITSZEIT, type Mitarbeiter } from "../src/stundenzettel/types.js";
+import { ArbeitsZeitConfigSchema } from "../src/stundenzettel/validation.js";
 
 function ma(ziel: number | null): Mitarbeiter {
   return {
@@ -68,5 +69,13 @@ describe("Zielstunden-Ausgleich", () => {
     const z = generiereStundenzettel(ma(120.5), 2026, 7, []);
     expect(summeStunden(z.tage)).toBe(120.5);
     expect(pruefeZiel(z.tage, 120.5).erfuellt).toBe(true);
+  });
+
+  it("akzeptiert Monatsziele in Halbstunden", () => {
+    const config = { ...DEFAULT_ARBEITSZEIT, zielStundenProMonat: 40.5 };
+    expect(ArbeitsZeitConfigSchema.safeParse(config).success).toBe(true);
+    expect(
+      ArbeitsZeitConfigSchema.safeParse({ ...config, zielStundenProMonat: 40.25 }).success,
+    ).toBe(false);
   });
 });
