@@ -38,6 +38,17 @@ import {
   upsertZettel,
 } from "../stundenzettel/repo.js";
 import {
+  createAbwesenheit,
+  deleteAbwesenheit,
+  ersetzeTageImZeitraum,
+  getAbwesenheit,
+  listAbwesenheiten,
+  monateImZeitraum,
+  updateAbwesenheit,
+} from "../stundenzettel/abwesenheit.js";
+import { wendeZielausgleichAn } from "../stundenzettel/zielausgleich.js";
+import {
+  AbwesenheitInputSchema,
   CustomFeiertagInputSchema,
   MitarbeiterInputSchema,
   MitarbeiterPatchSchema,
@@ -49,8 +60,82 @@ function badRequest(reply: import("fastify").FastifyReply, issues: unknown) {
   return { error: "validation", issues };
 }
 
+/**
+ * Berechnet vorhandene Zettel eines Mitarbeiters neu, aber nur die Tage in
+ * den übergebenen Zeiträumen. Manuell bearbeitete Tage außerhalb bleiben.
+ */
+async function nachberechnen(
+  mitarbeiterId: string,
+  zeitraeume: Array<{ von: string; bis: string }>,
+  log: { error: (o: unknown, msg: string) => void },
+): Promise<void> {
+  const m = getMitarbeiter(mitarbeiterId);
+  if (!m) return;
+  const abw = listAbwesenheiten(mitarbeiterId);
+  const monate = new Map<string, { jahr: number; monat: number }>();
+  for (const z of zeitraeume) for (const mo of monateImZeitraum(z.von, z.bis)) monate.set(`${mo.jahr}-${mo.monat}`, mo);
+  for (const { jahr, monat } of monate.values()) {
+    const existing = findZettel(mitarbeiterId, jahr, monat);
+    if (!existing) continue;
+    const frisch = generiereStundenzettel(m, jahr, monat, listCustomFeiertage(jahr), abw);
+    const tage = ersetzeTageImZeitraum(existing.tage, frisch.tage, zeitraeume);
+    const ziel = m.arbeitszeiten.zielStundenProMonat;
+    let gesamt = tage.reduce((s, t) => s + t.stunden, 0);
+    if (ziel != null && ziel > 0) gesamt = wendeZielausgleichAn(tage, ziel, `${m.id}-${jahr}-${monat}`);
+    const saved = upsertZettel({ mitarbeiterId, jahr, monat, tage, gesamtStunden: gesamt });
+    try {
+      await archiviereStundenzettel(saved.id!);
+    } catch (e) {
+      log.error({ err: e }, "stundenzettel-archiv-failed");
+    }
+  }
+}
+
 export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", requireAuth);
+
+  // ---------- Abwesenheiten ----------
+  app.get("/abwesenheiten", async (req) => {
+    const q = req.query as { mitarbeiterId?: string };
+    return { abwesenheiten: listAbwesenheiten(q.mitarbeiterId || undefined) };
+  });
+
+  app.post("/abwesenheiten", async (req, reply) => {
+    const p = AbwesenheitInputSchema.safeParse(req.body);
+    if (!p.success) return badRequest(reply, p.error.issues);
+    if (!getMitarbeiter(p.data.mitarbeiterId)) return reply.status(404).send({ error: "mitarbeiter-not-found" });
+    const a = createAbwesenheit(p.data);
+    await nachberechnen(a.mitarbeiterId, [a], req.log);
+    audit({ userId: req.user?.id ?? null, action: "stundenzettel.abwesenheit.create", detail: { id: a.id } });
+    return reply.status(201).send(a);
+  });
+
+  app.put("/abwesenheiten/:id", async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    const alt = getAbwesenheit(id);
+    if (!alt) return reply.status(404).send({ error: "not-found" });
+    const p = AbwesenheitInputSchema.safeParse(req.body);
+    if (!p.success) return badRequest(reply, p.error.issues);
+    if (!getMitarbeiter(p.data.mitarbeiterId)) return reply.status(404).send({ error: "mitarbeiter-not-found" });
+    const neu = updateAbwesenheit(id, p.data)!;
+    if (alt.mitarbeiterId !== neu.mitarbeiterId) {
+      await nachberechnen(alt.mitarbeiterId, [alt], req.log);
+      await nachberechnen(neu.mitarbeiterId, [neu], req.log);
+    } else {
+      await nachberechnen(neu.mitarbeiterId, [alt, neu], req.log);
+    }
+    audit({ userId: req.user?.id ?? null, action: "stundenzettel.abwesenheit.update", detail: { id } });
+    return neu;
+  });
+
+  app.delete("/abwesenheiten/:id", async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    const alt = getAbwesenheit(id);
+    if (!alt || !deleteAbwesenheit(id)) return reply.status(404).send({ error: "not-found" });
+    await nachberechnen(alt.mitarbeiterId, [alt], req.log);
+    audit({ userId: req.user?.id ?? null, action: "stundenzettel.abwesenheit.delete", detail: { id } });
+    return { ok: true };
+  });
 
   // ---------- Mitarbeiter ----------
   app.get("/mitarbeiter", async () => ({ mitarbeiter: listMitarbeiter() }));
@@ -163,7 +248,7 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
       if (!m) { ergebnis.push({ mitarbeiterId: id, ok: false, error: "not-found" }); continue; }
       const existing = findZettel(id, jahr, monat);
       if (existing && !ueberschreiben) { ergebnis.push({ mitarbeiterId: id, ok: true, id: existing.id!, skipped: true }); continue; }
-      const z = generiereStundenzettel(m, jahr, monat, custom);
+      const z = generiereStundenzettel(m, jahr, monat, custom, listAbwesenheiten(id));
       const saved = upsertZettel({
         mitarbeiterId: z.mitarbeiterId,
         jahr: z.jahr,
