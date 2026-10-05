@@ -151,6 +151,7 @@ export function StundenzettelTabelle({
 
   function loeschen() {
     if (!zettel.id) return;
+    const zettelId = zettel.id;
     confirm(
       {
         title: "Stundenzettel löschen?",
@@ -160,7 +161,7 @@ export function StundenzettelTabelle({
       },
       async () => {
         try {
-          await del.mutateAsync(zettel.id);
+          await del.mutateAsync(zettelId);
           toast.success("Gelöscht");
         } catch (e) {
           toast.error((e as Error).message || "Löschen fehlgeschlagen");
