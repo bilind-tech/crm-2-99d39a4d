@@ -96,21 +96,21 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
     }
   }
 
-  async function entfernen(a: Abwesenheit) {
-    const ok = await confirm({
+  function entfernen(a: Abwesenheit) {
+    confirm({
       title: "Abwesenheit löschen?",
       description: `${ABWESENHEIT_LABEL[a.art]} von ${nameVon.get(a.mitarbeiterId) ?? "?"} (${fmt(a.von)} – ${fmt(a.bis)}) wird entfernt. Die Tage werden wieder normal berechnet.`,
       confirmLabel: "Löschen",
       variant: "destructive",
+    }, async () => {
+      try {
+        await loeschen.mutateAsync(a.id);
+        if (editId === a.id) reset();
+        toast.success("Abwesenheit gelöscht");
+      } catch (e) {
+        toast.error((e as Error).message || "Löschen fehlgeschlagen");
+      }
     });
-    if (!ok) return;
-    try {
-      await loeschen.mutateAsync(a.id);
-      if (editId === a.id) reset();
-      toast.success("Abwesenheit gelöscht");
-    } catch (e) {
-      toast.error((e as Error).message || "Löschen fehlgeschlagen");
-    }
   }
 
   return (
