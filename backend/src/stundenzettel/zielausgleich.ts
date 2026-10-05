@@ -57,8 +57,11 @@ function passeTagAn(t: GenerierterTag, deltaMin: number): boolean {
 
   for (const blockNr of reihenfolge) {
     if (blockNr === 2) {
-      const start2 = toMin(t.beginn2!);
-      const neu = toMin(t.ende2!) + deltaMin;
+      const beginn2 = t.beginn2;
+      const ende2 = t.ende2;
+      if (!beginn2 || !ende2) continue;
+      const start2 = toMin(beginn2);
+      const neu = toMin(ende2) + deltaMin;
       const laenge = neu - start2;
       if (laenge < 60 || laenge > 12 * 60) continue;
       if (neu > 24 * 60) continue;
@@ -66,9 +69,12 @@ function passeTagAn(t: GenerierterTag, deltaMin: number): boolean {
       t.stunden += deltaMin / 60;
       return true;
     }
-    const start1 = toMin(t.beginn!);
+    const beginn = t.beginn;
+    const ende = t.ende;
+    if (!beginn || !ende) continue;
+    const start1 = toMin(beginn);
     const pause = t.pause ?? 0;
-    const neu = toMin(t.ende!) + deltaMin;
+    const neu = toMin(ende) + deltaMin;
     const laengeNet = neu - start1 - pause;
     if (laengeNet < 60 || laengeNet > 12 * 60) continue;
     if (neu > 24 * 60) continue;

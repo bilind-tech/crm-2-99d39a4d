@@ -128,8 +128,6 @@ export function StundenzettelTabelle({
         t.bemerkung = status;
         t.beginn = undefined;
         t.ende = undefined;
-        t.beginn2 = undefined;
-        t.ende2 = undefined;
         t.pause = undefined;
       }
       t.stunden = berechneStunden(t);
