@@ -26,4 +26,4 @@
 - [x] Stundenzettel-Bearbeitung ohne zweite Zeitspalte übersichtlicher gestalten
 - [x] Geänderte Tageszeilen bis zum Speichern sichtbar markieren
 - [x] Halbstunden in Bearbeitung, Zielausgleich, Summen und PDF durchgängig korrekt rechnen
-- [ ] Stundenzettel im Browser sowie mit Tests und PDF-Sichtprüfung kontrollieren
+- [x] Stundenzettel im Browser sowie mit Tests und PDF-Sichtprüfung kontrollieren
