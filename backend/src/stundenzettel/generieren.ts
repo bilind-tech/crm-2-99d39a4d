@@ -11,7 +11,7 @@ import {
   type FeiertagEintrag,
 } from "./feiertage.js";
 import { wendeZielausgleichAn } from "./zielausgleich.js";
-import { abwesenheitAm } from "./abwesenheit.js";
+import { abwesenheitAm } from "./abwesenheitZeitraum.js";
 import { abwesenheitBemerkung, type Abwesenheit } from "./types.js";
 import type {
   GenerierterStundenzettel,

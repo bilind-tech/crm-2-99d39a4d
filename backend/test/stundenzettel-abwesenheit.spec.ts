@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { generiereStundenzettel } from "../src/stundenzettel/generieren.js";
-import { ersetzeTageImZeitraum, monateImZeitraum } from "../src/stundenzettel/abwesenheit.js";
+import { ersetzeTageImZeitraum, monateImZeitraum } from "../src/stundenzettel/abwesenheitZeitraum.js";
 import { DEFAULT_ARBEITSZEIT, type Abwesenheit, type Mitarbeiter } from "../src/stundenzettel/types.js";
 
 const m: Mitarbeiter = {
