@@ -20,6 +20,8 @@ function toMin(t?: string): number | null {
 
 /** Halbe Stunden je Block (Floor), Pause nur von Block 1 abgezogen. */
 function berechneStunden(t: GenerierterTag): number {
+  // Urlaub/Krank zählen wie Arbeitszeit: die übernommenen Tagesstunden bleiben.
+  if (t.bemerkung && (BEZAHLTE_ABWESENHEIT as readonly string[]).includes(t.bemerkung)) return t.stunden || 0;
   if (t.bemerkung && (TAG_STATUS as readonly string[]).includes(t.bemerkung)) return 0;
   const s1 = toMin(t.beginn);
   const e1 = toMin(t.ende);
@@ -49,6 +51,9 @@ export const TAG_STATUS = [
   "Unbezahlt",
   "Schule",
 ] as const;
+
+/** Abwesenheiten, die mit den normalen Tagesstunden zählen. */
+export const BEZAHLTE_ABWESENHEIT = ["Krank", "Urlaub"] as const;
 
 function editierbarerStand(t: GenerierterTag): string {
   return JSON.stringify({
@@ -130,10 +135,17 @@ export function StundenzettelTabelle({
           t.bemerkung = undefined;
         }
       } else {
+        const bezahlt = (BEZAHLTE_ABWESENHEIT as readonly string[]).includes(status);
+        const warBezahlt = !!t.bemerkung && (BEZAHLTE_ABWESENHEIT as readonly string[]).includes(t.bemerkung);
+        // Bisherige Tagesstunden übernehmen (aus Zeiten oder vorheriger Abwesenheit).
+        const vorher = warBezahlt ? t.stunden || 0 : (t.beginn && t.ende ? berechneStunden({ ...t, bemerkung: undefined }) : 0);
         t.bemerkung = status;
+        t.stunden = bezahlt ? vorher : 0;
         t.beginn = undefined;
         t.ende = undefined;
         t.pause = undefined;
+        t.beginn2 = undefined;
+        t.ende2 = undefined;
       }
       t.stunden = berechneStunden(t);
       next[idx] = t;

@@ -4,3 +4,4 @@
 - PDF layout settings use their own persisted settings area and must participate in every browser/server PDF cache key, so settings changes cannot serve stale documents.
 - Bulk Drive sync accepts only explicit filtered document IDs and reports success only after matching PDF hashes completed uploading, preventing hidden records or stale versions from appearing synced.
 - Stundenzettel calculations use the same 30-minute floor and 0.5-hour target-adjustment rules in browser preview and Pi backend, preventing divergent monthly totals.
+- Stundenzettel-Abwesenheiten: pure Zeitraum-Helfer in `abwesenheitZeitraum.ts` (ohne DB-Import), damit Generierung/Tests ohne SQLite laufen; Browser-Vorschau spiegelt dieselbe Logik.

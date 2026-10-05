@@ -11,6 +11,8 @@ import {
   type FeiertagEintrag,
 } from "./feiertage.js";
 import { wendeZielausgleichAn } from "./zielausgleich.js";
+import { abwesenheitAm } from "./abwesenheitZeitraum.js";
+import { abwesenheitBemerkung, type Abwesenheit } from "./types.js";
 import type {
   GenerierterStundenzettel,
   GenerierterTag,
@@ -40,6 +42,7 @@ export function generiereStundenzettel(
   jahr: number,
   monat: number,
   customFeiertage: FeiertagEintrag[],
+  abwesenheiten: Abwesenheit[] = [],
 ): GenerierterStundenzettel {
   const feiertage = baueFeiertagsKarte(jahr, customFeiertage);
   const cfg = mitarbeiter.arbeitszeiten;
@@ -94,6 +97,13 @@ export function generiereStundenzettel(
 
     // 4) Normaler Arbeitstag.
     const norm = berechneNormalenTag(zeit, cfg.standardZeiten);
+
+    // 4a) Abwesenheit (Urlaub/Krank): normale Tagesstunden, keine Zeiten.
+    const abw = abwesenheitAm(abwesenheiten.filter((a) => a.mitarbeiterId === mitarbeiter.id), datum);
+    if (abw) {
+      tage.push({ datum, wochentag: wt, stunden: norm.stunden, bemerkung: abwesenheitBemerkung(abw) });
+      continue;
+    }
     tage.push({
       datum,
       wochentag: wt,

@@ -3,6 +3,9 @@
 
 import {
   DEFAULT_ARBEITSZEIT,
+  abwesenheitBemerkung,
+  type Abwesenheit,
+  type AbwesenheitInput,
   WOCHENTAGE,
   type CustomFeiertag,
   type FeiertageResponse,
@@ -21,10 +24,11 @@ interface Store {
   mitarbeiter: Mitarbeiter[];
   zettel: Stundenzettel[];
   customFeiertage: CustomFeiertag[];
+  abwesenheiten: Abwesenheit[];
 }
 
 function empty(): Store {
-  return { mitarbeiter: [], zettel: [], customFeiertage: [] };
+  return { mitarbeiter: [], zettel: [], customFeiertage: [], abwesenheiten: [] };
 }
 
 function read(): Store {
@@ -37,6 +41,7 @@ function read(): Store {
       mitarbeiter: parsed.mitarbeiter ?? [],
       zettel: parsed.zettel ?? [],
       customFeiertage: parsed.customFeiertage ?? [],
+      abwesenheiten: parsed.abwesenheiten ?? [],
     };
   } catch {
     return empty();
@@ -117,7 +122,7 @@ function wochentagVon(d: Date): Wochentag {
   return WOCHENTAGE[idx];
 }
 
-function generiereTage(m: Mitarbeiter, jahr: number, monat: number, feiertage: Map<string, string>): GenerierterTag[] {
+function generiereTage(m: Mitarbeiter, jahr: number, monat: number, feiertage: Map<string, string>, abwesenheiten: Abwesenheit[] = []): GenerierterTag[] {
   const cfg = m.arbeitszeiten ?? DEFAULT_ARBEITSZEIT;
   const tageImMonat = new Date(Date.UTC(jahr, monat, 0)).getUTCDate();
   const out: GenerierterTag[] = [];
@@ -148,6 +153,15 @@ function generiereTage(m: Mitarbeiter, jahr: number, monat: number, feiertage: M
       pause,
       stunden: stundenAus(beginn, ende, pause),
     };
+    const abw = abwesenheiten
+      .filter((a) => a.mitarbeiterId === m.id && a.von <= datum && datum <= a.bis)
+      .sort((a, b) => b.erstelltAm.localeCompare(a.erstelltAm))[0];
+    if (abw) {
+      let std = tagEintrag.stunden;
+      if (zeit?.block2) std = Math.round((std + stundenAus(zeit.block2.beginn, zeit.block2.ende, 0)) * 100) / 100;
+      out.push({ datum, wochentag: wt, stunden: std, bemerkung: abwesenheitBemerkung(abw) });
+      continue;
+    }
     if (zeit?.block2) {
       tagEintrag.beginn2 = zeit.block2.beginn;
       tagEintrag.ende2 = zeit.block2.ende;
@@ -182,6 +196,9 @@ export function stundenzettelPreviewGet<T>(cleanPath: string, params: URLSearchP
       custom: store.customFeiertage.filter((c) => c.datum.startsWith(String(jahr))),
     };
     return res as T;
+  }
+  if (cleanPath === "/abwesenheiten") {
+    return { abwesenheiten: [...store.abwesenheiten].sort((a, b) => b.von.localeCompare(a.von)) } as T;
   }
   if (cleanPath === "/stundenzettel") {
     const jahr = Number.parseInt(params.get("jahr") ?? "", 10);
@@ -231,6 +248,29 @@ export function stundenzettelPreviewMutate<T>(method: string, cleanPath: string,
     }
   }
 
+  // ---- Abwesenheiten ----
+  if (cleanPath === "/abwesenheiten" || cleanPath.startsWith("/abwesenheiten/")) {
+    const id = cleanPath.split("/")[2];
+    const alt = id ? store.abwesenheiten.find((a) => a.id === id) : undefined;
+    let neu: Abwesenheit | undefined;
+    if (method === "POST" && !id) {
+      const input = (body ?? {}) as AbwesenheitInput;
+      neu = { id: `preview-abw-${crypto.randomUUID()}`, ...input, notiz: input.notiz ?? null, erstelltAm: ts, aktualisiertAm: ts };
+      store.abwesenheiten.push(neu);
+    } else if (method === "PUT" && alt) {
+      const input = (body ?? {}) as AbwesenheitInput;
+      neu = { ...alt, ...input, notiz: input.notiz ?? null, aktualisiertAm: ts };
+      store.abwesenheiten = store.abwesenheiten.map((a) => (a.id === id ? neu! : a));
+    } else if (method === "DELETE" && alt) {
+      store.abwesenheiten = store.abwesenheiten.filter((a) => a.id !== id);
+    } else {
+      return null;
+    }
+    previewNachberechnen(store, [alt, neu].filter((x): x is Abwesenheit => !!x), ts);
+    write(store);
+    return (neu ?? { ok: true }) as T;
+  }
+
   // ---- Feiertage ----
   if (method === "POST" && cleanPath === "/feiertage/custom") {
     const input = (body ?? {}) as { datum: string; name: string };
@@ -272,7 +312,7 @@ export function stundenzettelPreviewMutate<T>(method: string, cleanPath: string,
       if (vorhandenIdx >= 0 && input.ueberschreiben !== true) {
         return { mitarbeiterId: mid, ok: true, id: store.zettel[vorhandenIdx].id ?? undefined, skipped: true };
       }
-      const tage = generiereTage(m, jahr, monat, ftMap);
+      const tage = generiereTage(m, jahr, monat, ftMap, store.abwesenheiten);
       const ziel = m.arbeitszeiten?.zielStundenProMonat ?? null;
       if (ziel != null && ziel > 0) {
         wendeZielausgleichAn(tage, ziel, `${m.id}-${jahr}-${monat}`);
@@ -335,4 +375,24 @@ export function stundenzettelPreviewMutate<T>(method: string, cleanPath: string,
   }
 
   return null;
+}
+
+/** Ersetzt in vorhandenen Zetteln nur die Tage in den Zeiträumen (wie Backend). */
+function previewNachberechnen(store: Store, zeitraeume: Abwesenheit[], ts: string): void {
+  for (let i = 0; i < store.zettel.length; i++) {
+    const z = store.zettel[i];
+    const relevante = zeitraeume.filter((a) => a.mitarbeiterId === z.mitarbeiterId);
+    const m = store.mitarbeiter.find((x) => x.id === z.mitarbeiterId);
+    if (!m || relevante.length === 0) continue;
+    const betrifft = (d: string) => relevante.some((a) => a.von <= d && d <= a.bis);
+    if (!z.tage.some((t) => betrifft(t.datum))) continue;
+    const ftMap = new Map<string, string>();
+    for (const f of gesetzlicheFeiertageNrw(z.jahr)) ftMap.set(f.datum, f.name);
+    for (const f of store.customFeiertage) ftMap.set(f.datum, f.name);
+    const frisch = new Map(generiereTage(m, z.jahr, z.monat, ftMap, store.abwesenheiten).map((t) => [t.datum, t]));
+    const tage = z.tage.map((t) => (betrifft(t.datum) ? frisch.get(t.datum) ?? t : t));
+    const ziel = m.arbeitszeiten?.zielStundenProMonat ?? null;
+    if (ziel != null && ziel > 0) wendeZielausgleichAn(tage, ziel, `${m.id}-${z.jahr}-${z.monat}`);
+    store.zettel[i] = { ...z, tage, gesamtStunden: summe(tage), aktualisiertAm: ts };
+  }
 }

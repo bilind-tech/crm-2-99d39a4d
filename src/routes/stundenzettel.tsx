@@ -34,6 +34,7 @@ import { MitarbeiterImportDialog } from "@/components/stundenzettel/MitarbeiterI
 import { StundenzettelTabelle } from "@/components/stundenzettel/StundenzettelTabelle";
 import { StundenzettelPdfAktionen } from "@/components/stundenzettel/StundenzettelPdfAktionen";
 import { StundenzettelWorkspace } from "@/components/stundenzettel/StundenzettelWorkspace";
+import { AbwesenheitenPanel } from "@/components/stundenzettel/AbwesenheitenPanel";
 import {
   useCreateCustomFeiertag,
   useDeleteCustomFeiertag,
@@ -399,6 +400,22 @@ function Page() {
               </ul>
               </>
             )}
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* --- Abwesenheiten --- */}
+        <AccordionItem
+          value="abwesenheiten"
+          className="rounded-xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger className="hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <CalendarPlus className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">Urlaub & Krank</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <AbwesenheitenPanel mitarbeiter={mitarbeiter} />
           </AccordionContent>
         </AccordionItem>
 
