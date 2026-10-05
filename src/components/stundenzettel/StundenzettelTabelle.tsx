@@ -72,7 +72,6 @@ export function StundenzettelTabelle({
 }) {
   const [tage, setTage] = useState<GenerierterTag[]>(zettel.tage);
   const [gespeicherteTage, setGespeicherteTage] = useState<GenerierterTag[]>(zettel.tage);
-  const [dirty, setDirty] = useState(false);
   const patch = usePatchZettel(jahr, monat);
   const del = useDeleteZettel(jahr, monat);
   const { confirm, dialog } = useConfirm();
@@ -80,7 +79,6 @@ export function StundenzettelTabelle({
   useEffect(() => {
     setTage(zettel.tage);
     setGespeicherteTage(zettel.tage);
-    setDirty(false);
   }, [zettel]);
 
   const gesamt = useMemo(() => tage.reduce((s, t) => s + (t.stunden || 0), 0), [tage]);
@@ -92,6 +90,7 @@ export function StundenzettelTabelle({
         .map((t) => t.datum),
     );
   }, [gespeicherteTage, tage]);
+  const dirty = geaenderteTage.size > 0;
 
   function setFeld(idx: number, feld: keyof GenerierterTag, value: string) {
     setTage((prev) => {
@@ -114,7 +113,6 @@ export function StundenzettelTabelle({
       next[idx] = t;
       return next;
     });
-    setDirty(true);
   }
 
   /** Status setzt die Bemerkung und leert bei Abwesenheit alle Zeiten. */
@@ -138,7 +136,6 @@ export function StundenzettelTabelle({
       next[idx] = t;
       return next;
     });
-    setDirty(true);
   }
 
   async function speichern() {
@@ -146,7 +143,6 @@ export function StundenzettelTabelle({
     try {
       await patch.mutateAsync({ id: zettel.id, tage });
       setGespeicherteTage(tage.map((tag) => ({ ...tag })));
-      setDirty(false);
       toast.success("Stundenzettel gespeichert");
     } catch (e) {
       toast.error((e as Error).message || "Speichern fehlgeschlagen");
