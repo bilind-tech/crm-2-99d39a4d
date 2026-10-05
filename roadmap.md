@@ -23,3 +23,7 @@
 - [x] PDF-, Drive-, Browser- und Update-Sicherheit vollständig prüfen
 - [x] Tabellenzeilen, vertikale Textausrichtung, Fließtext und Footer sichtbar nachkorrigieren und erneut prüfen
 - [x] Tabellenkopf und Summenzeilen nach der neuen Referenz wieder ausgewogen luftiger setzen und sichtbar prüfen
+- [ ] Stundenzettel-Bearbeitung ohne zweite Zeitspalte übersichtlicher gestalten
+- [ ] Geänderte Tageszeilen bis zum Speichern sichtbar markieren
+- [ ] Halbstunden in Bearbeitung, Zielausgleich, Summen und PDF durchgängig korrekt rechnen
+- [ ] Stundenzettel im Browser sowie mit Tests und PDF-Sichtprüfung kontrollieren
