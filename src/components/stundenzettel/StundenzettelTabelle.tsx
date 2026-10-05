@@ -109,6 +109,10 @@ export function StundenzettelTabelle({
         feld === "ende2"
       ) {
         t[feld] = value === "" ? undefined : value;
+        if (feld === "beginn" || feld === "ende") {
+          t.beginn2 = undefined;
+          t.ende2 = undefined;
+        }
       }
       t.stunden = berechneStunden(t);
       next[idx] = t;
