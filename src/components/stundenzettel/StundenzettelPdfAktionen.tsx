@@ -2,7 +2,9 @@
 // Das PDF kommt immer frisch vom Backend (Renderer in backend/src/pdf/stundenzettelPdf.ts).
 
 import { useState, type ReactNode } from "react";
-import { Download, ExternalLink, FolderInput, Loader2 } from "lucide-react";
+import { Download, Eye, FolderInput, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PdfCanvasViewer } from "@/components/pdf/PdfCanvasViewer";
 import { Button } from "@/components/ui/button";
 import { PrintButton } from "@/components/pdf/PrintButton";
 import { fetchStundenzettelPdf } from "@/lib/stundenzettel/pdf";
@@ -18,6 +20,7 @@ interface Props {
 export function StundenzettelPdfAktionen({ zettelId, extra }: Props) {
   const [busy, setBusy] = useState<"ansehen" | "download" | null>(null);
   const archivieren = useArchivieren();
+  const [vorschau, setVorschau] = useState<{ blob: Blob; dateiname: string } | null>(null);
 
   const handleArchiv = async () => {
     try {
@@ -37,10 +40,13 @@ export function StundenzettelPdfAktionen({ zettelId, extra }: Props) {
     setBusy(mode);
     try {
       const { blob, dateiname } = await fetchStundenzettelPdf(zettelId);
-      const url = URL.createObjectURL(blob);
       if (mode === "ansehen") {
-        window.open(url, "_blank", "noopener");
-      } else {
+        // Auf derselben Seite anzeigen — kein neuer Tab, keine Weiterleitung.
+        setVorschau({ blob, dateiname });
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      {
         const a = document.createElement("a");
         a.href = url;
         a.download = dateiname;
@@ -62,7 +68,7 @@ export function StundenzettelPdfAktionen({ zettelId, extra }: Props) {
         {busy === "ansehen" ? (
           <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
         ) : (
-          <ExternalLink className="mr-1.5 h-4 w-4" />
+          <Eye className="mr-1.5 h-4 w-4" />
         )}
         PDF ansehen
       </Button>
@@ -84,6 +90,29 @@ export function StundenzettelPdfAktionen({ zettelId, extra }: Props) {
         In Dokumente ablegen
       </Button>
       {extra}
+      <Dialog open={!!vorschau} onOpenChange={(o) => !o && setVorschau(null)}>
+        <DialogContent className="flex h-[92vh] max-w-5xl flex-col gap-3 p-4">
+          <DialogHeader className="flex-row items-center justify-between gap-2 space-y-0 pr-8">
+            <DialogTitle className="truncate text-base">{vorschau?.dateiname ?? "Stundenzettel"}</DialogTitle>
+            <div className="flex items-center gap-2">
+              <PrintButton getBlob={async () => vorschau!.blob} />
+              <Button size="sm" variant="outline" onClick={() => run("download")} disabled={busy !== null}>
+                <Download className="mr-1.5 h-4 w-4" /> Herunterladen
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-hidden rounded-lg border border-border bg-muted/30">
+            {vorschau && (
+              <PdfCanvasViewer
+                pdfBlob={vorschau.blob}
+                pdfUrl={null}
+                fileName={vorschau.dateiname}
+                className="h-full w-full overflow-y-auto bg-muted/30"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
