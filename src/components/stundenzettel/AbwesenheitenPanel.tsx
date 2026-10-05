@@ -57,7 +57,8 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
 
   const fehler =
     !mitarbeiterId ? "Bitte Mitarbeiter wählen"
-    : !von || !bis ? "Bitte Zeitraum eintragen"
+    : !von || !bis ? "Bitte „Von“ und „Bis“ vollständig eintragen"
+    : !/^\d{4}-\d{2}-\d{2}$/.test(von) || !/^\d{4}-\d{2}-\d{2}$/.test(bis) ? "Datum ist unvollständig"
     : bis < von ? "„Bis“ liegt vor „Von“"
     : anzahlTage(von, bis) > 367 ? "Höchstens 1 Jahr am Stück"
     : null;
@@ -145,14 +146,16 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
             type="date"
             value={von}
             onChange={(e) => {
-              setVon(e.target.value);
-              if (!bis || bis < e.target.value) setBis(e.target.value);
+              const v = e.target.value;
+              setVon(v);
+              if (v && (!bis || bis < v)) setBis(v);
             }}
+            onBlur={(e) => setVon(e.target.value)}
           />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="abw-bis">Bis</Label>
-          <Input id="abw-bis" type="date" value={bis} min={von || undefined} onChange={(e) => setBis(e.target.value)} />
+          <Input id="abw-bis" type="date" value={bis} min={von || undefined} onChange={(e) => setBis(e.target.value)} onBlur={(e) => setBis(e.target.value)} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="abw-notiz">Notiz (optional)</Label>
@@ -165,14 +168,17 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
           />
         </div>
         <div className="flex flex-wrap items-center gap-2 sm:col-span-2 lg:col-span-5">
-          <Button onClick={absenden} disabled={speichern.isPending || !!fehler}>
+          <Button onClick={absenden} disabled={speichern.isPending}>
             {speichern.isPending && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
             {editId ? "Änderung speichern" : "Eintragen"}
           </Button>
           {editId && (
             <Button variant="ghost" onClick={reset}>Abbrechen</Button>
           )}
-          {von && bis && bis >= von && (
+          {fehler && (mitarbeiterId || von || bis) && (
+            <span className="text-xs font-medium text-destructive">{fehler}</span>
+          )}
+          {!fehler && (
             <span className="text-xs text-muted-foreground">
               {anzahlTage(von, bis)} Kalendertage · Wochenenden und Feiertage werden übersprungen.
               Urlaub/Krank zählen mit den normalen Tagesstunden.
