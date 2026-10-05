@@ -80,3 +80,19 @@ export const ZettelPatchSchema = z.object({
     }),
   ),
 });
+const datumStr = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Datum muss YYYY-MM-DD sein")
+  .refine((s) => !Number.isNaN(Date.parse(`${s}T00:00:00Z`)), "Ungültiges Datum");
+
+export const AbwesenheitInputSchema = z
+  .object({
+    mitarbeiterId: z.string().min(1),
+    art: z.enum(["urlaub", "krank", "sonstiges"]),
+    von: datumStr,
+    bis: datumStr,
+    notiz: z.string().trim().max(200).optional().nullable(),
+  })
+  .refine((a) => a.von <= a.bis, { message: "„Bis“ darf nicht vor „Von“ liegen", path: ["bis"] })
+  .refine(
+    (a) => (Date.parse(`${a.bis}T00:00:00Z`) - Date.parse(`${a.von}T00:00:00Z`)) / 86400000 <= 366,
+    { message: "Zeitraum höchstens 1 Jahr", path: ["bis"] },
+  );
