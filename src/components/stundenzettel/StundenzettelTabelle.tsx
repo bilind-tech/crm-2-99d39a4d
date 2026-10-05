@@ -20,6 +20,7 @@ function toMin(t?: string): number | null {
 
 /** Halbe Stunden je Block (Floor), Pause nur von Block 1 abgezogen. */
 function berechneStunden(t: GenerierterTag): number {
+  if (t.bemerkung && (TAG_STATUS as readonly string[]).includes(t.bemerkung)) return 0;
   const s1 = toMin(t.beginn);
   const e1 = toMin(t.ende);
   let min = 0;
