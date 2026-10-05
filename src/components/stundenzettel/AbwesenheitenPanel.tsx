@@ -52,6 +52,7 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
   const [bis, setBis] = useState("");
   const [notiz, setNotiz] = useState("");
   const [filter, setFilter] = useState(ALLE);
+  const [versucht, setVersucht] = useState(false);
   const vonRef = useRef<HTMLInputElement>(null);
   const bisRef = useRef<HTMLInputElement>(null);
 
@@ -70,6 +71,7 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
   const fehler = pruefe(mitarbeiterId, von, bis);
 
   function reset() {
+    setVersucht(false);
     setEditId(null);
     setArt("urlaub");
     setVon("");
@@ -94,6 +96,7 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
     if (b !== bis) setBis(b);
     const f = pruefe(mitarbeiterId, v, b);
     if (f) {
+      setVersucht(true);
       toast.error(f);
       return;
     }
@@ -195,7 +198,7 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
           {editId && (
             <Button variant="ghost" onClick={reset}>Abbrechen</Button>
           )}
-          {fehler && (mitarbeiterId || von || bis) && (
+          {fehler && versucht && (
             <span className="text-xs font-medium text-destructive">{fehler}</span>
           )}
           {!fehler && (
