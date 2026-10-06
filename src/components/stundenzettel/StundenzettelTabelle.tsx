@@ -83,6 +83,7 @@ export function StundenzettelTabelle({
 }) {
   const [filter, setFilter] = useState<"alle" | "manuell" | "geaendert">("alle");
   const [tage, setTage] = useState<GenerierterTag[]>(zettel.tage);
+  const [zweiterBlock, setZweiterBlock] = useState<Set<string>>(new Set());
   const [gespeicherteTage, setGespeicherteTage] = useState<GenerierterTag[]>(zettel.tage);
   const patch = usePatchZettel(jahr, monat);
   const del = useDeleteZettel(jahr, monat);
