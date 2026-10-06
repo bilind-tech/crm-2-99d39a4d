@@ -47,7 +47,7 @@ import {
   updateAbwesenheit,
 } from "../stundenzettel/abwesenheit.js";
 import { wendeZielausgleichAn } from "../stundenzettel/zielausgleich.js";
-import { entferneUrlaubsantragDokumente, legeUrlaubsantragAb } from "../stundenzettel/urlaubsantragArchiv.js";
+import { entferneUrlaubsantragDokumente, legeUrlaubsantragAb, urlaubsantragStatus } from "../stundenzettel/urlaubsantragArchiv.js";
 import {
   AbwesenheitInputSchema,
   CustomFeiertagInputSchema,
@@ -127,6 +127,13 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
     }
     audit({ userId: req.user?.id ?? null, action: "stundenzettel.abwesenheit.update", detail: { id } });
     return neu;
+  });
+
+  // Ablage-/Drive-Status aller Urlaubsanträge (für die Werkzeug-Liste).
+  app.get("/abwesenheiten/antrag-status", async () => {
+    const status: Record<string, ReturnType<typeof urlaubsantragStatus>> = {};
+    for (const a of listAbwesenheiten()) if (a.art === "urlaub") status[a.id] = urlaubsantragStatus(a);
+    return { status };
   });
 
   // Urlaubsantrag-PDF (im Browser erzeugt) in Dokumente ablegen.

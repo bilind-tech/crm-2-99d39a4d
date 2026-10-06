@@ -2,7 +2,7 @@
 // (art = urlaub), dadurch automatisch im Stundenzettel berücksichtigt.
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Download, Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
+import { CloudUpload, Download, ExternalLink, FolderCheck, Loader2, Pencil, Plus, Save, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { useConfirm } from "@/hooks/useConfirm";
 import { useFirmendaten } from "@/hooks/useApi";
 import {
   useAbwesenheiten,
+  useAntragStatus,
   useDeleteAbwesenheit,
   useFeiertage,
   useMitarbeiter,
@@ -64,6 +65,7 @@ function UrlaubsantragPage() {
   const speichern = useSpeichereAbwesenheit();
   const ablegen = useUrlaubsantragAblegen();
   const loeschen = useDeleteAbwesenheit();
+  const { data: antragStatus = {} } = useAntragStatus();
   const { confirm, dialog } = useConfirm();
 
   const [editId, setEditId] = useState<string | null>(null);
@@ -178,6 +180,23 @@ function UrlaubsantragPage() {
       }
     } catch (e) {
       toast.error((e as Error).message || "Speichern fehlgeschlagen");
+    }
+  }
+
+  async function erneutAblegen(a: Abwesenheit) {
+    try {
+      const n = nameVon.get(a.mitarbeiterId) ?? "";
+      const pdf = await generateUrlaubsantragPdf({
+        firma,
+        mitarbeiterName: n,
+        von: a.von,
+        bis: a.bis,
+        tage: a.tageOverride ?? zaehleUrlaubstage(a.von, a.bis, feiertage),
+      });
+      await ablegen.mutateAsync({ id: a.id, pdfBase64: await blobToDataUrl(pdf) });
+      toast.success("PDF in Dokumente abgelegt");
+    } catch (e) {
+      toast.error((e as Error).message || "Ablage fehlgeschlagen");
     }
   }
 
@@ -311,7 +330,20 @@ function UrlaubsantragPage() {
                         {fmt(a.von)} – {fmt(a.bis)}
                         {a.tageOverride != null ? ` · ${String(a.tageOverride).replace(".", ",")} Tage` : ""}
                       </div>
+                      <AntragStatusZeile status={antragStatus[a.id]} />
                     </button>
+                    {antragStatus[a.id] && !antragStatus[a.id].dokumentId && (
+                      <Button variant="outline" size="sm" disabled={ablegen.isPending} onClick={() => erneutAblegen(a)}>
+                        Erneut ablegen
+                      </Button>
+                    )}
+                    {antragStatus[a.id]?.driveUrl && (
+                      <Button variant="ghost" size="icon" aria-label="In Google Drive öffnen" asChild>
+                        <a href={antragStatus[a.id].driveUrl!} target="_blank" rel="noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" aria-label="Öffnen" onClick={() => oeffnen(a)}>
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -339,6 +371,31 @@ function UrlaubsantragPage() {
         </div>
       </div>
       {dialog}
+    </div>
+  );
+}
+
+function AntragStatusZeile({ status }: { status?: { dokumentId: string | null; driveStatus: string } }) {
+  if (!status) return null;
+  if (!status.dokumentId) {
+    return <div className="mt-1 text-[11px] font-medium text-destructive">PDF fehlt in Dokumente</div>;
+  }
+  const drive =
+    status.driveStatus === "uploaded"
+      ? { text: "In Drive", cls: "text-primary" }
+      : status.driveStatus === "fehler"
+        ? { text: "Drive-Fehler", cls: "text-destructive" }
+        : status.driveStatus === "pending"
+          ? { text: "Drive ausstehend", cls: "text-muted-foreground" }
+          : { text: "Nicht in Drive (Drive nicht verbunden?)", cls: "text-muted-foreground" };
+  return (
+    <div className="mt-1 flex items-center gap-3 text-[11px]">
+      <span className="inline-flex items-center gap-1 text-muted-foreground">
+        <FolderCheck className="h-3 w-3" /> In Dokumente
+      </span>
+      <span className={`inline-flex items-center gap-1 ${drive.cls}`}>
+        <CloudUpload className="h-3 w-3" /> {drive.text}
+      </span>
     </div>
   );
 }

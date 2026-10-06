@@ -1,7 +1,7 @@
 // Urlaubsantrag-PDFs (im Browser erzeugt) in Dokumente → Urlaubsanträge/{YYYY} ablegen.
 // Pro Abwesenheit genau eine aktuelle Fassung; ältere werden per Soft-Delete ersetzt.
 import { storeBuffer } from "../dokumente/storage.js";
-import { createDokument, listDokumente, softDeleteDokument } from "../dokumente/repo.js";
+import { createDokument, getDokumentRaw, listDokumente, softDeleteDokument } from "../dokumente/repo.js";
 import { createOrdner, listOrdner } from "../dokumente/ordner-repo.js";
 import type { Abwesenheit } from "./types.js";
 
@@ -59,4 +59,24 @@ export async function legeUrlaubsantragAb(
     beschreibung: `Urlaubsantrag ${mitarbeiterName} [antrag:${kennung(a)}]`,
   });
   return { dokumentId: dok.id, dateiname, ersetzt };
+}
+
+/** Aktuell abgelegte Fassung + Drive-Status eines Antrags. */
+export function urlaubsantragStatus(a: Pick<Abwesenheit, "id">): {
+  dokumentId: string | null;
+  dateiname: string | null;
+  driveStatus: "keins" | "pending" | "uploaded" | "fehler";
+  driveUrl: string | null;
+} {
+  const tag = `[antrag:${kennung(a)}]`;
+  const d = listDokumente({}).find((x) => (x.beschreibung ?? "").includes(tag));
+  if (!d) return { dokumentId: null, dateiname: null, driveStatus: "keins", driveUrl: null };
+  const raw = getDokumentRaw(d.id) as { drive_status?: string | null; drive_url?: string | null } | null;
+  const st = raw?.drive_status;
+  return {
+    dokumentId: d.id,
+    dateiname: d.dateiname ?? null,
+    driveStatus: st === "uploaded" || st === "fehler" || st === "pending" ? st : "keins",
+    driveUrl: raw?.drive_url ?? null,
+  };
 }

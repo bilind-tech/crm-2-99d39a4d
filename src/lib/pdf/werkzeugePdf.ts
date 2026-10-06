@@ -1038,15 +1038,10 @@ export async function generateUrlaubsantragPdf(data: UrlaubsantragData): Promise
     defaultStyle: { font: "Roboto", fontSize: 11, color: COLOR_TEXT, lineHeight: 1.25 },
     footer: urlaubFooter(data.firma),
     content: [
-      // Logo oben rechts, darunter Firmenname + Zusatz wie auf der Papiervorlage
-      {
-        alignment: "right" as const,
-        stack: [
-          ...(logo ? [{ image: logo, fit: [90, 70], alignment: "right" as const, margin: [0, 0, 62, 4] as [number, number, number, number] }] : []),
-          firmenSchriftzug(data.firma),
-          { text: "Gebäude- und Hausmeisterservice", fontSize: 9.5, characterSpacing: 0.6, color: COLOR_MUTED, alignment: "right" as const },
-        ],
-      },
+      // Logo oben rechts — Firmenname/Zusatz stehen bereits im Logo
+      logo
+        ? { image: logo, fit: [200, 125], alignment: "right" as const, margin: [0, 0, 0, 0] as [number, number, number, number] }
+        : firmenSchriftzug(data.firma),
       // Titel — bewusst kleiner als auf der Papiervorlage
       { text: "Urlaubsantrag", fontSize: 17, margin: [10, 26, 0, 4] as [number, number, number, number] },
       { canvas: [{ type: "line", x1: 14, y1: 0, x2: 112, y2: 0, lineWidth: 0.9, lineColor: COLOR_TEXT }] },
