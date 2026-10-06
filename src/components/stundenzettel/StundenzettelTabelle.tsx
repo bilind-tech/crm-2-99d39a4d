@@ -83,6 +83,7 @@ export function StundenzettelTabelle({
 }) {
   const [filter, setFilter] = useState<"alle" | "manuell" | "geaendert">("alle");
   const [tage, setTage] = useState<GenerierterTag[]>(zettel.tage);
+  const [zweiterBlock, setZweiterBlock] = useState<Set<string>>(new Set());
   const [gespeicherteTage, setGespeicherteTage] = useState<GenerierterTag[]>(zettel.tage);
   const patch = usePatchZettel(jahr, monat);
   const del = useDeleteZettel(jahr, monat);
@@ -122,10 +123,6 @@ export function StundenzettelTabelle({
         feld === "ende2"
       ) {
         t[feld] = value === "" ? undefined : value;
-        if (feld === "beginn" || feld === "ende") {
-          t.beginn2 = undefined;
-          t.ende2 = undefined;
-        }
       }
       t.quelle = "manuell";
       t.stunden = berechneStunden(t);
@@ -309,14 +306,15 @@ export function StundenzettelTabelle({
               const abwesend = !!t.bemerkung && (BEZAHLTE_ABWESENHEIT as readonly string[]).includes(t.bemerkung);
               const frei = !abwesend && !t.beginn && (we || !!t.bemerkung);
               const aus = !!t.ausgeschlossen;
-              const nichtGezaehlt = aus || (!!t.beginn && t.beginn === t.ende) || (!!t.beginn && t.stunden === 0);
+              const nichtGezaehlt =
+                aus || (!t.beginn && !t.ende && !t.stunden) || (!!t.beginn && t.beginn === t.ende);
               const geaendert = geaenderteTage.has(t.datum);
               return (
                 <tr
                   key={t.datum}
                   className={cn(
                     "border-t border-border border-l-4 border-l-transparent transition-colors",
-                    frei && "bg-muted/60",
+                    frei && !nichtGezaehlt && "bg-muted/60",
                     abwesend && "bg-accent/60",
                     manuell && "border-l-primary bg-primary/5",
                     geaendert && "bg-primary/15",
@@ -341,17 +339,56 @@ export function StundenzettelTabelle({
                       {manuell ? "Manuell" : "Auto"}
                     </span>
                   </td>
-                  {(["beginn", "ende"] as const).map((f) => (
-                    <td key={f} className="px-1 py-1">
-                      <Input
-                        type="time"
-                        value={t[f] ?? ""}
-                        onChange={(e) => setFeld(i, f, e.target.value)}
-                        step={1800}
-                        className="h-8 w-full min-w-[92px] text-xs"
-                      />
-                    </td>
-                  ))}
+                  {(["beginn", "ende"] as const).map((f) => {
+                    const f2 = f === "beginn" ? "beginn2" : "ende2";
+                    const zwei = t.beginn2 !== undefined || t.ende2 !== undefined || zweiterBlock.has(t.datum);
+                    return (
+                      <td key={f} className="px-1 py-1 align-top">
+                        <Input
+                          type="time"
+                          value={t[f] ?? ""}
+                          onChange={(e) => setFeld(i, f, e.target.value)}
+                          step={1800}
+                          className="h-8 w-full min-w-[92px] text-xs"
+                        />
+                        {zwei && (
+                          <div className="mt-1 flex items-center gap-1">
+                            <Input
+                              type="time"
+                              aria-label={f === "beginn" ? "Beginn 2. Block" : "Ende 2. Block"}
+                              value={t[f2] ?? ""}
+                              onChange={(e) => setFeld(i, f2, e.target.value)}
+                              step={1800}
+                              className="h-8 w-full min-w-[92px] text-xs"
+                            />
+                            {f === "ende" && (
+                              <button
+                                type="button"
+                                aria-label="2. Block entfernen"
+                                className="rounded px-1 text-xs text-muted-foreground hover:text-destructive"
+                                onClick={() => {
+                                  setZweiterBlock((s) => { const n = new Set(s); n.delete(t.datum); return n; });
+                                  setFeld(i, "beginn2", "");
+                                  setFeld(i, "ende2", "");
+                                }}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {!zwei && f === "beginn" && !!t.beginn && (
+                          <button
+                            type="button"
+                            className="mt-0.5 text-[10px] text-primary hover:underline"
+                            onClick={() => setZweiterBlock((s) => new Set(s).add(t.datum))}
+                          >
+                            + 2. Block
+                          </button>
+                        )}
+                      </td>
+                    );
+                  })}
                   <td className="px-1 py-1">
                     <Input
                       type="number"

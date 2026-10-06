@@ -2,7 +2,7 @@
 // mit globalem Monatswechsler. Editor + Bulk-Generate folgen in Phase 3.
 
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   CalendarPlus,
@@ -70,6 +70,29 @@ function Page() {
   const today = new Date();
   const [jahr, setJahr] = useState(today.getFullYear());
   const [monat, setMonat] = useState(today.getMonth() + 1);
+  const [monatGeladen, setMonatGeladen] = useState(false);
+  // Gewählten Monat merken (Neuladen / Seitenwechsel) — erst nach dem Hydrieren lesen.
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("mcc.stundenzettel.monat");
+      const m = raw ? (JSON.parse(raw) as { jahr: number; monat: number }) : null;
+      if (m && m.jahr > 2000 && m.monat >= 1 && m.monat <= 12) {
+        setJahr(m.jahr);
+        setMonat(m.monat);
+      }
+    } catch {
+      /* ignorieren */
+    }
+    setMonatGeladen(true);
+  }, []);
+  useEffect(() => {
+    if (!monatGeladen) return;
+    try {
+      window.localStorage.setItem("mcc.stundenzettel.monat", JSON.stringify({ jahr, monat }));
+    } catch {
+      /* ignorieren */
+    }
+  }, [jahr, monat, monatGeladen]);
   const [mitarbeiterDialog, setMitarbeiterDialog] = useState<{
     open: boolean;
     editing: Mitarbeiter | null;
