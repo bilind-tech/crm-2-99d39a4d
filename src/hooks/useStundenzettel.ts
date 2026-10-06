@@ -195,6 +195,7 @@ function useAbwesenheitInvalidate() {
     qc.invalidateQueries({ queryKey: qkStz.abwesenheiten });
     qc.invalidateQueries({ queryKey: ["stz", "zettel"] });
     qc.invalidateQueries({ queryKey: ["dokumente"] });
+    qc.invalidateQueries({ queryKey: ["stz", "antrag-status"] });
   };
 }
 
@@ -226,6 +227,26 @@ export function useUrlaubsantragAblegen() {
         `/abwesenheiten/${id}/antrag-pdf`,
         { pdfBase64 },
       ),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["dokumente"] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dokumente"] });
+      qc.invalidateQueries({ queryKey: ["stz", "antrag-status"] });
+    },
+  });
+}
+
+export interface AntragStatus {
+  dokumentId: string | null;
+  dateiname: string | null;
+  driveStatus: "keins" | "pending" | "uploaded" | "fehler";
+  driveUrl: string | null;
+}
+
+/** Ablage- und Drive-Status aller Urlaubsanträge; pollt, solange Drive noch aussteht. */
+export function useAntragStatus() {
+  return useQuery({
+    queryKey: ["stz", "antrag-status"],
+    queryFn: async () => (await api.get<{ status: Record<string, AntragStatus> }>("/abwesenheiten/antrag-status")).status,
+    refetchInterval: (q) =>
+      Object.values(q.state.data ?? {}).some((s) => s.driveStatus === "pending") ? 5000 : false,
   });
 }

@@ -197,6 +197,13 @@ export function stundenzettelPreviewGet<T>(cleanPath: string, params: URLSearchP
     };
     return res as T;
   }
+  if (cleanPath === "/abwesenheiten/antrag-status") {
+    const status: Record<string, unknown> = {};
+    for (const a of store.abwesenheiten) {
+      if (a.art === "urlaub") status[a.id] = { dokumentId: `preview-${a.id}`, dateiname: "Urlaubsantrag.pdf", driveStatus: "pending", driveUrl: null };
+    }
+    return { status } as T;
+  }
   if (cleanPath === "/abwesenheiten") {
     return { abwesenheiten: [...store.abwesenheiten].sort((a, b) => b.von.localeCompare(a.von)) } as T;
   }
