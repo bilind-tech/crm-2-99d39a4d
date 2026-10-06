@@ -79,7 +79,7 @@ export function StundenzettelTabelle({
   name: string;
   jahr: number;
   monat: number;
-  ziel: number | null;
+  ziel?: number | null;
 }) {
   const [filter, setFilter] = useState<"alle" | "manuell" | "geaendert">("alle");
   const [tage, setTage] = useState<GenerierterTag[]>(zettel.tage);
@@ -103,7 +103,7 @@ export function StundenzettelTabelle({
     );
   }, [gespeicherteTage, tage]);
   const dirty = geaenderteTage.size > 0;
-  const pruefung = useMemo(() => pruefeZiel(tage, ziel), [tage, ziel]);
+  const pruefung = useMemo(() => pruefeZiel(tage, ziel ?? null), [tage, ziel]);
   const zielSperre = pruefung.ziel != null && !pruefung.erfuellt;
 
   function setFeld(idx: number, feld: keyof GenerierterTag, value: string) {
