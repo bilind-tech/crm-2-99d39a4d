@@ -10,6 +10,8 @@ import { StundenzettelTabelle } from "./StundenzettelTabelle";
 import { StundenzettelPdfAktionen } from "./StundenzettelPdfAktionen";
 import { fetchStundenzettelPdf } from "@/lib/stundenzettel/pdf";
 import { pruefeZiel } from "@/lib/stundenzettel/ziel";
+import { effektivesZiel } from "@/lib/stundenzettel/monatsplan";
+import { useMonatsplaene } from "@/hooks/useStundenzettel";
 import type { Mitarbeiter, Stundenzettel } from "@/lib/stundenzettel/types";
 
 interface Props {
@@ -86,12 +88,19 @@ export function StundenzettelWorkspace({
     [mitarbeiter],
   );
 
+  const { data: plaene = [] } = useMonatsplaene(jahr, monat);
   const zielById = useMemo(
     () =>
       new Map(
-        mitarbeiter.map((m) => [m.id, m.arbeitszeiten?.zielStundenProMonat ?? null]),
+        mitarbeiter.map((m) => [
+          m.id,
+          effektivesZiel(
+            m.arbeitszeiten?.zielStundenProMonat,
+            plaene.find((p) => p.mitarbeiterId === m.id),
+          ),
+        ]),
       ),
-    [mitarbeiter],
+    [mitarbeiter, plaene],
   );
 
   useEffect(() => {

@@ -309,6 +309,7 @@ export function StundenzettelTabelle({
               const abwesend = !!t.bemerkung && (BEZAHLTE_ABWESENHEIT as readonly string[]).includes(t.bemerkung);
               const frei = !abwesend && !t.beginn && (we || !!t.bemerkung);
               const aus = !!t.ausgeschlossen;
+              const nichtGezaehlt = aus || (!!t.beginn && t.beginn === t.ende) || (!!t.beginn && t.stunden === 0);
               const geaendert = geaenderteTage.has(t.datum);
               return (
                 <tr
@@ -319,12 +320,16 @@ export function StundenzettelTabelle({
                     abwesend && "bg-accent/60",
                     manuell && "border-l-primary bg-primary/5",
                     geaendert && "bg-primary/15",
-                    aus && "opacity-50 [&_input]:line-through",
+                    nichtGezaehlt && "border-l-foreground/60 bg-foreground/15",
+                    aus && "[&_input]:line-through",
                   )}
                 >
                   <td className="whitespace-nowrap px-2 py-1 text-xs">
                     <span className={cn("font-medium", aus && "line-through")}>{tagNr(t.datum)}.</span>{" "}
                     <span className="text-muted-foreground">{WOCHENTAG_LABEL[t.wochentag].slice(0, 2)}</span>
+                    {nichtGezaehlt && (
+                      <span className="mt-0.5 block text-[10px] font-medium text-muted-foreground">nicht gezählt</span>
+                    )}
                   </td>
                   <td className="px-2 py-1">
                     <span
