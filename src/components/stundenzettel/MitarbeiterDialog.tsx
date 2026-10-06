@@ -215,7 +215,7 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
               <Label htmlFor="we">Arbeitet am Wochenende</Label>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="ziel">Zielstunden pro Monat (optional)</Label>
+              <Label htmlFor="ziel">Standard-Stundenziel pro Monat (optional)</Label>
               <Input
                 id="ziel"
                 type="number"
@@ -230,7 +230,7 @@ export function MitarbeiterDialog({ open, onOpenChange, mitarbeiter }: Props) {
                 placeholder="z. B. 160"
               />
               <p className="text-[11px] text-muted-foreground">
-                Leer = kein Zielausgleich. Sonst verteilt das System die Differenz automatisch
+                Gilt jeden Monat, außer du trägst unter „Monatsziele & feste Tage“ etwas anderes ein. Leer = kein Zielausgleich. Sonst verteilt das System die Differenz automatisch
                 in halben Stunden auf einzelne Arbeitstage, bis die Monatssumme exakt dem
                 Ziel entspricht.
               </p>

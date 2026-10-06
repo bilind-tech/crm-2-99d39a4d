@@ -12,6 +12,7 @@ import {
 } from "./feiertage.js";
 import { wendeZielausgleichAn } from "./zielausgleich.js";
 import { abwesenheitAm } from "./abwesenheitZeitraum.js";
+import { effektivesZiel, wendeFesteTageAn, type Monatsplan } from "./monatsplanLogik.js";
 import { abwesenheitBemerkung, type Abwesenheit } from "./types.js";
 import type {
   GenerierterStundenzettel,
@@ -43,6 +44,7 @@ export function generiereStundenzettel(
   monat: number,
   customFeiertage: FeiertagEintrag[],
   abwesenheiten: Abwesenheit[] = [],
+  plan: Monatsplan | null = null,
 ): GenerierterStundenzettel {
   const feiertage = baueFeiertagsKarte(jahr, customFeiertage);
   const cfg = mitarbeiter.arbeitszeiten;
@@ -116,13 +118,11 @@ export function generiereStundenzettel(
     });
   }
 
+  wendeFesteTageAn(tage, plan?.festeTage);
   let gesamt = tage.reduce((s, t) => s + t.stunden, 0);
-  if (cfg.zielStundenProMonat != null && cfg.zielStundenProMonat > 0) {
-    gesamt = wendeZielausgleichAn(
-      tage,
-      cfg.zielStundenProMonat,
-      `${mitarbeiter.id}-${jahr}-${monat}`,
-    );
+  const ziel = effektivesZiel(cfg.zielStundenProMonat, plan);
+  if (ziel != null) {
+    gesamt = wendeZielausgleichAn(tage, ziel, `${mitarbeiter.id}-${jahr}-${monat}`);
   }
 
   return {

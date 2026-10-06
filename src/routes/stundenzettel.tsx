@@ -35,6 +35,7 @@ import { StundenzettelTabelle } from "@/components/stundenzettel/StundenzettelTa
 import { StundenzettelPdfAktionen } from "@/components/stundenzettel/StundenzettelPdfAktionen";
 import { StundenzettelWorkspace } from "@/components/stundenzettel/StundenzettelWorkspace";
 import { AbwesenheitenPanel } from "@/components/stundenzettel/AbwesenheitenPanel";
+import { MonatsplanPanel } from "@/components/stundenzettel/MonatsplanPanel";
 import {
   useCreateCustomFeiertag,
   useDeleteCustomFeiertag,
@@ -400,6 +401,22 @@ function Page() {
               </ul>
               </>
             )}
+          </AccordionContent>
+        </AccordionItem>
+
+        {/* --- Monatsplanung --- */}
+        <AccordionItem
+          value="monatsplan"
+          className="rounded-xl border border-border bg-card px-4"
+        >
+          <AccordionTrigger className="hover:no-underline">
+            <div className="flex items-center gap-2 text-left">
+              <CalendarPlus className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium">Monatsziele & feste Tage · {MONATE[monat - 1]} {jahr}</span>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <MonatsplanPanel mitarbeiter={mitarbeiter} jahr={jahr} monat={monat} monatLabel={MONATE[monat - 1]} />
           </AccordionContent>
         </AccordionItem>
 

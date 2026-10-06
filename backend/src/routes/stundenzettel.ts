@@ -46,6 +46,9 @@ import {
   monateImZeitraum,
   updateAbwesenheit,
 } from "../stundenzettel/abwesenheit.js";
+import { getMonatsplan, listMonatsplaene, speichereMonatsplan } from "../stundenzettel/monatsplan.js";
+import { effektivesZiel } from "../stundenzettel/monatsplanLogik.js";
+import { z } from "zod";
 import { pruefeZiel, wendeZielausgleichAn } from "../stundenzettel/zielausgleich.js";
 import { entferneUrlaubsantragDokumente, legeUrlaubsantragAb, urlaubsantragStatus } from "../stundenzettel/urlaubsantragArchiv.js";
 import {
@@ -78,11 +81,12 @@ async function nachberechnen(
   for (const { jahr, monat } of monate.values()) {
     const existing = findZettel(mitarbeiterId, jahr, monat);
     if (!existing) continue;
-    const frisch = generiereStundenzettel(m, jahr, monat, listCustomFeiertage(jahr), abw);
+    const plan = getMonatsplan(mitarbeiterId, jahr, monat);
+    const frisch = generiereStundenzettel(m, jahr, monat, listCustomFeiertage(jahr), abw, plan);
     const tage = ersetzeTageImZeitraum(existing.tage, frisch.tage, zeitraeume);
-    const ziel = m.arbeitszeiten.zielStundenProMonat;
+    const ziel = effektivesZiel(m.arbeitszeiten.zielStundenProMonat, plan);
     let gesamt = tage.reduce((s, t) => s + t.stunden, 0);
-    if (ziel != null && ziel > 0) gesamt = wendeZielausgleichAn(tage, ziel, `${m.id}-${jahr}-${monat}`);
+    if (ziel != null) gesamt = wendeZielausgleichAn(tage, ziel, `${m.id}-${jahr}-${monat}`);
     const saved = upsertZettel({ mitarbeiterId, jahr, monat, tage, gesamtStunden: gesamt });
     try {
       await archiviereStundenzettel(saved.id!);
@@ -94,6 +98,41 @@ async function nachberechnen(
 
 export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", requireAuth);
+
+
+  // ---------- Monatsplanung (Monatsziel + feste Tage) ----------
+  app.get("/stz-monatsplan", async (req, reply) => {
+    const q = req.query as { jahr?: string; monat?: string };
+    const jahr = Number(q.jahr), monat = Number(q.monat);
+    if (!jahr || !monat || monat < 1 || monat > 12) return reply.status(400).send({ error: "jahr und monat sind Pflicht" });
+    return { plaene: listMonatsplaene(jahr, monat) };
+  });
+
+  app.put("/stz-monatsplan/:mitarbeiterId", async (req, reply) => {
+    const mitarbeiterId = (req.params as { mitarbeiterId: string }).mitarbeiterId;
+    if (!getMitarbeiter(mitarbeiterId)) return reply.status(404).send({ error: "not-found" });
+    const halb = z.number().min(0).max(16).refine((v) => Number.isInteger(v * 2), "nur halbe Stunden");
+    const p = z
+      .object({
+        jahr: z.number().int().min(2000).max(2100),
+        monat: z.number().int().min(1).max(12),
+        zielStunden: z.number().min(0).max(500).refine((v) => Number.isInteger(v * 2), "nur halbe Stunden").nullable(),
+        festeTage: z.array(z.object({ datum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/), stunden: halb, bemerkung: z.string().max(60).nullable().optional() })).max(31),
+      })
+      .safeParse(req.body);
+    if (!p.success) return badRequest(reply, p.error.issues);
+    const { jahr, monat, zielStunden, festeTage } = p.data;
+    const prefix = `${jahr}-${String(monat).padStart(2, "0")}-`;
+    const daten = new Set<string>();
+    for (const f of festeTage) {
+      if (!f.datum.startsWith(prefix)) return badRequest(reply, [{ message: `Datum ${f.datum} liegt nicht im Monat` }]);
+      if (daten.has(f.datum)) return badRequest(reply, [{ message: `Datum ${f.datum} doppelt` }]);
+      daten.add(f.datum);
+    }
+    const saved = speichereMonatsplan({ mitarbeiterId, jahr, monat, zielStunden, festeTage });
+    audit({ userId: req.user?.id ?? null, action: "stundenzettel.monatsplan", detail: { mitarbeiterId, jahr, monat } });
+    return saved;
+  });
 
   // ---------- Abwesenheiten ----------
   app.get("/abwesenheiten", async (req) => {
@@ -278,7 +317,7 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
       if (!m) { ergebnis.push({ mitarbeiterId: id, ok: false, error: "not-found" }); continue; }
       const existing = findZettel(id, jahr, monat);
       if (existing && !ueberschreiben) { ergebnis.push({ mitarbeiterId: id, ok: true, id: existing.id!, skipped: true }); continue; }
-      const z = generiereStundenzettel(m, jahr, monat, custom, listAbwesenheiten(id));
+      const z = generiereStundenzettel(m, jahr, monat, custom, listAbwesenheiten(id), getMonatsplan(id, jahr, monat));
       const saved = upsertZettel({
         mitarbeiterId: z.mitarbeiterId,
         jahr: z.jahr,
@@ -322,7 +361,10 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
       };
     });
     const gesamt = neueTage.reduce((s, t) => s + t.stunden, 0);
-    const zielMa = getMitarbeiter(existing.mitarbeiterId)?.arbeitszeiten?.zielStundenProMonat ?? null;
+    const zielMa = effektivesZiel(
+      getMitarbeiter(existing.mitarbeiterId)?.arbeitszeiten?.zielStundenProMonat ?? null,
+      getMonatsplan(existing.mitarbeiterId, existing.jahr, existing.monat),
+    );
     const zielCheck = pruefeZiel(neueTage, zielMa);
     if (!zielCheck.erfuellt) {
       return reply.status(422).send({
