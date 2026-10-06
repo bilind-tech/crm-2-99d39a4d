@@ -72,10 +72,6 @@ function toHhmm(min: number): string {
  */
 function pauseFenster(t: GenerierterTag): { von: string; bis: string } | null {
   const ende1 = toMin(t.ende);
-  const beginn2 = toMin(t.beginn2);
-  if (ende1 != null && beginn2 != null && beginn2 > ende1) {
-    return { von: toHhmm(ende1), bis: toHhmm(beginn2) };
-  }
   const beginn = toMin(t.beginn);
   const pause = t.pause ?? 0;
   if (beginn == null || ende1 == null || pause <= 0) return null;
@@ -118,8 +114,9 @@ function zeile(t: GenerierterTag): Zelle {
     };
   }
   const p = pauseFenster(t);
-  const beginn = t.beginn ?? "";
-  const ende = t.beginn2 && t.ende2 ? t.ende2 : (t.ende ?? "");
+  const zwei = Boolean(t.beginn2 && t.ende2);
+  const beginn = zwei ? `${t.beginn} / ${t.beginn2}` : (t.beginn ?? "");
+  const ende = zwei ? `${t.ende} / ${t.ende2}` : (t.ende ?? "");
   return {
     tag: tagLabel(t),
     beginn,
