@@ -243,6 +243,7 @@ export function StundenzettelWorkspace({
                     name={nameById.get(aktiv.mitarbeiterId) ?? ""}
                     jahr={jahr}
                     monat={monat}
+                    ziel={zielById.get(aktiv.mitarbeiterId) ?? null}
                   />
                 </div>
               ) : (

@@ -104,6 +104,10 @@ export interface GenerierterTag {
   pause?: number;
   stunden: number;
   bemerkung?: string;
+  /** Herkunft: fehlt = automatisch erzeugt. */
+  quelle?: "auto" | "manuell";
+  /** Zählt nicht in die Summe (stunden = 0, Zeiten bleiben sichtbar). */
+  ausgeschlossen?: boolean;
 }
 
 export interface Stundenzettel {

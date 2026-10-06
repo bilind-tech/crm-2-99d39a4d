@@ -46,6 +46,7 @@ function mische<T>(arr: T[], rnd: () => number): T[] {
 }
 
 function istNormalerArbeitstag(t: GenerierterTag): boolean {
+  if (t.ausgeschlossen || t.quelle === "manuell") return false;
   if (t.bemerkung && !t.beginn) return false;
   return !!t.beginn && !!t.ende;
 }

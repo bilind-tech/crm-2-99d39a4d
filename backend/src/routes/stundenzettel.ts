@@ -46,7 +46,7 @@ import {
   monateImZeitraum,
   updateAbwesenheit,
 } from "../stundenzettel/abwesenheit.js";
-import { wendeZielausgleichAn } from "../stundenzettel/zielausgleich.js";
+import { pruefeZiel, wendeZielausgleichAn } from "../stundenzettel/zielausgleich.js";
 import { entferneUrlaubsantragDokumente, legeUrlaubsantragAb, urlaubsantragStatus } from "../stundenzettel/urlaubsantragArchiv.js";
 import {
   AbwesenheitInputSchema,
@@ -315,11 +315,21 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
         beginn2: patched.beginn2 ?? undefined,
         ende2: patched.ende2 ?? undefined,
         pause: patched.pause ?? undefined,
-        stunden: patched.stunden,
+        stunden: patched.ausgeschlossen ? 0 : patched.stunden,
         bemerkung: patched.bemerkung ?? undefined,
+        quelle: patched.quelle ?? t.quelle,
+        ausgeschlossen: patched.ausgeschlossen ? true : undefined,
       };
     });
     const gesamt = neueTage.reduce((s, t) => s + t.stunden, 0);
+    const zielMa = getMitarbeiter(existing.mitarbeiterId)?.arbeitszeiten?.zielStundenProMonat ?? null;
+    const zielCheck = pruefeZiel(neueTage, zielMa);
+    if (!zielCheck.erfuellt) {
+      return reply.status(422).send({
+        code: "ziel-nicht-erreicht",
+        error: `Zielstunden nicht erreicht: Ist ${zielCheck.ist.toLocaleString("de-DE")} h, Ziel ${zielCheck.ziel?.toLocaleString("de-DE")} h`,
+      });
+    }
     const saved = upsertZettel({
       mitarbeiterId: existing.mitarbeiterId,
       jahr: existing.jahr,
