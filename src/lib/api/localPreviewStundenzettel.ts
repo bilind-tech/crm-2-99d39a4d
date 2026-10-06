@@ -17,6 +17,7 @@ import {
   type Wochentag,
 } from "@/lib/stundenzettel/types";
 import { summeStunden, wendeZielausgleichAn } from "@/lib/stundenzettel/ziel";
+import { effektivesZiel, wendeFesteTageAn, type Monatsplan } from "@/lib/stundenzettel/monatsplan";
 
 const KEY = "mcc.localPreview.stundenzettel.v1";
 
@@ -25,6 +26,7 @@ interface Store {
   zettel: Stundenzettel[];
   customFeiertage: CustomFeiertag[];
   abwesenheiten: Abwesenheit[];
+  monatsplaene?: Monatsplan[];
 }
 
 function empty(): Store {
@@ -178,8 +180,16 @@ function summe(tage: GenerierterTag[]): number {
 
 // ---------- Router ----------
 
+function planVon(store: Store, mid: string, jahr: number, monat: number): Monatsplan | null {
+  return (store.monatsplaene ?? []).find((p) => p.mitarbeiterId === mid && p.jahr === jahr && p.monat === monat) ?? null;
+}
+
 export function stundenzettelPreviewGet<T>(cleanPath: string, params: URLSearchParams): T | null {
   const store = read();
+  if (cleanPath === "/stz-monatsplan") {
+    const jahr = Number(params.get("jahr")), monat = Number(params.get("monat"));
+    return { plaene: (store.monatsplaene ?? []).filter((p) => p.jahr === jahr && p.monat === monat) } as T;
+  }
 
   if (cleanPath === "/mitarbeiter") {
     return { mitarbeiter: store.mitarbeiter } as T;
@@ -220,6 +230,16 @@ export function stundenzettelPreviewGet<T>(cleanPath: string, params: URLSearchP
 export function stundenzettelPreviewMutate<T>(method: string, cleanPath: string, body?: unknown): T | null {
   const store = read();
   const ts = new Date().toISOString();
+
+  if (method === "PUT" && cleanPath.startsWith("/stz-monatsplan/")) {
+    const mid = cleanPath.split("/")[2];
+    const b = (body ?? {}) as Omit<Monatsplan, "mitarbeiterId">;
+    const neu: Monatsplan = { mitarbeiterId: mid, jahr: b.jahr, monat: b.monat, zielStunden: b.zielStunden ?? null, festeTage: [...(b.festeTage ?? [])].sort((a, c) => a.datum.localeCompare(c.datum)), aktualisiertAm: ts };
+    const rest = (store.monatsplaene ?? []).filter((p) => !(p.mitarbeiterId === mid && p.jahr === neu.jahr && p.monat === neu.monat));
+    store.monatsplaene = neu.zielStunden == null && neu.festeTage.length === 0 ? rest : [...rest, neu];
+    write(store);
+    return neu as T;
+  }
 
   // ---- Mitarbeiter ----
   if (method === "POST" && cleanPath === "/mitarbeiter") {
@@ -323,8 +343,10 @@ export function stundenzettelPreviewMutate<T>(method: string, cleanPath: string,
         return { mitarbeiterId: mid, ok: true, id: store.zettel[vorhandenIdx].id ?? undefined, skipped: true };
       }
       const tage = generiereTage(m, jahr, monat, ftMap, store.abwesenheiten);
-      const ziel = m.arbeitszeiten?.zielStundenProMonat ?? null;
-      if (ziel != null && ziel > 0) {
+      const plan = planVon(store, mid, jahr, monat);
+      wendeFesteTageAn(tage, plan?.festeTage);
+      const ziel = effektivesZiel(m.arbeitszeiten?.zielStundenProMonat, plan);
+      if (ziel != null) {
         wendeZielausgleichAn(tage, ziel, `${m.id}-${jahr}-${monat}`);
       }
       const zettel: Stundenzettel = {
@@ -401,8 +423,8 @@ function previewNachberechnen(store: Store, zeitraeume: Abwesenheit[], ts: strin
     for (const f of store.customFeiertage) ftMap.set(f.datum, f.name);
     const frisch = new Map(generiereTage(m, z.jahr, z.monat, ftMap, store.abwesenheiten).map((t) => [t.datum, t]));
     const tage = z.tage.map((t) => (betrifft(t.datum) ? frisch.get(t.datum) ?? t : t));
-    const ziel = m.arbeitszeiten?.zielStundenProMonat ?? null;
-    if (ziel != null && ziel > 0) wendeZielausgleichAn(tage, ziel, `${m.id}-${z.jahr}-${z.monat}`);
+    const ziel = effektivesZiel(m.arbeitszeiten?.zielStundenProMonat, planVon(store, m.id, z.jahr, z.monat));
+    if (ziel != null) wendeZielausgleichAn(tage, ziel, `${m.id}-${z.jahr}-${z.monat}`);
     store.zettel[i] = { ...z, tage, gesamtStunden: summe(tage), aktualisiertAm: ts };
   }
 }
