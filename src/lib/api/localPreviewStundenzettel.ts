@@ -249,6 +249,9 @@ export function stundenzettelPreviewMutate<T>(method: string, cleanPath: string,
   }
 
   // ---- Abwesenheiten ----
+  if (method === "POST" && /^\/abwesenheiten\/[^/]+\/antrag-pdf$/.test(cleanPath)) {
+    return { dokumentId: `preview-dok-${crypto.randomUUID()}`, dateiname: "Urlaubsantrag-Vorschau.pdf", ersetzt: false } as T;
+  }
   if (cleanPath === "/abwesenheiten" || cleanPath.startsWith("/abwesenheiten/")) {
     const id = cleanPath.split("/")[2];
     const alt = id ? store.abwesenheiten.find((a) => a.id === id) : undefined;

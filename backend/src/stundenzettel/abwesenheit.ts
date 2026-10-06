@@ -12,6 +12,7 @@ interface Row {
   von: string;
   bis: string;
   notiz: string | null;
+  tage_override: number | null;
   erstellt_am: string;
   aktualisiert_am: string;
 }
@@ -24,6 +25,7 @@ function map(r: Row): Abwesenheit {
     von: r.von,
     bis: r.bis,
     notiz: r.notiz,
+    tageOverride: r.tage_override ?? null,
     erstelltAm: r.erstellt_am,
     aktualisiertAm: r.aktualisiert_am,
   };
@@ -45,18 +47,18 @@ export function getAbwesenheit(id: string): Abwesenheit | null {
 export function createAbwesenheit(input: AbwesenheitInput): Abwesenheit {
   const id = randomUUID();
   getDatabase()
-    .prepare("INSERT INTO stz_abwesenheit (id, mitarbeiter_id, art, von, bis, notiz) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(id, input.mitarbeiterId, input.art, input.von, input.bis, input.notiz?.trim() || null);
+    .prepare("INSERT INTO stz_abwesenheit (id, mitarbeiter_id, art, von, bis, notiz, tage_override) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(id, input.mitarbeiterId, input.art, input.von, input.bis, input.notiz?.trim() || null, input.tageOverride ?? null);
   return getAbwesenheit(id)!;
 }
 
 export function updateAbwesenheit(id: string, input: AbwesenheitInput): Abwesenheit | null {
   const r = getDatabase()
     .prepare(
-      `UPDATE stz_abwesenheit SET mitarbeiter_id = ?, art = ?, von = ?, bis = ?, notiz = ?,
+      `UPDATE stz_abwesenheit SET mitarbeiter_id = ?, art = ?, von = ?, bis = ?, notiz = ?, tage_override = ?,
        aktualisiert_am = datetime('now') WHERE id = ?`,
     )
-    .run(input.mitarbeiterId, input.art, input.von, input.bis, input.notiz?.trim() || null, id);
+    .run(input.mitarbeiterId, input.art, input.von, input.bis, input.notiz?.trim() || null, input.tageOverride ?? null, id);
   return r.changes > 0 ? getAbwesenheit(id) : null;
 }
 

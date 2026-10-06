@@ -47,6 +47,7 @@ import {
   updateAbwesenheit,
 } from "../stundenzettel/abwesenheit.js";
 import { wendeZielausgleichAn } from "../stundenzettel/zielausgleich.js";
+import { entferneUrlaubsantragDokumente, legeUrlaubsantragAb } from "../stundenzettel/urlaubsantragArchiv.js";
 import {
   AbwesenheitInputSchema,
   CustomFeiertagInputSchema,
@@ -128,10 +129,32 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
     return neu;
   });
 
+  // Urlaubsantrag-PDF (im Browser erzeugt) in Dokumente ablegen.
+  app.post("/abwesenheiten/:id/antrag-pdf", { bodyLimit: 15 * 1024 * 1024 }, async (req, reply) => {
+    const id = (req.params as { id: string }).id;
+    const a = getAbwesenheit(id);
+    if (!a) return reply.status(404).send({ error: "not-found" });
+    const b = (req.body ?? {}) as { pdfBase64?: string };
+    const raw = typeof b.pdfBase64 === "string" ? b.pdfBase64.replace(/^data:application\/pdf;base64,/, "") : "";
+    const buf = Buffer.from(raw, "base64");
+    if (buf.length < 100 || buf.subarray(0, 5).toString("latin1") !== "%PDF-") {
+      return reply.status(400).send({ error: "kein-pdf" });
+    }
+    const m = getMitarbeiter(a.mitarbeiterId);
+    const r = await legeUrlaubsantragAb(a, m?.name ?? "Mitarbeiter", buf);
+    audit({ userId: req.user?.id ?? null, action: "stundenzettel.urlaubsantrag.abgelegt", detail: { id, dokumentId: r.dokumentId } });
+    return r;
+  });
+
   app.delete("/abwesenheiten/:id", async (req, reply) => {
     const id = (req.params as { id: string }).id;
     const alt = getAbwesenheit(id);
     if (!alt || !deleteAbwesenheit(id)) return reply.status(404).send({ error: "not-found" });
+    try {
+      entferneUrlaubsantragDokumente(alt);
+    } catch (e) {
+      req.log.error({ err: e }, "urlaubsantrag-dokument-delete-failed");
+    }
     await nachberechnen(alt.mitarbeiterId, [alt], req.log);
     audit({ userId: req.user?.id ?? null, action: "stundenzettel.abwesenheit.delete", detail: { id } });
     return { ok: true };
