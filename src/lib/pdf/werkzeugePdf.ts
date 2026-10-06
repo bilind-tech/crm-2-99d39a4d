@@ -1082,14 +1082,7 @@ export async function generateUrlaubsantragPdf(data: UrlaubsantragData): Promise
       },
     ],
   };
-  const pm = await getPdfMake();
-  return await new Promise<Blob>((resolve, reject) => {
-    try {
-      pm.createPdf(doc).getBlob((b: Blob) => resolve(b));
-    } catch (e) {
-      reject(e);
-    }
-  });
+  return await renderToBlob(doc);
 }
 
 /** Werktage (Mo–Fr) im Zeitraum ohne Feiertage. */

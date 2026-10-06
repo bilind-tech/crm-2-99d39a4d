@@ -90,6 +90,7 @@ export const AbwesenheitInputSchema = z
     von: datumStr,
     bis: datumStr,
     notiz: z.string().trim().max(200).optional().nullable(),
+    tageOverride: z.number().min(0).max(366).multipleOf(0.5).optional().nullable(),
   })
   .refine((a) => a.von <= a.bis, { message: "„Bis“ darf nicht vor „Von“ liegen", path: ["bis"] })
   .refine(

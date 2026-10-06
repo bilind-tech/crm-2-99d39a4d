@@ -164,6 +164,7 @@ export interface Abwesenheit {
   von: string;
   bis: string;
   notiz: string | null;
+  tageOverride?: number | null;
   erstelltAm: string;
   aktualisiertAm: string;
 }
@@ -174,6 +175,7 @@ export interface AbwesenheitInput {
   von: string;
   bis: string;
   notiz?: string | null;
+  tageOverride?: number | null;
 }
 
 /** Bemerkung im Stundenzettel/PDF — identisch zum Backend. */

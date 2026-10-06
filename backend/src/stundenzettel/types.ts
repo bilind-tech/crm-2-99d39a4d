@@ -143,6 +143,8 @@ export interface Abwesenheit {
   von: string; // YYYY-MM-DD
   bis: string; // YYYY-MM-DD (inklusive)
   notiz: string | null;
+  /** Urlaubsantrag: manuell festgelegte Anzahl Urlaubstage. */
+  tageOverride: number | null;
   erstelltAm: string;
   aktualisiertAm: string;
 }
@@ -153,6 +155,7 @@ export interface AbwesenheitInput {
   von: string;
   bis: string;
   notiz?: string | null;
+  tageOverride?: number | null;
 }
 
 /** Bemerkung im Stundenzettel/PDF für eine Abwesenheit. */
