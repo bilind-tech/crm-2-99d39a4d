@@ -44,6 +44,7 @@ function read(): Store {
       zettel: parsed.zettel ?? [],
       customFeiertage: parsed.customFeiertage ?? [],
       abwesenheiten: parsed.abwesenheiten ?? [],
+      monatsplaene: parsed.monatsplaene ?? [],
     };
   } catch {
     return empty();

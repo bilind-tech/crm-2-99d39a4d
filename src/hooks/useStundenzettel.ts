@@ -3,6 +3,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api/client";
+import type { Monatsplan } from "@/lib/stundenzettel/monatsplan";
 import type {
   Abwesenheit,
   AbwesenheitInput,
@@ -248,5 +249,31 @@ export function useAntragStatus() {
     queryFn: async () => (await api.get<{ status: Record<string, AntragStatus> }>("/abwesenheiten/antrag-status")).status,
     refetchInterval: (q) =>
       Object.values(q.state.data ?? {}).some((s) => s.driveStatus === "pending") ? 5000 : false,
+  });
+}
+
+// ---------- Monatsplanung (Monatsziel + feste Tage) ----------
+
+export function useMonatsplaene(jahr: number, monat: number) {
+  return useQuery({
+    queryKey: ["stz", "monatsplan", jahr, monat],
+    queryFn: async () =>
+      (await api.get<{ plaene: Monatsplan[] }>(`/stz-monatsplan?jahr=${jahr}&monat=${monat}`)).plaene,
+  });
+}
+
+export function useSpeichereMonatsplan() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (p: Monatsplan) =>
+      api.put<Monatsplan>(`/stz-monatsplan/${p.mitarbeiterId}`, {
+        jahr: p.jahr,
+        monat: p.monat,
+        zielStunden: p.zielStunden,
+        festeTage: p.festeTage,
+      }),
+    onSuccess: (_d, p) => {
+      qc.invalidateQueries({ queryKey: ["stz", "monatsplan", p.jahr, p.monat] });
+    },
   });
 }
