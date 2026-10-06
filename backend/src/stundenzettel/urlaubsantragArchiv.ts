@@ -76,7 +76,7 @@ export function urlaubsantragStatus(a: Pick<Abwesenheit, "id">): {
   return {
     dokumentId: d.id,
     dateiname: d.dateiname ?? null,
-    driveStatus: st === "uploaded" || st === "fehler" || st === "pending" ? st : "pending",
+    driveStatus: st === "uploaded" || st === "fehler" || st === "pending" ? st : "keins",
     driveUrl: raw?.drive_url ?? null,
   };
 }

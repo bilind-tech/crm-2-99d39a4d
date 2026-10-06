@@ -385,7 +385,9 @@ function AntragStatusZeile({ status }: { status?: { dokumentId: string | null; d
       ? { text: "In Drive", cls: "text-primary" }
       : status.driveStatus === "fehler"
         ? { text: "Drive-Fehler", cls: "text-destructive" }
-        : { text: "Drive ausstehend", cls: "text-muted-foreground" };
+        : status.driveStatus === "pending"
+          ? { text: "Drive ausstehend", cls: "text-muted-foreground" }
+          : { text: "Nicht in Drive (Drive nicht verbunden?)", cls: "text-muted-foreground" };
   return (
     <div className="mt-1 flex items-center gap-3 text-[11px]">
       <span className="inline-flex items-center gap-1 text-muted-foreground">
