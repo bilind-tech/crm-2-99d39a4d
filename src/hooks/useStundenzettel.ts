@@ -216,3 +216,16 @@ export function useDeleteAbwesenheit() {
     onSuccess: inv,
   });
 }
+
+/** Legt das im Browser erzeugte Urlaubsantrag-PDF unter Dokumente → Urlaubsanträge ab. */
+export function useUrlaubsantragAblegen() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, pdfBase64 }: { id: string; pdfBase64: string }) =>
+      api.post<{ dokumentId: string; dateiname: string; ersetzt: boolean }>(
+        `/abwesenheiten/${id}/antrag-pdf`,
+        { pdfBase64 },
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dokumente"] }),
+  });
+}

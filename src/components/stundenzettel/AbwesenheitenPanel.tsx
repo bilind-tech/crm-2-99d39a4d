@@ -46,6 +46,7 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
   const { confirm, dialog } = useConfirm();
 
   const [editId, setEditId] = useState<string | null>(null);
+  const [tageOverride, setTageOverride] = useState<number | null>(null);
   const [mitarbeiterId, setMitarbeiterId] = useState("");
   const [art, setArt] = useState<AbwesenheitArt>("urlaub");
   const [von, setVon] = useState("");
@@ -77,6 +78,7 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
     setVon("");
     setBis("");
     setNotiz("");
+    setTageOverride(null);
   }
 
   function bearbeiten(a: Abwesenheit) {
@@ -86,6 +88,7 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
     setVon(a.von);
     setBis(a.bis);
     setNotiz(a.notiz ?? "");
+    setTageOverride(a.tageOverride ?? null);
   }
 
   async function absenden() {
@@ -103,7 +106,7 @@ export function AbwesenheitenPanel({ mitarbeiter }: { mitarbeiter: Mitarbeiter[]
     try {
       await speichern.mutateAsync({
         id: editId ?? undefined,
-        input: { mitarbeiterId, art, von: v, bis: b, notiz: notiz.trim() || null },
+        input: { mitarbeiterId, art, von: v, bis: b, notiz: notiz.trim() || null, tageOverride },
       });
       toast.success(editId ? "Abwesenheit aktualisiert" : "Abwesenheit eingetragen");
       reset();
