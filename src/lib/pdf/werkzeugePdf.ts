@@ -1004,6 +1004,16 @@ function urlaubDatum(iso: string): string {
   return `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
 }
 
+/** „MYCLEANCENTER GmbH“ mit fettem CLEAN wie im Briefkopf; sonst Firmenname. */
+function firmenSchriftzug(firma?: Firmendaten) {
+  const name = (firma?.firmenname ?? "").trim();
+  const base = { fontSize: 15, alignment: "right" as const, characterSpacing: 0.3 };
+  if (!name || /my\s*clean\s*center/i.test(name)) {
+    return { ...base, text: [{ text: "MY" }, { text: "CLEAN", bold: true }, { text: "CENTER GmbH" }] };
+  }
+  return { ...base, text: name };
+}
+
 /** Linie mit Wert darüber (wie ein ausgefülltes Formularfeld). */
 function feldLinie(wert: string, breite: number, fs = 11) {
   return {
@@ -1028,13 +1038,18 @@ export async function generateUrlaubsantragPdf(data: UrlaubsantragData): Promise
     defaultStyle: { font: "Roboto", fontSize: 11, color: COLOR_TEXT, lineHeight: 1.25 },
     footer: urlaubFooter(data.firma),
     content: [
-      // Logo oben rechts
-      logo
-        ? { image: logo, fit: [200, 95], alignment: "right" as const, margin: [0, 0, 0, 0] as [number, number, number, number] }
-        : { text: data.firma?.firmenname ?? "", alignment: "right" as const, bold: true, fontSize: 13 },
+      // Logo oben rechts, darunter Firmenname + Zusatz wie auf der Papiervorlage
+      {
+        alignment: "right" as const,
+        stack: [
+          ...(logo ? [{ image: logo, fit: [90, 70], alignment: "right" as const, margin: [0, 0, 62, 4] as [number, number, number, number] }] : []),
+          firmenSchriftzug(data.firma),
+          { text: "Gebäude- und Hausmeisterservice", fontSize: 9.5, characterSpacing: 0.6, color: COLOR_MUTED, alignment: "right" as const },
+        ],
+      },
       // Titel — bewusst kleiner als auf der Papiervorlage
-      { text: "Urlaubsantrag", fontSize: 17, margin: [10, 30, 0, 4] as [number, number, number, number] },
-      { canvas: [{ type: "line", x1: 18, y1: 0, x2: 120, y2: 0, lineWidth: 0.9, lineColor: COLOR_TEXT }] },
+      { text: "Urlaubsantrag", fontSize: 17, margin: [10, 26, 0, 4] as [number, number, number, number] },
+      { canvas: [{ type: "line", x1: 14, y1: 0, x2: 112, y2: 0, lineWidth: 0.9, lineColor: COLOR_TEXT }] },
 
       { ...label("Name des Mitarbeiters / der Mitarbeiterin:"), margin: [0, 48, 0, 10] as [number, number, number, number] },
       { columns: [feldLinie(data.mitarbeiterName, 300)] },
