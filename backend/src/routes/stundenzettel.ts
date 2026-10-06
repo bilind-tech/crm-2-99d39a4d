@@ -326,8 +326,8 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
     const zielCheck = pruefeZiel(neueTage, zielMa);
     if (!zielCheck.erfuellt) {
       return reply.status(422).send({
-        error: "ziel-nicht-erreicht",
-        message: `Zielstunden nicht erreicht: Ist ${zielCheck.ist.toLocaleString("de-DE")} h, Ziel ${zielCheck.ziel?.toLocaleString("de-DE")} h`,
+        code: "ziel-nicht-erreicht",
+        error: `Zielstunden nicht erreicht: Ist ${zielCheck.ist.toLocaleString("de-DE")} h, Ziel ${zielCheck.ziel?.toLocaleString("de-DE")} h`,
       });
     }
     const saved = upsertZettel({
