@@ -957,3 +957,152 @@ export function protokollTitel(p: Protokoll): string {
       ? "Übergabe- und Abnahmeprotokoll"
       : "Übergabeprotokoll";
 }
+
+// ───────── Urlaubsantrag ────────────────────────────────────────────────
+
+export interface UrlaubsantragData {
+  firma?: Firmendaten;
+  mitarbeiterName: string;
+  von: string; // YYYY-MM-DD
+  bis: string;
+  tage: number;
+}
+
+/** Fußzeile wie bei Rechnungen: vier linksbündige Blöcke, ganz unten. */
+function urlaubFooter(firma?: Firmendaten) {
+  return function () {
+    const f = firma ?? ({} as Firmendaten);
+    const cell = (lines: (string | null | undefined)[]) => ({
+      stack: lines.filter(Boolean).map((l) => ({ text: l as string, fontSize: 8, color: COLOR_TEXT })),
+    });
+    return {
+      margin: [55, 6, 55, 0] as [number, number, number, number],
+      stack: [
+        { canvas: [{ type: "line", x1: 0, y1: 0, x2: 485, y2: 0, lineWidth: 0.5, lineColor: COLOR_LINE }] },
+        {
+          margin: [0, 7, 0, 0] as [number, number, number, number],
+          columns: [
+            cell([f.firmenname, f.strasse, [f.plz, f.ort].filter(Boolean).join(" ") || null]),
+            cell(["Bankverbindung", f.bankName, f.iban]),
+            cell([f.telefon, f.mobil, f.email]),
+            cell([
+              f.handelsregister,
+              f.ustId ? `USt-ID: ${f.ustId}` : null,
+              f.webseite,
+              f.geschaeftsfuehrer ? `Geschäftsführer: ${f.geschaeftsfuehrer}` : null,
+            ]),
+          ],
+          columnGap: 12,
+        },
+      ],
+    };
+  };
+}
+
+function urlaubDatum(iso: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "";
+  return `${iso.slice(8, 10)}.${iso.slice(5, 7)}.${iso.slice(0, 4)}`;
+}
+
+/** Linie mit Wert darüber (wie ein ausgefülltes Formularfeld). */
+function feldLinie(wert: string, breite: number, fs = 11) {
+  return {
+    width: breite,
+    stack: [
+      { text: wert || " ", fontSize: fs, margin: [4, 0, 0, 2] as [number, number, number, number] },
+      { canvas: [{ type: "line", x1: 0, y1: 0, x2: breite, y2: 0, lineWidth: 0.7, lineColor: COLOR_TEXT }] },
+    ],
+  };
+}
+
+export async function generateUrlaubsantragPdf(data: UrlaubsantragData): Promise<Blob> {
+  const logo = await resolveLogo(data.firma).catch(() => null);
+  const tageText = Number.isFinite(data.tage)
+    ? data.tage.toLocaleString("de-DE", { maximumFractionDigits: 1 })
+    : "";
+  const label = (t: string) => ({ text: t, fontSize: 11, margin: [0, 0, 0, 0] as [number, number, number, number] });
+
+  const doc = {
+    pageSize: "A4" as const,
+    pageMargins: [70, 60, 70, 95] as [number, number, number, number],
+    defaultStyle: { font: "Roboto", fontSize: 11, color: COLOR_TEXT, lineHeight: 1.25 },
+    footer: urlaubFooter(data.firma),
+    content: [
+      // Logo oben rechts
+      logo
+        ? { image: logo, fit: [200, 95], alignment: "right" as const, margin: [0, 0, 0, 0] as [number, number, number, number] }
+        : { text: data.firma?.firmenname ?? "", alignment: "right" as const, bold: true, fontSize: 13 },
+      // Titel — bewusst kleiner als auf der Papiervorlage
+      { text: "Urlaubsantrag", fontSize: 17, margin: [10, 30, 0, 4] as [number, number, number, number] },
+      { canvas: [{ type: "line", x1: 18, y1: 0, x2: 120, y2: 0, lineWidth: 0.9, lineColor: COLOR_TEXT }] },
+
+      { ...label("Name des Mitarbeiters / der Mitarbeiterin:"), margin: [0, 48, 0, 10] as [number, number, number, number] },
+      { columns: [feldLinie(data.mitarbeiterName, 300)] },
+
+      {
+        margin: [0, 34, 0, 0] as [number, number, number, number],
+        columnGap: 6,
+        columns: [
+          { width: "auto", text: "Urlaub von:", fontSize: 11, margin: [0, 2, 0, 0] as [number, number, number, number] },
+          feldLinie(urlaubDatum(data.von), 115),
+          { width: "auto", text: "bis:", fontSize: 11, margin: [14, 2, 0, 0] as [number, number, number, number] },
+          feldLinie(urlaubDatum(data.bis), 115),
+        ],
+      },
+      {
+        margin: [0, 28, 0, 0] as [number, number, number, number],
+        columnGap: 6,
+        columns: [
+          { width: "auto", text: "Anzahl Urlaubstage:", fontSize: 11, margin: [0, 2, 0, 0] as [number, number, number, number] },
+          feldLinie(tageText, 150),
+        ],
+      },
+
+      {
+        text: "Hiermit wird bestätigt, dass der/die oben genannte Mitarbeiter/in den beantragten Urlaub im angegebenen Zeitraum genommen hat.",
+        fontSize: 11,
+        lineHeight: 1.35,
+        margin: [0, 52, 0, 0] as [number, number, number, number],
+      },
+
+      {
+        margin: [0, 70, 0, 0] as [number, number, number, number],
+        columnGap: 30,
+        columns: [0, 1].map((i) => ({
+          width: "*",
+          stack: [
+            { canvas: [{ type: "line", x1: 0, y1: 0, x2: 212, y2: 0, lineWidth: 0.7, lineColor: COLOR_TEXT }] },
+            {
+              text: i === 0 ? "Datum, Unterschrift, Arbeitnehmer/in" : "Datum, Unterschrift, Arbeitgeber",
+              fontSize: 8.5,
+              margin: [0, 4, 0, 0] as [number, number, number, number],
+            },
+          ],
+        })),
+      },
+    ],
+  };
+  const pm = await getPdfMake();
+  return await new Promise<Blob>((resolve, reject) => {
+    try {
+      pm.createPdf(doc).getBlob((b: Blob) => resolve(b));
+    } catch (e) {
+      reject(e);
+    }
+  });
+}
+
+/** Werktage (Mo–Fr) im Zeitraum ohne Feiertage. */
+export function zaehleUrlaubstage(von: string, bis: string, feiertage: Set<string>): number {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(von) || !/^\d{4}-\d{2}-\d{2}$/.test(bis) || bis < von) return 0;
+  let n = 0;
+  const end = Date.parse(`${bis}T00:00:00Z`);
+  for (let t = Date.parse(`${von}T00:00:00Z`); t <= end; t += 86400000) {
+    const d = new Date(t);
+    const wd = d.getUTCDay();
+    if (wd === 0 || wd === 6) continue;
+    if (feiertage.has(d.toISOString().slice(0, 10))) continue;
+    n++;
+  }
+  return n;
+}
