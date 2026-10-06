@@ -3,7 +3,7 @@
 // nach derselben Halbstunden-Regel wie im Backend berechnet.
 
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, Save, Trash2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, Save, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -11,6 +11,7 @@ import { WOCHENTAG_LABEL, type GenerierterTag, type Stundenzettel } from "@/lib/
 import { useDeleteZettel, usePatchZettel } from "@/hooks/useStundenzettel";
 import { useConfirm } from "@/hooks/useConfirm";
 import { cn } from "@/lib/utils";
+import { pruefeZiel } from "@/lib/stundenzettel/ziel";
 
 function toMin(t?: string): number | null {
   if (!t || !/^\d{2}:\d{2}$/.test(t)) return null;
@@ -20,6 +21,7 @@ function toMin(t?: string): number | null {
 
 /** Halbe Stunden je Block (Floor), Pause nur von Block 1 abgezogen. */
 function berechneStunden(t: GenerierterTag): number {
+  if (t.ausgeschlossen) return 0;
   // Urlaub/Krank zählen wie Arbeitszeit: die übernommenen Tagesstunden bleiben.
   if (t.bemerkung && (BEZAHLTE_ABWESENHEIT as readonly string[]).includes(t.bemerkung)) return t.stunden || 0;
   if (t.bemerkung && (TAG_STATUS as readonly string[]).includes(t.bemerkung)) return 0;
@@ -62,6 +64,7 @@ function editierbarerStand(t: GenerierterTag): string {
     pause: t.pause ?? null,
     stunden: t.stunden,
     bemerkung: t.bemerkung ?? null,
+    ausgeschlossen: !!t.ausgeschlossen,
   });
 }
 
@@ -70,12 +73,15 @@ export function StundenzettelTabelle({
   name,
   jahr,
   monat,
+  ziel,
 }: {
   zettel: Stundenzettel;
   name: string;
   jahr: number;
   monat: number;
+  ziel: number | null;
 }) {
+  const [filter, setFilter] = useState<"alle" | "manuell" | "geaendert">("alle");
   const [tage, setTage] = useState<GenerierterTag[]>(zettel.tage);
   const [gespeicherteTage, setGespeicherteTage] = useState<GenerierterTag[]>(zettel.tage);
   const patch = usePatchZettel(jahr, monat);
@@ -97,6 +103,8 @@ export function StundenzettelTabelle({
     );
   }, [gespeicherteTage, tage]);
   const dirty = geaenderteTage.size > 0;
+  const pruefung = useMemo(() => pruefeZiel(tage, ziel), [tage, ziel]);
+  const zielSperre = pruefung.ziel != null && !pruefung.erfuellt;
 
   function setFeld(idx: number, feld: keyof GenerierterTag, value: string) {
     setTage((prev) => {
@@ -119,7 +127,28 @@ export function StundenzettelTabelle({
           t.ende2 = undefined;
         }
       }
+      t.quelle = "manuell";
       t.stunden = berechneStunden(t);
+      next[idx] = t;
+      return next;
+    });
+  }
+
+  /** Ein Klick: Zeile zählt / zählt nicht. Zeiten bleiben erhalten. */
+  function toggleZaehlt(idx: number) {
+    setTage((prev) => {
+      const next = prev.slice();
+      const t = { ...next[idx] } as GenerierterTag;
+      if (t.ausgeschlossen) {
+        t.ausgeschlossen = undefined;
+        const orig = gespeicherteTage.find((g) => g.datum === t.datum);
+        const bezahlt = !!t.bemerkung && (BEZAHLTE_ABWESENHEIT as readonly string[]).includes(t.bemerkung);
+        t.stunden = bezahlt && orig && !orig.ausgeschlossen ? orig.stunden : berechneStunden(t);
+      } else {
+        t.ausgeschlossen = true;
+        t.stunden = 0;
+      }
+      t.quelle = "manuell";
       next[idx] = t;
       return next;
     });
@@ -147,6 +176,7 @@ export function StundenzettelTabelle({
         t.beginn2 = undefined;
         t.ende2 = undefined;
       }
+      t.quelle = "manuell";
       t.stunden = berechneStunden(t);
       next[idx] = t;
       return next;
@@ -154,7 +184,7 @@ export function StundenzettelTabelle({
   }
 
   async function speichern() {
-    if (!zettel.id) return;
+    if (!zettel.id || zielSperre) return;
     try {
       await patch.mutateAsync({ id: zettel.id, tage });
       setGespeicherteTage(tage.map((tag) => ({ ...tag })));
@@ -185,59 +215,125 @@ export function StundenzettelTabelle({
     );
   }
 
+  const fmt = (n: number) => n.toLocaleString("de-DE");
+  const sichtbar = tage
+    .map((t, i) => ({ t, i }))
+    .filter(({ t }) =>
+      filter === "alle" ? true : filter === "manuell" ? t.quelle === "manuell" : geaenderteTage.has(t.datum),
+    );
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="text-sm text-muted-foreground">
-          Gesamt:{" "}
-          <span className="font-semibold text-foreground">
-            {gesamt.toLocaleString("de-DE")} Std.
-          </span>
+        <div
+          className={cn(
+            "flex items-center gap-2 rounded-md border px-3 py-1.5 text-sm",
+            pruefung.ziel == null
+              ? "border-border text-muted-foreground"
+              : pruefung.erfuellt
+                ? "border-primary/40 bg-primary/10 text-foreground"
+                : "border-destructive/40 bg-destructive/10 text-destructive",
+          )}
+        >
+          {pruefung.ziel != null &&
+            (pruefung.erfuellt ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <AlertCircle className="h-4 w-4" />)}
+          {pruefung.ziel != null ? (
+            <span>
+              Ziel <b>{fmt(pruefung.ziel)}</b> · Ist <b>{fmt(gesamt)}</b> Std.
+              {!pruefung.erfuellt &&
+                (pruefung.abweichung < 0
+                  ? ` · noch ${fmt(-pruefung.abweichung)} Std. fehlen`
+                  : ` · ${fmt(pruefung.abweichung)} Std. zu viel`)}
+            </span>
+          ) : (
+            <span>
+              Gesamt: <b className="text-foreground">{fmt(gesamt)} Std.</b>
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="sm" onClick={loeschen} disabled={del.isPending}>
             <Trash2 className="mr-1.5 h-4 w-4" /> Löschen
           </Button>
-          <Button size="sm" onClick={speichern} disabled={!dirty || patch.isPending}>
-            {patch.isPending ? (
-              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-1.5 h-4 w-4" />
-            )}
-            Speichern
+          <Button
+            size="sm"
+            onClick={speichern}
+            disabled={!dirty || zielSperre || patch.isPending}
+            title={zielSperre ? "Speichern erst möglich, wenn die Zielstunden genau erreicht sind" : undefined}
+          >
+            {patch.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+            {zielSperre && dirty ? "Ziel nicht erreicht" : "Speichern"}
           </Button>
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm border border-border bg-background" /> Automatisch</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm border-l-4 border-primary bg-primary/10" /> Manuell</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-accent" /> Urlaub / Krank</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-muted" /> Frei / Feiertag / WE</span>
+        <span className="flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm bg-muted line-through opacity-50" /> Zählt nicht</span>
+        <div className="ml-auto flex overflow-hidden rounded-md border border-border">
+          {([["alle", "Alle"], ["manuell", "Nur manuelle"], ["geaendert", "Nur geänderte"]] as const).map(([k, l]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setFilter(k)}
+              className={cn("px-2.5 py-1", filter === k ? "bg-primary text-primary-foreground" : "hover:bg-muted")}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="overflow-x-auto rounded-lg border border-border">
-        <table className="w-full min-w-[610px] table-fixed text-sm">
-          <thead className="bg-muted/50 text-xs text-muted-foreground">
+        <table className="w-full min-w-[720px] table-fixed text-sm">
+          <thead className="sticky top-0 z-10 bg-muted text-xs text-muted-foreground">
             <tr>
-              <th className="w-[62px] px-2 py-2 text-left font-medium">Tag</th>
-              <th className="w-[112px] px-2 py-2 text-left font-medium">Beginn</th>
-              <th className="w-[112px] px-2 py-2 text-left font-medium">Ende</th>
-              <th className="w-[80px] px-2 py-2 text-left font-medium">Pause</th>
-              <th className="w-[58px] px-2 py-2 text-right font-medium">Std.</th>
-              <th className="w-[112px] px-2 py-2 text-left font-medium">Status</th>
+              <th className="w-[66px] px-2 py-2 text-left font-medium">Tag</th>
+              <th className="w-[62px] px-2 py-2 text-left font-medium">Herkunft</th>
+              <th className="w-[108px] px-2 py-2 text-left font-medium">Beginn</th>
+              <th className="w-[108px] px-2 py-2 text-left font-medium">Ende</th>
+              <th className="w-[76px] px-2 py-2 text-left font-medium">Pause</th>
+              <th className="w-[54px] px-2 py-2 text-right font-medium">Std.</th>
+              <th className="w-[84px] px-2 py-2 text-center font-medium">Zählt</th>
+              <th className="w-[108px] px-2 py-2 text-left font-medium">Status</th>
               <th className="px-2 py-2 text-left font-medium">Bemerkung</th>
             </tr>
           </thead>
           <tbody>
-            {tage.map((t, i) => {
+            {sichtbar.map(({ t, i }) => {
               const we = t.wochentag === "samstag" || t.wochentag === "sonntag";
+              const manuell = t.quelle === "manuell";
+              const abwesend = !!t.bemerkung && (BEZAHLTE_ABWESENHEIT as readonly string[]).includes(t.bemerkung);
+              const frei = !abwesend && !t.beginn && (we || !!t.bemerkung);
+              const aus = !!t.ausgeschlossen;
+              const geaendert = geaenderteTage.has(t.datum);
               return (
                 <tr
                   key={t.datum}
                   className={cn(
-                    "border-t border-border transition-colors",
-                    we && "bg-muted/30",
-                    geaenderteTage.has(t.datum) && "bg-muted hover:bg-muted",
+                    "border-t border-border border-l-4 border-l-transparent transition-colors",
+                    frei && "bg-muted/60",
+                    abwesend && "bg-accent/60",
+                    manuell && "border-l-primary bg-primary/5",
+                    geaendert && "bg-primary/15",
+                    aus && "opacity-50 [&_input]:line-through",
                   )}
                 >
-                  <td className="whitespace-nowrap px-2 py-1.5 text-xs">
-                    <span className="font-medium">{tagNr(t.datum)}.</span>{" "}
-                    <span className="text-muted-foreground">
-                      {WOCHENTAG_LABEL[t.wochentag].slice(0, 2)}
+                  <td className="whitespace-nowrap px-2 py-1 text-xs">
+                    <span className={cn("font-medium", aus && "line-through")}>{tagNr(t.datum)}.</span>{" "}
+                    <span className="text-muted-foreground">{WOCHENTAG_LABEL[t.wochentag].slice(0, 2)}</span>
+                  </td>
+                  <td className="px-2 py-1">
+                    <span
+                      className={cn(
+                        "rounded px-1.5 py-0.5 text-[10px] font-medium",
+                        manuell ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {manuell ? "Manuell" : "Auto"}
                     </span>
                   </td>
                   {(["beginn", "ende"] as const).map((f) => (
@@ -247,7 +343,7 @@ export function StundenzettelTabelle({
                         value={t[f] ?? ""}
                         onChange={(e) => setFeld(i, f, e.target.value)}
                         step={1800}
-                        className="h-8 w-full min-w-[96px] text-xs"
+                        className="h-8 w-full min-w-[92px] text-xs"
                       />
                     </td>
                   ))}
@@ -259,28 +355,37 @@ export function StundenzettelTabelle({
                       step={5}
                       value={t.pause ?? ""}
                       onChange={(e) => setFeld(i, "pause", e.target.value)}
-                      className="h-8 w-[72px] text-xs"
+                      className="h-8 w-[68px] text-xs"
                     />
                   </td>
-                  <td className="px-2 py-1 text-right text-xs font-medium tabular-nums">
-                    {t.stunden ? t.stunden.toLocaleString("de-DE") : ""}
+                  <td className={cn("px-2 py-1 text-right text-xs font-semibold tabular-nums", aus && "line-through")}>
+                    {t.stunden ? fmt(t.stunden) : ""}
+                  </td>
+                  <td className="px-1 py-1 text-center">
+                    <button
+                      type="button"
+                      onClick={() => toggleZaehlt(i)}
+                      aria-pressed={!aus}
+                      className={cn(
+                        "h-7 w-[72px] rounded-md border text-[11px] font-medium transition-colors",
+                        aus
+                          ? "border-destructive/40 bg-destructive/10 text-destructive"
+                          : "border-border bg-background hover:bg-muted",
+                      )}
+                    >
+                      {aus ? "Zählt nicht" : "Zählt"}
+                    </button>
                   </td>
                   <td className="px-1 py-1">
                     <select
-                      value={
-                        t.bemerkung && (TAG_STATUS as readonly string[]).includes(t.bemerkung)
-                          ? t.bemerkung
-                          : ""
-                      }
+                      value={t.bemerkung && (TAG_STATUS as readonly string[]).includes(t.bemerkung) ? t.bemerkung : ""}
                       onChange={(e) => setStatus(i, e.target.value)}
                       aria-label="Status"
-                      className="h-8 w-full min-w-[96px] rounded-md border border-input bg-background px-2 text-xs"
+                      className="h-8 w-full min-w-[92px] rounded-md border border-input bg-background px-2 text-xs"
                     >
                       <option value="">Arbeit</option>
                       {TAG_STATUS.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
+                        <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
                   </td>
@@ -288,13 +393,16 @@ export function StundenzettelTabelle({
                     <Input
                       value={t.bemerkung ?? ""}
                       onChange={(e) => setFeld(i, "bemerkung", e.target.value)}
-                      className="h-8 min-w-[140px] text-xs"
+                      className="h-8 min-w-[120px] text-xs"
                       placeholder="—"
                     />
                   </td>
                 </tr>
               );
             })}
+            {sichtbar.length === 0 && (
+              <tr><td colSpan={9} className="px-3 py-6 text-center text-xs text-muted-foreground">Keine Zeilen für diesen Filter.</td></tr>
+            )}
           </tbody>
         </table>
       </div>
