@@ -23,6 +23,7 @@ import { Route as AktivitaetRouteImport } from './routes/aktivitaet'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WerkzeugeIndexRouteImport } from './routes/werkzeuge.index'
 import { Route as WerkzeugeWhatsappStoryRouteImport } from './routes/werkzeuge.whatsapp-story'
+import { Route as WerkzeugeUrlaubsantragRouteImport } from './routes/werkzeuge.urlaubsantrag'
 import { Route as WerkzeugeUebergabeprotokollRouteImport } from './routes/werkzeuge.uebergabeprotokoll'
 import { Route as WerkzeugeSchluesseluebergabeRouteImport } from './routes/werkzeuge.schluesseluebergabe'
 import { Route as RechnungenNeuRouteImport } from './routes/rechnungen.neu'
@@ -108,6 +109,11 @@ const WerkzeugeIndexRoute = WerkzeugeIndexRouteImport.update({
 const WerkzeugeWhatsappStoryRoute = WerkzeugeWhatsappStoryRouteImport.update({
   id: '/whatsapp-story',
   path: '/whatsapp-story',
+  getParentRoute: () => WerkzeugeRoute,
+} as any)
+const WerkzeugeUrlaubsantragRoute = WerkzeugeUrlaubsantragRouteImport.update({
+  id: '/urlaubsantrag',
+  path: '/urlaubsantrag',
   getParentRoute: () => WerkzeugeRoute,
 } as any)
 const WerkzeugeUebergabeprotokollRoute =
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/rechnungen/neu': typeof RechnungenNeuRoute
   '/werkzeuge/schluesseluebergabe': typeof WerkzeugeSchluesseluebergabeRoute
   '/werkzeuge/uebergabeprotokoll': typeof WerkzeugeUebergabeprotokollRoute
+  '/werkzeuge/urlaubsantrag': typeof WerkzeugeUrlaubsantragRoute
   '/werkzeuge/whatsapp-story': typeof WerkzeugeWhatsappStoryRoute
   '/werkzeuge/': typeof WerkzeugeIndexRoute
   '/angebote/$id/bearbeiten': typeof AngeboteIdBearbeitenRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/rechnungen/neu': typeof RechnungenNeuRoute
   '/werkzeuge/schluesseluebergabe': typeof WerkzeugeSchluesseluebergabeRoute
   '/werkzeuge/uebergabeprotokoll': typeof WerkzeugeUebergabeprotokollRoute
+  '/werkzeuge/urlaubsantrag': typeof WerkzeugeUrlaubsantragRoute
   '/werkzeuge/whatsapp-story': typeof WerkzeugeWhatsappStoryRoute
   '/werkzeuge': typeof WerkzeugeIndexRoute
   '/angebote/$id/bearbeiten': typeof AngeboteIdBearbeitenRoute
@@ -282,6 +290,7 @@ export interface FileRoutesById {
   '/rechnungen/neu': typeof RechnungenNeuRoute
   '/werkzeuge/schluesseluebergabe': typeof WerkzeugeSchluesseluebergabeRoute
   '/werkzeuge/uebergabeprotokoll': typeof WerkzeugeUebergabeprotokollRoute
+  '/werkzeuge/urlaubsantrag': typeof WerkzeugeUrlaubsantragRoute
   '/werkzeuge/whatsapp-story': typeof WerkzeugeWhatsappStoryRoute
   '/werkzeuge/': typeof WerkzeugeIndexRoute
   '/angebote/$id/bearbeiten': typeof AngeboteIdBearbeitenRoute
@@ -316,6 +325,7 @@ export interface FileRouteTypes {
     | '/rechnungen/neu'
     | '/werkzeuge/schluesseluebergabe'
     | '/werkzeuge/uebergabeprotokoll'
+    | '/werkzeuge/urlaubsantrag'
     | '/werkzeuge/whatsapp-story'
     | '/werkzeuge/'
     | '/angebote/$id/bearbeiten'
@@ -347,6 +357,7 @@ export interface FileRouteTypes {
     | '/rechnungen/neu'
     | '/werkzeuge/schluesseluebergabe'
     | '/werkzeuge/uebergabeprotokoll'
+    | '/werkzeuge/urlaubsantrag'
     | '/werkzeuge/whatsapp-story'
     | '/werkzeuge'
     | '/angebote/$id/bearbeiten'
@@ -379,6 +390,7 @@ export interface FileRouteTypes {
     | '/rechnungen/neu'
     | '/werkzeuge/schluesseluebergabe'
     | '/werkzeuge/uebergabeprotokoll'
+    | '/werkzeuge/urlaubsantrag'
     | '/werkzeuge/whatsapp-story'
     | '/werkzeuge/'
     | '/angebote/$id/bearbeiten'
@@ -501,6 +513,13 @@ declare module '@tanstack/react-router' {
       path: '/whatsapp-story'
       fullPath: '/werkzeuge/whatsapp-story'
       preLoaderRoute: typeof WerkzeugeWhatsappStoryRouteImport
+      parentRoute: typeof WerkzeugeRoute
+    }
+    '/werkzeuge/urlaubsantrag': {
+      id: '/werkzeuge/urlaubsantrag'
+      path: '/urlaubsantrag'
+      fullPath: '/werkzeuge/urlaubsantrag'
+      preLoaderRoute: typeof WerkzeugeUrlaubsantragRouteImport
       parentRoute: typeof WerkzeugeRoute
     }
     '/werkzeuge/uebergabeprotokoll': {
@@ -735,6 +754,7 @@ const RechnungenRouteWithChildren = RechnungenRoute._addFileChildren(
 interface WerkzeugeRouteChildren {
   WerkzeugeSchluesseluebergabeRoute: typeof WerkzeugeSchluesseluebergabeRoute
   WerkzeugeUebergabeprotokollRoute: typeof WerkzeugeUebergabeprotokollRoute
+  WerkzeugeUrlaubsantragRoute: typeof WerkzeugeUrlaubsantragRoute
   WerkzeugeWhatsappStoryRoute: typeof WerkzeugeWhatsappStoryRoute
   WerkzeugeIndexRoute: typeof WerkzeugeIndexRoute
 }
@@ -742,6 +762,7 @@ interface WerkzeugeRouteChildren {
 const WerkzeugeRouteChildren: WerkzeugeRouteChildren = {
   WerkzeugeSchluesseluebergabeRoute: WerkzeugeSchluesseluebergabeRoute,
   WerkzeugeUebergabeprotokollRoute: WerkzeugeUebergabeprotokollRoute,
+  WerkzeugeUrlaubsantragRoute: WerkzeugeUrlaubsantragRoute,
   WerkzeugeWhatsappStoryRoute: WerkzeugeWhatsappStoryRoute,
   WerkzeugeIndexRoute: WerkzeugeIndexRoute,
 }
