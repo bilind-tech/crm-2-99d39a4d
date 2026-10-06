@@ -100,6 +100,10 @@ export interface GenerierterTag {
   stunden: number;
   /** Feiertagsname, "Samstag"/"Sonntag" oder frei ("Krank", "Urlaub"). */
   bemerkung?: string;
+  /** Herkunft: fehlt = automatisch erzeugt. */
+  quelle?: "auto" | "manuell";
+  /** Zählt nicht in die Summe (stunden = 0, Zeiten bleiben sichtbar). */
+  ausgeschlossen?: boolean;
 }
 
 export interface GenerierterStundenzettel {

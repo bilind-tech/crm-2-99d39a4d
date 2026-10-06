@@ -77,6 +77,8 @@ export const ZettelPatchSchema = z.object({
       pause: z.number().int().min(0).max(600).optional().nullable(),
       stunden: z.number().min(0).max(24),
       bemerkung: z.string().max(200).optional().nullable(),
+      quelle: z.enum(["auto", "manuell"]).optional().nullable(),
+      ausgeschlossen: z.boolean().optional().nullable(),
     }),
   ),
 });
