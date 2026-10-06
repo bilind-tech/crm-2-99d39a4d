@@ -3,7 +3,7 @@
 // `src/routes/werkzeuge.<slug>.tsx` anlegen. Sonst nichts.
 
 import type { ComponentType } from "react";
-import { FileSignature, Images, KeyRound } from "lucide-react";
+import { CalendarCheck, FileSignature, Images, KeyRound } from "lucide-react";
 
 export type WerkzeugGruppe = "PDF-Vorlagen" | "Sonstiges";
 
@@ -43,6 +43,14 @@ export const WERKZEUGE: WerkzeugDefinition[] = [
     beschreibung: "Bilder sortieren, zuschneiden und als einheitliche Story-Serie exportieren.",
     icon: Images,
     route: "/werkzeuge/whatsapp-story",
+  },
+  {
+    id: "urlaubsantrag",
+    gruppe: "Sonstiges",
+    titel: "Urlaubsantrag",
+    beschreibung: "Urlaubsantrag für einen Mitarbeiter ausfüllen, speichern und drucken — wird im Stundenzettel berücksichtigt.",
+    icon: CalendarCheck,
+    route: "/werkzeuge/urlaubsantrag",
   },
 ];
 
