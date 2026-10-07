@@ -12,6 +12,7 @@ import { renderPdf } from "./render.js";
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
 import { getMitarbeiter, getZettel } from "../stundenzettel/repo.js";
 import type { GenerierterStundenzettel, GenerierterTag } from "../stundenzettel/types.js";
+import { stundenzettelZeitzeilen } from "./stundenzettelZeitzeilen.js";
 
 const COLOR_TEXT = "#000000";
 
@@ -97,21 +98,6 @@ interface Zelle {
   pauseVon: string;
   pauseBis: string;
   stunden: string;
-}
-
-/** Zwei Arbeitsblöcke bleiben als zusammengehörige, vertikale Zeilen erhalten. */
-export function stundenzettelZeitzeilen(t: GenerierterTag): { beginn: string; ende: string } {
-  const bloecke = [
-    t.beginn && t.ende ? { beginn: t.beginn, ende: t.ende } : null,
-    t.beginn2 && t.ende2 ? { beginn: t.beginn2, ende: t.ende2 } : null,
-  ]
-    .filter((block): block is { beginn: string; ende: string } => block !== null)
-    .sort((a, b) => (toMin(a.beginn) ?? 0) - (toMin(b.beginn) ?? 0));
-
-  return {
-    beginn: bloecke.map((block) => block.beginn).join("\n"),
-    ende: bloecke.map((block) => block.ende).join("\n"),
-  };
 }
 
 function zeile(t: GenerierterTag): Zelle {

@@ -4,7 +4,7 @@ import { generiereStundenzettel } from "../src/stundenzettel/generieren.js";
 import { pruefeZiel, summeStunden } from "../src/stundenzettel/zielausgleich.js";
 import { DEFAULT_ARBEITSZEIT, type Mitarbeiter } from "../src/stundenzettel/types.js";
 import { ArbeitsZeitConfigSchema } from "../src/stundenzettel/validation.js";
-import { stundenzettelZeitzeilen } from "../src/pdf/stundenzettelPdf.js";
+import { stundenzettelZeitzeilen } from "../src/pdf/stundenzettelZeitzeilen.js";
 
 function ma(ziel: number | null): Mitarbeiter {
   return {

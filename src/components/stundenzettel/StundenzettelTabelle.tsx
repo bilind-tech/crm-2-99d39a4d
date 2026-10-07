@@ -344,14 +344,18 @@ export function StundenzettelTabelle({
                   {(["beginn", "ende"] as const).map((f) => {
                     const f2 = f === "beginn" ? "beginn2" : "ende2";
                     const zwei = t.beginn2 !== undefined || t.ende2 !== undefined || zweiterBlock.has(t.datum);
+                    const zweiterFrueher =
+                      zwei && toMin(t.beginn2) != null && toMin(t.beginn) != null && Number(toMin(t.beginn2)) < Number(toMin(t.beginn));
+                    const oben = zweiterFrueher ? f2 : f;
+                    const unten = zweiterFrueher ? f : f2;
                     return (
                       <td key={f} className="px-1 py-1 align-top">
                         <div className={cn("relative grid gap-1", zwei && "grid-rows-[2rem_2rem]")}>
                           <Input
                             type="time"
                             aria-label={f === "beginn" ? "Beginn 1. Block" : "Ende 1. Block"}
-                            value={t[f] ?? ""}
-                            onChange={(e) => setFeld(i, f, e.target.value)}
+                            value={t[oben] ?? ""}
+                            onChange={(e) => setFeld(i, oben, e.target.value)}
                             step={1800}
                             className="h-8 w-full min-w-[92px] text-xs"
                           />
@@ -359,8 +363,8 @@ export function StundenzettelTabelle({
                             <Input
                               type="time"
                               aria-label={f === "beginn" ? "Beginn 2. Block" : "Ende 2. Block"}
-                              value={t[f2] ?? ""}
-                              onChange={(e) => setFeld(i, f2, e.target.value)}
+                              value={t[unten] ?? ""}
+                              onChange={(e) => setFeld(i, unten, e.target.value)}
                               step={1800}
                               className={cn("h-8 w-full min-w-[92px] text-xs", f === "ende" && "pr-7")}
                             />
