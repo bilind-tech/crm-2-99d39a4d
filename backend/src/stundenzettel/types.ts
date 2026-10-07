@@ -114,6 +114,8 @@ export interface GenerierterStundenzettel {
   tage: GenerierterTag[];
   gesamtStunden: number;
   aktualisiertAm: string | null;
+  /** Speicherstand in Dokumente (nur API-Ausgabe). */
+  archivStatus?: "nicht" | "veraltet" | "gespeichert";
 }
 
 /** Default-Config für einen neuen Mitarbeiter — Mo–Fr 08:00–17:00, 60 Min Pause ab 4h. */

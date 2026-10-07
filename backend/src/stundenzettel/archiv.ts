@@ -5,7 +5,24 @@ import { renderStundenzettelPdf } from "../pdf/stundenzettelPdf.js";
 import { storeBuffer } from "../dokumente/storage.js";
 import { createDokument, listDokumente, softDeleteDokument } from "../dokumente/repo.js";
 import { createOrdner, listOrdner } from "../dokumente/ordner-repo.js";
-import { getZettel } from "./repo.js";
+import { createHash } from "node:crypto";
+import { getArchivStand, getMitarbeiter, getZettel, setArchivStand } from "./repo.js";
+import { getDokument } from "../dokumente/repo.js";
+import { zettelInhalt, type ArchivStatus } from "./archivStand.js";
+import type { GenerierterStundenzettel } from "./types.js";
+
+export function zettelHash(z: GenerierterStundenzettel): string {
+  const name = getMitarbeiter(z.mitarbeiterId)?.name ?? "";
+  return createHash("sha256").update(zettelInhalt(z.tage, z.gesamtStunden, name)).digest("hex");
+}
+
+/** Speicherstand: nie abgelegt / abgelegt aber geändert / aktuell abgelegt. */
+export function archivStatus(z: GenerierterStundenzettel): ArchivStatus {
+  if (!z.id) return "nicht";
+  const stand = getArchivStand(z.id);
+  if (!stand.hash || !stand.dokumentId || !getDokument(stand.dokumentId)) return "nicht";
+  return stand.hash === zettelHash(z) ? "gespeichert" : "veraltet";
+}
 
 export const STUNDENZETTEL_ORDNER = "Stundenzettel";
 
@@ -67,5 +84,6 @@ export async function archiviereStundenzettel(zettelId: string): Promise<ArchivE
     beschreibung: `Stundenzettel ${String(z.monat).padStart(2, "0")}/${z.jahr} — ${z.gesamtStunden.toFixed(2)} Stunden`,
   });
 
+  setArchivStand(zettelId, zettelHash(z), dok.id);
   return { dokumentId: dok.id, dateiname: pdf.dateiname, ordnerId, ersetzt };
 }
