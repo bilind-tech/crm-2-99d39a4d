@@ -332,8 +332,10 @@ async function printViaHiddenIframe(images: string[]): Promise<void> {
       }
       const imgs = Array.from(win.document.images);
       let pending = imgs.length || 1;
+      let gedruckt = false;
       const triggerPrint = () => {
-        if (--pending > 0) return;
+        if (--pending > 0 || gedruckt) return;
+        gedruckt = true;
         try {
           win.addEventListener("afterprint", () => setTimeout(cleanup, 300));
         } catch {
