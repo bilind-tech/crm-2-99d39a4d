@@ -226,7 +226,14 @@ export function stundenzettelPreviewGet<T>(cleanPath: string, params: URLSearchP
     const jahr = Number.parseInt(params.get("jahr") ?? "", 10);
     const monat = Number.parseInt(params.get("monat") ?? "", 10);
     return {
-      zettel: store.zettel.filter((z) => z.jahr === jahr && z.monat === monat),
+      zettel: store.zettel
+        .filter((z) => z.jahr === jahr && z.monat === monat)
+        .map((z) => {
+          const alt = z.id ? store.archivStand?.[z.id] : undefined;
+          const name = store.mitarbeiter.find((m) => m.id === z.mitarbeiterId)?.name ?? "";
+          const archivStatus = !alt ? "nicht" : alt === zettelInhalt(z.tage, z.gesamtStunden, name) ? "gespeichert" : "veraltet";
+          return { ...z, archivStatus };
+        }),
     } as T;
   }
   return null;
