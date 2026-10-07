@@ -118,6 +118,8 @@ export interface Stundenzettel {
   tage: GenerierterTag[];
   gesamtStunden: number;
   aktualisiertAm: string | null;
+  /** Speicherstand in Dokumente. */
+  archivStatus?: "nicht" | "veraltet" | "gespeichert";
 }
 
 export interface GenerierenErgebnis {

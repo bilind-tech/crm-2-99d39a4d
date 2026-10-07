@@ -150,6 +150,8 @@ interface ZettelRow {
   monat: number;
   tage_json: string;
   gesamt_stunden: number;
+  archiv_hash?: string | null;
+  archiv_dokument_id?: string | null;
   erstellt_am: string;
   aktualisiert_am: string;
 }
@@ -232,4 +234,17 @@ export function deleteZettel(id: string): boolean {
   const db = getDatabase();
   const r = db.prepare("DELETE FROM stz_stundenzettel WHERE id = ?").run(id);
   return r.changes > 0;
+}
+/** Roh-Speicherstand (Hash + Dokument) eines Zettels. */
+export function getArchivStand(id: string): { hash: string | null; dokumentId: string | null } {
+  const r = getDatabase()
+    .prepare("SELECT archiv_hash, archiv_dokument_id FROM stz_stundenzettel WHERE id = ?")
+    .get(id) as { archiv_hash: string | null; archiv_dokument_id: string | null } | undefined;
+  return { hash: r?.archiv_hash ?? null, dokumentId: r?.archiv_dokument_id ?? null };
+}
+
+export function setArchivStand(id: string, hash: string, dokumentId: string): void {
+  getDatabase()
+    .prepare("UPDATE stz_stundenzettel SET archiv_hash = ?, archiv_dokument_id = ? WHERE id = ?")
+    .run(hash, dokumentId, id);
 }

@@ -21,7 +21,7 @@ import { emit } from "../events/bus.js";
 import { getFeiertageFuerJahr } from "../stundenzettel/feiertage.js";
 import { generiereStundenzettel } from "../stundenzettel/generieren.js";
 import { renderStundenzettelPdf } from "../pdf/stundenzettelPdf.js";
-import { archiviereStundenzettel } from "../stundenzettel/archiv.js";
+import { archiviereStundenzettel, archivStatus } from "../stundenzettel/archiv.js";
 import {
   createCustomFeiertag,
   createMitarbeiter,
@@ -88,11 +88,6 @@ async function nachberechnen(
     let gesamt = tage.reduce((s, t) => s + t.stunden, 0);
     if (ziel != null) gesamt = wendeZielausgleichAn(tage, ziel, `${m.id}-${jahr}-${monat}`);
     const saved = upsertZettel({ mitarbeiterId, jahr, monat, tage, gesamtStunden: gesamt });
-    try {
-      await archiviereStundenzettel(saved.id!);
-    } catch (e) {
-      log.error({ err: e }, "stundenzettel-archiv-failed");
-    }
   }
 }
 
@@ -286,9 +281,9 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
     }
     if (q.mitarbeiterId) {
       const z = findZettel(q.mitarbeiterId, jahr, monat);
-      return { zettel: z ? [z] : [] };
+      return { zettel: z ? [{ ...z, archivStatus: archivStatus(z) }] : [] };
     }
-    return { zettel: listZettelFuerMonat(jahr, monat) };
+    return { zettel: listZettelFuerMonat(jahr, monat).map((z) => ({ ...z, archivStatus: archivStatus(z) })) };
   });
 
   app.post("/stundenzettel/generieren", async (req, reply) => {
@@ -325,11 +320,6 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
         tage: z.tage,
         gesamtStunden: z.gesamtStunden,
       });
-      try {
-        await archiviereStundenzettel(saved.id!);
-      } catch (e) {
-        req.log.error({ err: e }, "stundenzettel-archiv-failed");
-      }
       ergebnis.push({ mitarbeiterId: id, ok: true, id: saved.id! });
     }
     audit({ userId: req.user?.id ?? null, action: "stundenzettel.generieren", detail: { jahr, monat, count: ids.length } });
@@ -380,11 +370,6 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
       gesamtStunden: gesamt,
     });
     audit({ userId: req.user?.id ?? null, action: "stundenzettel.tage.patch", detail: { id, count: p.data.tage.length } });
-    try {
-      await archiviereStundenzettel(saved.id!);
-    } catch (e) {
-      req.log.error({ err: e }, "stundenzettel-archiv-failed");
-    }
     return saved;
   });
 

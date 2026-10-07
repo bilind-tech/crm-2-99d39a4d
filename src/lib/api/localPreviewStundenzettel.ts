@@ -17,6 +17,7 @@ import {
   type Wochentag,
 } from "@/lib/stundenzettel/types";
 import { summeStunden, wendeZielausgleichAn } from "@/lib/stundenzettel/ziel";
+import { zettelInhalt } from "@/lib/stundenzettel/archivStand";
 import { effektivesZiel, wendeFesteTageAn, type Monatsplan } from "@/lib/stundenzettel/monatsplan";
 
 const KEY = "mcc.localPreview.stundenzettel.v1";
@@ -27,6 +28,8 @@ interface Store {
   customFeiertage: CustomFeiertag[];
   abwesenheiten: Abwesenheit[];
   monatsplaene?: Monatsplan[];
+  /** zettelId → abgelegter Inhalt (Vorschau-Ersatz für archiv_hash). */
+  archivStand?: Record<string, string>;
 }
 
 function empty(): Store {
@@ -45,6 +48,7 @@ function read(): Store {
       customFeiertage: parsed.customFeiertage ?? [],
       abwesenheiten: parsed.abwesenheiten ?? [],
       monatsplaene: parsed.monatsplaene ?? [],
+      archivStand: parsed.archivStand ?? {},
     };
   } catch {
     return empty();
@@ -222,7 +226,14 @@ export function stundenzettelPreviewGet<T>(cleanPath: string, params: URLSearchP
     const jahr = Number.parseInt(params.get("jahr") ?? "", 10);
     const monat = Number.parseInt(params.get("monat") ?? "", 10);
     return {
-      zettel: store.zettel.filter((z) => z.jahr === jahr && z.monat === monat),
+      zettel: store.zettel
+        .filter((z) => z.jahr === jahr && z.monat === monat)
+        .map((z) => {
+          const alt = z.id ? store.archivStand?.[z.id] : undefined;
+          const name = store.mitarbeiter.find((m) => m.id === z.mitarbeiterId)?.name ?? "";
+          const archivStatus = !alt ? "nicht" : alt === zettelInhalt(z.tage, z.gesamtStunden, name) ? "gespeichert" : "veraltet";
+          return { ...z, archivStatus };
+        }),
     } as T;
   }
   return null;
@@ -398,6 +409,12 @@ export function stundenzettelPreviewMutate<T>(method: string, cleanPath: string,
       return { ok: true } as T;
     }
     if (method === "POST" && action === "archivieren") {
+      const z = store.zettel.find((x) => x.id === id);
+      if (z) {
+        const name = store.mitarbeiter.find((m) => m.id === z.mitarbeiterId)?.name ?? "";
+        store.archivStand = { ...(store.archivStand ?? {}), [id]: zettelInhalt(z.tage, z.gesamtStunden, name) };
+        write(store);
+      }
       return {
         dokumentId: `preview-dok-${crypto.randomUUID()}`,
         dateiname: "Stundenzettel-Vorschau.pdf",

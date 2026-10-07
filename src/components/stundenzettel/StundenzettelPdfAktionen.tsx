@@ -2,7 +2,8 @@
 // Das PDF kommt immer frisch vom Backend (Renderer in backend/src/pdf/stundenzettelPdf.ts).
 
 import { useState, type ReactNode } from "react";
-import { Download, Eye, FolderInput, Loader2 } from "lucide-react";
+import { CheckCircle2, Download, Eye, FolderInput, Loader2, RefreshCw } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { PdfCanvasViewer } from "@/components/pdf/PdfCanvasViewer";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,11 @@ interface Props {
   zettelId: string;
   /** Zusätzliche Buttons (z. B. „Bearbeiten“) in derselben Leiste. */
   extra?: ReactNode;
+  /** Speicherstand in Dokumente. */
+  archivStatus?: "nicht" | "veraltet" | "gespeichert";
 }
 
-export function StundenzettelPdfAktionen({ zettelId, extra }: Props) {
+export function StundenzettelPdfAktionen({ zettelId, extra, archivStatus = "nicht" }: Props) {
   const [busy, setBusy] = useState<"ansehen" | "download" | null>(null);
   const archivieren = useArchivieren();
   const [vorschau, setVorschau] = useState<{ blob: Blob; dateiname: string } | null>(null);
@@ -27,8 +30,8 @@ export function StundenzettelPdfAktionen({ zettelId, extra }: Props) {
       const r = await archivieren.mutateAsync(zettelId);
       toast.success(
         r.ersetzt
-          ? "In Dokumente aktualisiert (Ordner Stundenzettel)"
-          : "In Dokumente gespeichert (Ordner Stundenzettel)",
+          ? "In Dokumente aktualisiert — wird mit Google Drive synchronisiert"
+          : "In Dokumente gespeichert — wird mit Google Drive synchronisiert",
       );
     } catch (e) {
       toast.error((e as Error).message);
@@ -81,14 +84,42 @@ export function StundenzettelPdfAktionen({ zettelId, extra }: Props) {
         )}
         Herunterladen
       </Button>
-      <Button size="sm" variant="outline" onClick={handleArchiv} disabled={archivieren.isPending}>
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={handleArchiv}
+        disabled={archivieren.isPending || archivStatus === "gespeichert"}
+        title={
+          archivStatus === "gespeichert"
+            ? "Aktueller Stand liegt in Dokumente (und wird mit Drive synchronisiert)"
+            : archivStatus === "veraltet"
+              ? "Geändert seit dem letzten Speichern"
+              : "Noch nicht in Dokumente gespeichert"
+        }
+        className={cn(
+          archivStatus === "gespeichert" &&
+            "border-success/40 bg-success/10 text-success disabled:opacity-100",
+          archivStatus === "veraltet" && "border-warning bg-warning text-warning-foreground hover:bg-warning/85",
+        )}
+      >
         {archivieren.isPending ? (
           <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+        ) : archivStatus === "gespeichert" ? (
+          <CheckCircle2 className="mr-1.5 h-4 w-4" />
+        ) : archivStatus === "veraltet" ? (
+          <RefreshCw className="mr-1.5 h-4 w-4" />
         ) : (
           <FolderInput className="mr-1.5 h-4 w-4" />
         )}
-        In Dokumente ablegen
+        {archivStatus === "gespeichert"
+          ? "Gespeichert"
+          : archivStatus === "veraltet"
+            ? "Aktualisieren & speichern"
+            : "In Dokumente speichern"}
       </Button>
+      {archivStatus === "nicht" && !archivieren.isPending && (
+        <span className="text-xs text-muted-foreground">nicht gespeichert</span>
+      )}
       {extra}
       <Dialog open={!!vorschau} onOpenChange={(o) => !o && setVorschau(null)}>
         <DialogContent className="flex h-[92vh] max-w-5xl flex-col gap-3 p-4">

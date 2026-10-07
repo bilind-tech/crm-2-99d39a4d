@@ -175,6 +175,7 @@ export function useArchivieren() {
       api.post<ArchivErgebnis>(`/stundenzettel/${zettelId}/archivieren`, {}),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["dokumente"] });
+      qc.invalidateQueries({ queryKey: ["stz", "zettel"] });
     },
   });
 }

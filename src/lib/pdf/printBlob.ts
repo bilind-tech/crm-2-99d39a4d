@@ -118,8 +118,8 @@ async function printPdfNativeTab(blob: Blob, winRef: Window | null): Promise<voi
     };
     // Zwei Versuche: nach 800ms und nach 1800ms. Falls der erste zu früh
     // kam, sitzt der zweite sicher.
-    setTimeout(tryPrint, 800);
-    setTimeout(tryPrint, 1800);
+    // Genau EIN Versuch — zwei Aufrufe öffneten den Druckdialog doppelt.
+    setTimeout(tryPrint, 1200);
   } finally {
     // Großzügig revoken — die Blob-URL hängt am Tab.
     setTimeout(() => URL.revokeObjectURL(url), 10 * 60_000);
@@ -257,7 +257,7 @@ function buildPrintHtml(images: string[]): string {
   }
   .page {
     width: 210mm;
-    height: 297mm;
+    height: 296.5mm;
     box-sizing: border-box;
     overflow: hidden;
     page-break-after: always;
@@ -276,7 +276,7 @@ function buildPrintHtml(images: string[]): string {
     display: block;
     width: 100%;
     height: auto;
-    max-height: 297mm;
+    max-height: 296.5mm;
     object-fit: contain;
     object-position: top center;
   }
@@ -288,14 +288,22 @@ ${imgs}
 </html>`;
 }
 
+let druckLaeuft = false;
+
 async function printViaHiddenIframe(images: string[]): Promise<void> {
   if (images.length === 0) throw new Error("Keine Seiten zum Drucken");
+  if (druckLaeuft) return; // Doppelklick / paralleler Druck → nur ein Dialog
+  druckLaeuft = true;
+  setTimeout(() => (druckLaeuft = false), 3000);
 
   const iframe = document.createElement("iframe");
   iframe.setAttribute("aria-hidden", "true");
   iframe.setAttribute("tabindex", "-1");
-  iframe.style.cssText =
-    "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+  // WebKit layoutet den Druck anhand der iframe-Größe: deshalb echte A4-Maße,
+  // aber außerhalb des Bildschirms (0×0 + hidden schnitt in Safari Seiten ab).
+  iframe.style.cssText = isWebKitSafari()
+    ? "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;opacity:0;pointer-events:none;"
+    : "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
   iframe.srcdoc = buildPrintHtml(images);
   document.body.appendChild(iframe);
 
@@ -324,8 +332,10 @@ async function printViaHiddenIframe(images: string[]): Promise<void> {
       }
       const imgs = Array.from(win.document.images);
       let pending = imgs.length || 1;
+      let gedruckt = false;
       const triggerPrint = () => {
-        if (--pending > 0) return;
+        if (--pending > 0 || gedruckt) return;
+        gedruckt = true;
         try {
           win.addEventListener("afterprint", () => setTimeout(cleanup, 300));
         } catch {
@@ -385,11 +395,6 @@ export async function printPdfBlobUrl(url: string, winRef?: Window | null): Prom
     showPrintTabError(winRef ?? null, "PDF konnte nicht geladen werden.");
     throw new Error(`PDF-Quelle antwortete HTTP ${res.status}`);
   }
-  if (isWebKitSafari()) {
-    const blob = await res.blob();
-    await printPdfNativeTab(blob, winRef ?? null);
-    return;
-  }
   let buf: ArrayBuffer;
   try {
     buf = await res.arrayBuffer();
@@ -403,10 +408,7 @@ export async function printPdfBlobUrl(url: string, winRef?: Window | null): Prom
  *  `winRef` (Safari): vorab im User-Klick geöffnetes Fenster für den nativen PDF-Tab.
  */
 export async function printPdfBlob(blob: Blob, winRef?: Window | null): Promise<void> {
-  if (isWebKitSafari()) {
-    await printPdfNativeTab(blob, winRef ?? null);
-    return;
-  }
+  void winRef;
   let buf: ArrayBuffer;
   try {
     buf = await blob.arrayBuffer();
@@ -419,5 +421,9 @@ export async function printPdfBlob(blob: Blob, winRef?: Window | null): Promise<
 /** True, wenn Druck den Safari-PDF-Tab-Pfad nimmt. UI kann damit synchron
  *  im Klickhandler ein leeres `window.open()` aufrufen, um Popup-Blocker zu vermeiden. */
 export function printRequiresOpenWindow(): boolean {
-  return isWebKitSafari();
+  // Alle Browser drucken im CRM (verstecktes iframe) — kein neuer Tab mehr.
+  return false;
 }
+
+/** Alter Safari-Tab-Pfad, nur noch als Reserve exportiert. */
+export const _printPdfNativeTab = printPdfNativeTab;
