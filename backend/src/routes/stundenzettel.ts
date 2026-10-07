@@ -281,9 +281,9 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
     }
     if (q.mitarbeiterId) {
       const z = findZettel(q.mitarbeiterId, jahr, monat);
-      return { zettel: z ? [z] : [] };
+      return { zettel: z ? [{ ...z, archivStatus: archivStatus(z) }] : [] };
     }
-    return { zettel: listZettelFuerMonat(jahr, monat) };
+    return { zettel: listZettelFuerMonat(jahr, monat).map((z) => ({ ...z, archivStatus: archivStatus(z) })) };
   });
 
   app.post("/stundenzettel/generieren", async (req, reply) => {
