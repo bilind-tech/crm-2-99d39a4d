@@ -4,6 +4,7 @@ import { generiereStundenzettel } from "../src/stundenzettel/generieren.js";
 import { pruefeZiel, summeStunden } from "../src/stundenzettel/zielausgleich.js";
 import { DEFAULT_ARBEITSZEIT, type Mitarbeiter } from "../src/stundenzettel/types.js";
 import { ArbeitsZeitConfigSchema } from "../src/stundenzettel/validation.js";
+import { stundenzettelZeitzeilen } from "../src/pdf/stundenzettelZeitzeilen.js";
 
 function ma(ziel: number | null): Mitarbeiter {
   return {
@@ -63,6 +64,21 @@ describe("Zielstunden-Ausgleich", () => {
     expect(tag.stunden).toBe(4);
     expect(tag.ende).toBe("10:30");
     expect(tag.ende2).toBe("13:30");
+  });
+
+  it("stellt zwei Arbeitsblöcke im PDF untereinander und zeitlich sortiert dar", () => {
+    const zeiten = stundenzettelZeitzeilen({
+      datum: "2026-10-07",
+      wochentag: "mittwoch",
+      beginn: "17:00",
+      ende: "20:00",
+      beginn2: "08:00",
+      ende2: "12:00",
+      stunden: 7,
+    });
+
+    expect(zeiten.beginn).toBe("08:00\n17:00");
+    expect(zeiten.ende).toBe("12:00\n20:00");
   });
 
   it("erreicht auch ein halbstündiges Monatsziel exakt", () => {

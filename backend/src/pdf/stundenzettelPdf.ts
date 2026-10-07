@@ -12,6 +12,7 @@ import { renderPdf } from "./render.js";
 import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
 import { getMitarbeiter, getZettel } from "../stundenzettel/repo.js";
 import type { GenerierterStundenzettel, GenerierterTag } from "../stundenzettel/types.js";
+import { stundenzettelZeitzeilen } from "./stundenzettelZeitzeilen.js";
 
 const COLOR_TEXT = "#000000";
 
@@ -116,13 +117,11 @@ function zeile(t: GenerierterTag): Zelle {
     };
   }
   const p = pauseFenster(t);
-  const zwei = Boolean(t.beginn2 && t.ende2);
-  const beginn = zwei ? `${t.beginn} / ${t.beginn2}` : (t.beginn ?? "");
-  const ende = zwei ? `${t.ende} / ${t.ende2}` : (t.ende ?? "");
+  const zeiten = stundenzettelZeitzeilen(t);
   return {
     tag: tagLabel(t),
-    beginn,
-    ende,
+    beginn: zeiten.beginn,
+    ende: zeiten.ende,
     pauseVon: p?.von ?? "",
     pauseBis: p?.bis ?? "",
     stunden: stundenText(t.stunden),
@@ -147,6 +146,7 @@ function tabelle(zeilen: Zelle[], summe: number | null, rowPad: number) {
     text,
     fontSize: 10,
     alignment: "center" as const,
+    lineHeight: 1.05,
     margin: [2, rowPad, 2, rowPad] as [number, number, number, number],
   });
 

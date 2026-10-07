@@ -7,3 +7,4 @@
 - Stundenzettel-Abwesenheiten: pure Zeitraum-Helfer in `abwesenheitZeitraum.ts` (ohne DB-Import), damit Generierung/Tests ohne SQLite laufen; Browser-Vorschau spiegelt dieselbe Logik.
 - Stundenzettel-Monatsplanung (Monatsziel-Override + feste Tage) liegt in `stz_monatsplan`; pure Logik in `monatsplanLogik.ts` mit identischer Browser-Kopie `src/lib/stundenzettel/monatsplan.ts`, damit Generierung, Speichersperre und Vorschau dasselbe Ziel verwenden.
 - Stundenzettel-PDFs werden nie automatisch archiviert; nur `POST /stundenzettel/:id/archivieren` legt ab und setzt `archiv_hash` (Inhalts-Fingerabdruck aus `archivStand.ts`, Browser-Kopie identisch), damit der Speicherstand-Button nicht/veraltet/gespeichert zuverlässig anzeigt.
+- Stundenzettel mit zwei Arbeitsblöcken werden in Bearbeitung und PDF stets zeitlich sortiert als zwei gekoppelte Zeilen dargestellt, damit Beginn und Ende jedes Blocks horizontal zusammenbleiben.
