@@ -100,6 +100,8 @@ interface Zelle {
 }
 
 function zeile(t: GenerierterTag): Zelle {
+  // „Zählt nicht“: keine Zeiten, keine Stunden (Daten bleiben fürs Bearbeiten erhalten).
+  if (t.ausgeschlossen) return { ...LEER, tag: tagLabel(t) };
   const hatZeit = Boolean(t.beginn && t.ende);
   const bem = (t.bemerkung ?? "").trim();
   if (!hatZeit) {

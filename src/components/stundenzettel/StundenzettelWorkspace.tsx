@@ -197,6 +197,7 @@ export function StundenzettelWorkspace({
                 {aktiv.id ? (
                   <StundenzettelPdfAktionen
                     zettelId={aktiv.id}
+                    archivStatus={aktiv.archivStatus}
                     extra={
                       <Button
                         size="sm"

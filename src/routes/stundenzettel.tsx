@@ -525,6 +525,7 @@ function ZettelBlock({
       {zettel.id ? (
         <StundenzettelPdfAktionen
           zettelId={zettel.id}
+          archivStatus={zettel.archivStatus}
           extra={
             <Button
               size="sm"
