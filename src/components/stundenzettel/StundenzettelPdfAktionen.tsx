@@ -99,7 +99,7 @@ export function StundenzettelPdfAktionen({ zettelId, extra, archivStatus = "nich
         className={cn(
           archivStatus === "gespeichert" &&
             "border-success/40 bg-success/10 text-success disabled:opacity-100",
-          archivStatus === "veraltet" && "border-warning/50 bg-warning/15 text-warning hover:bg-warning/25",
+          archivStatus === "veraltet" && "border-warning bg-warning text-warning-foreground hover:bg-warning/85",
         )}
       >
         {archivieren.isPending ? (
