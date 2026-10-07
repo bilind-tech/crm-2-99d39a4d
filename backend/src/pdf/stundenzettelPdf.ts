@@ -99,6 +99,21 @@ interface Zelle {
   stunden: string;
 }
 
+/** Zwei Arbeitsblöcke bleiben als zusammengehörige, vertikale Zeilen erhalten. */
+export function stundenzettelZeitzeilen(t: GenerierterTag): { beginn: string; ende: string } {
+  const bloecke = [
+    t.beginn && t.ende ? { beginn: t.beginn, ende: t.ende } : null,
+    t.beginn2 && t.ende2 ? { beginn: t.beginn2, ende: t.ende2 } : null,
+  ]
+    .filter((block): block is { beginn: string; ende: string } => block !== null)
+    .sort((a, b) => (toMin(a.beginn) ?? 0) - (toMin(b.beginn) ?? 0));
+
+  return {
+    beginn: bloecke.map((block) => block.beginn).join("\n"),
+    ende: bloecke.map((block) => block.ende).join("\n"),
+  };
+}
+
 function zeile(t: GenerierterTag): Zelle {
   // „Zählt nicht“: keine Zeiten, keine Stunden (Daten bleiben fürs Bearbeiten erhalten).
   if (t.ausgeschlossen) return { ...LEER, tag: tagLabel(t) };
@@ -116,13 +131,11 @@ function zeile(t: GenerierterTag): Zelle {
     };
   }
   const p = pauseFenster(t);
-  const zwei = Boolean(t.beginn2 && t.ende2);
-  const beginn = zwei ? `${t.beginn} / ${t.beginn2}` : (t.beginn ?? "");
-  const ende = zwei ? `${t.ende} / ${t.ende2}` : (t.ende ?? "");
+  const zeiten = stundenzettelZeitzeilen(t);
   return {
     tag: tagLabel(t),
-    beginn,
-    ende,
+    beginn: zeiten.beginn,
+    ende: zeiten.ende,
     pauseVon: p?.von ?? "",
     pauseBis: p?.bis ?? "",
     stunden: stundenText(t.stunden),
@@ -147,6 +160,7 @@ function tabelle(zeilen: Zelle[], summe: number | null, rowPad: number) {
     text,
     fontSize: 10,
     alignment: "center" as const,
+    lineHeight: 1.05,
     margin: [2, rowPad, 2, rowPad] as [number, number, number, number],
   });
 

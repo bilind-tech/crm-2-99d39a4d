@@ -61,6 +61,8 @@ function editierbarerStand(t: GenerierterTag): string {
   return JSON.stringify({
     beginn: t.beginn ?? null,
     ende: t.ende ?? null,
+    beginn2: t.beginn2 ?? null,
+    ende2: t.ende2 ?? null,
     pause: t.pause ?? null,
     stunden: t.stunden,
     bemerkung: t.bemerkung ?? null,
@@ -344,28 +346,33 @@ export function StundenzettelTabelle({
                     const zwei = t.beginn2 !== undefined || t.ende2 !== undefined || zweiterBlock.has(t.datum);
                     return (
                       <td key={f} className="px-1 py-1 align-top">
-                        <Input
-                          type="time"
-                          value={t[f] ?? ""}
-                          onChange={(e) => setFeld(i, f, e.target.value)}
-                          step={1800}
-                          className="h-8 w-full min-w-[92px] text-xs"
-                        />
-                        {zwei && (
-                          <div className="mt-1 flex items-center gap-1">
+                        <div className={cn("relative grid gap-1", zwei && "grid-rows-[2rem_2rem]")}>
+                          <Input
+                            type="time"
+                            aria-label={f === "beginn" ? "Beginn 1. Block" : "Ende 1. Block"}
+                            value={t[f] ?? ""}
+                            onChange={(e) => setFeld(i, f, e.target.value)}
+                            step={1800}
+                            className="h-8 w-full min-w-[92px] text-xs"
+                          />
+                          {zwei && (
                             <Input
                               type="time"
                               aria-label={f === "beginn" ? "Beginn 2. Block" : "Ende 2. Block"}
                               value={t[f2] ?? ""}
                               onChange={(e) => setFeld(i, f2, e.target.value)}
                               step={1800}
-                              className="h-8 w-full min-w-[92px] text-xs"
+                              className={cn("h-8 w-full min-w-[92px] text-xs", f === "ende" && "pr-7")}
                             />
-                            {f === "ende" && (
-                              <button
+                          )}
+                          {zwei && f === "ende" && (
+                              <Button
                                 type="button"
+                                variant="ghost"
+                                size="icon"
                                 aria-label="2. Block entfernen"
-                                className="rounded px-1 text-xs text-muted-foreground hover:text-destructive"
+                                title="2. Block entfernen"
+                                className="absolute bottom-0 right-0 h-8 w-7 text-muted-foreground hover:text-destructive"
                                 onClick={() => {
                                   setZweiterBlock((s) => { const n = new Set(s); n.delete(t.datum); return n; });
                                   setFeld(i, "beginn2", "");
@@ -373,18 +380,19 @@ export function StundenzettelTabelle({
                                 }}
                               >
                                 ×
-                              </button>
-                            )}
-                          </div>
-                        )}
+                              </Button>
+                          )}
+                        </div>
                         {!zwei && f === "beginn" && !!t.beginn && (
-                          <button
+                          <Button
                             type="button"
-                            className="mt-0.5 text-[10px] text-primary hover:underline"
+                            variant="link"
+                            size="sm"
+                            className="mt-0.5 h-auto p-0 text-[10px]"
                             onClick={() => setZweiterBlock((s) => new Set(s).add(t.datum))}
                           >
                             + 2. Block
-                          </button>
+                          </Button>
                         )}
                       </td>
                     );
