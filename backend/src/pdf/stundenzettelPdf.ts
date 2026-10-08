@@ -140,15 +140,40 @@ function tabelle(zeilen: Zelle[], summe: number | null) {
     margin: [0, 3, 0, 3] as [number, number, number, number],
     ...extra,
   });
-  const td = (text: string, zweizeilig: boolean) => ({
-    text,
-    fontSize: 10,
-    alignment: "center" as const,
-    lineHeight: zweizeilig ? 0.8 : 1.05,
-    // Fontmetriken lassen Text bei symmetrischem Abstand optisch zu tief wirken.
-    // Gleiche Gesamthöhe beibehalten, den Inhalt aber um 1 pt nach oben setzen.
-    margin: [2, zweizeilig ? 0 : 3.5, 2, zweizeilig ? 0.5 : 5.5] as [number, number, number, number],
-  });
+  // Vertikale Abstände sind per Pixelmessung des gerenderten PDFs kalibriert:
+  // die sichtbare Schrift sitzt mittig zwischen oberer und unterer Linie.
+  // Alle Zellen einer Zeile ergeben dieselbe Gesamthöhe (zweizeilig 28,5 pt).
+  const td = (text: string, zweizeilig: boolean) => {
+    const zweiUhrzeiten = text.includes("\n");
+    if (zweizeilig && zweiUhrzeiten) {
+      // Gestauchte Zeilenhöhe lässt die Glyphen nach unten überstehen →
+      // Inhalt 2 pt nach oben ziehen, Gesamthöhe bleibt gleich.
+      return {
+        text,
+        fontSize: 10,
+        alignment: "center" as const,
+        lineHeight: 0.8,
+        margin: [2, -2, 2, 2.5] as [number, number, number, number],
+      };
+    }
+    if (zweizeilig) {
+      // Einzelner Wert (Tag, Stunden) in einer Zwei-Block-Zeile: mittig.
+      return {
+        text,
+        fontSize: 10,
+        alignment: "center" as const,
+        lineHeight: 1.05,
+        margin: [2, 4.75, 2, 5.25] as [number, number, number, number],
+      };
+    }
+    return {
+      text,
+      fontSize: 10,
+      alignment: "center" as const,
+      lineHeight: 1.05,
+      margin: [2, 3.5, 2, 5.5] as [number, number, number, number],
+    };
+  };
 
   const body: unknown[][] = [
     [

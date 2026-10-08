@@ -104,7 +104,8 @@ describe("Zielstunden-Ausgleich", () => {
     expect(tabellen[1].table.body).toHaveLength(19);
     expect(tabellen.every((table: any) => table.table.dontBreakRows === true)).toBe(true);
     expect(tabellen[0].table.body[2][1].text).toBe("08:00\n17:00");
-    expect(tabellen[0].table.body[2][1].margin).toEqual([2, 0, 2, 0.5]);
+    expect(tabellen[0].table.body[2][1].margin).toEqual([2, -2, 2, 2.5]);
+    expect(tabellen[0].table.body[2][0].margin).toEqual([2, 4.75, 2, 5.25]);
     expect(tabellen[1].table.body.at(-2)[0].text).toBe("31");
   });
 
