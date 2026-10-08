@@ -108,6 +108,14 @@ export function pruefeZiel(tage: GenerierterTag[], ziel: number | null | undefin
   return { ziel, ist, abweichung, erfuellt: Math.abs(abweichung) < 0.01 };
 }
 
+/** Eine bewusste Ausnahme ist nur oberhalb des Monatsziels erlaubt. */
+export function darfTrotzZielabweichungSpeichern(
+  pruefung: ZielPruefung,
+  zielUeberschreitungBestaetigt: boolean | undefined,
+): boolean {
+  return pruefung.erfuellt || (zielUeberschreitungBestaetigt === true && pruefung.abweichung > 0);
+}
+
 /**
  * Verteilt die Differenz zum Ziel als ±0,5 Stunden auf zufällige
  * Arbeitstage. Mutiert `tage` in-place und gibt die neue Summe zurück.

@@ -108,6 +108,7 @@ export function StundenzettelTabelle({
   const dirty = geaenderteTage.size > 0;
   const pruefung = useMemo(() => pruefeZiel(tage, ziel ?? null), [tage, ziel]);
   const zielSperre = pruefung.ziel != null && !pruefung.erfuellt;
+  const zielUeberschritten = zielSperre && pruefung.abweichung > 0;
 
   function setFeld(idx: number, feld: keyof GenerierterTag, value: string) {
     setTage((prev) => {
@@ -182,10 +183,14 @@ export function StundenzettelTabelle({
     });
   }
 
-  async function speichern() {
-    if (!zettel.id || zielSperre) return;
+  async function speichern(trotzZielUeberschreitung = false) {
+    if (!zettel.id || (zielSperre && !trotzZielUeberschreitung)) return;
     try {
-      await patch.mutateAsync({ id: zettel.id, tage });
+      await patch.mutateAsync({
+        id: zettel.id,
+        tage,
+        zielUeberschreitungBestaetigt: trotzZielUeberschreitung || undefined,
+      });
       setGespeicherteTage(tage.map((tag) => ({ ...tag })));
       toast.success("Stundenzettel gespeichert");
     } catch (e) {
@@ -254,15 +259,28 @@ export function StundenzettelTabelle({
           <Button variant="ghost" size="sm" onClick={loeschen} disabled={del.isPending}>
             <Trash2 className="mr-1.5 h-4 w-4" /> Löschen
           </Button>
-          <Button
-            size="sm"
-            onClick={speichern}
-            disabled={!dirty || zielSperre || patch.isPending}
-            title={zielSperre ? "Speichern erst möglich, wenn die Zielstunden genau erreicht sind" : undefined}
-          >
-            {patch.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
-            {zielSperre && dirty ? "Ziel nicht erreicht" : "Speichern"}
-          </Button>
+          {zielUeberschritten ? (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={() => speichern(true)}
+              disabled={!dirty || patch.isPending}
+              title="Änderungen bewusst trotz überschrittenem Monatsziel speichern"
+            >
+              {patch.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+              Trotzdem speichern
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              onClick={() => speichern()}
+              disabled={!dirty || zielSperre || patch.isPending}
+              title={zielSperre ? "Speichern erst möglich, wenn die Zielstunden erreicht sind" : undefined}
+            >
+              {patch.isPending ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Save className="mr-1.5 h-4 w-4" />}
+              {zielSperre && dirty ? "Ziel nicht erreicht" : "Speichern"}
+            </Button>
+          )}
         </div>
       </div>
 

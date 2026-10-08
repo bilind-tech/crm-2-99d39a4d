@@ -248,7 +248,7 @@ function unterschriften() {
     ],
   });
   return {
-    margin: [0, 18, 0, 0] as [number, number, number, number],
+    margin: [0, 36, 0, 0] as [number, number, number, number],
     columns: [feld("Unterschrift Arbeitsnehmer"), { width: 60, text: "" }, feld("Unterschrift Arbeitsgeber")],
   };
 }

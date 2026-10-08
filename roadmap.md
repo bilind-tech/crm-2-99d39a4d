@@ -28,3 +28,4 @@
 - [x] Halbstunden in Bearbeitung, Zielausgleich, Summen und PDF durchgängig korrekt rechnen
 - [x] Stundenzettel im Browser sowie mit Tests und PDF-Sichtprüfung kontrollieren
 - [x] Stundenzettel mit zwei Arbeitsblöcken wieder stabil auf exakt zwei PDF-Seiten halten
+- [x] Stundenzettel oberhalb des Monatsziels bewusst speichern und Unterschriftenraum vergrößern
