@@ -144,8 +144,8 @@ function tabelle(zeilen: Zelle[], summe: number | null) {
     text,
     fontSize: 10,
     alignment: "center" as const,
-    lineHeight: zweizeilig ? 0.92 : 1.05,
-    margin: [2, zweizeilig ? 1.25 : 4.5, 2, zweizeilig ? 1.25 : 4.5] as [number, number, number, number],
+    lineHeight: zweizeilig ? 0.8 : 1.05,
+    margin: [2, zweizeilig ? 0.25 : 4.5, 2, zweizeilig ? 0.25 : 4.5] as [number, number, number, number],
   });
 
   const body: unknown[][] = [
@@ -221,7 +221,7 @@ function unterschriften() {
     ],
   });
   return {
-    margin: [0, 26, 0, 0] as [number, number, number, number],
+    margin: [0, 18, 0, 0] as [number, number, number, number],
     columns: [feld("Unterschrift Arbeitsnehmer"), { width: 60, text: "" }, feld("Unterschrift Arbeitsgeber")],
   };
 }
@@ -246,7 +246,7 @@ export function stundenzettelDocDef(args: {
 
   return {
     pageSize: "A4",
-    pageMargins: [57, 142, 57, 45] as [number, number, number, number],
+    pageMargins: [57, 126, 57, 45] as [number, number, number, number],
     defaultStyle: { font: STUNDENZETTEL_FONT, fontSize: 10, color: COLOR_TEXT },
     info: { title: `Stundenzettel ${mitarbeiterName} ${MONATE[zettel.monat - 1]} ${zettel.jahr}` },
     header: () =>
