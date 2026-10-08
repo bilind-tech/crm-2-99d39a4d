@@ -104,7 +104,27 @@ describe("Zielstunden-Ausgleich", () => {
     expect(tabellen[1].table.body).toHaveLength(19);
     expect(tabellen.every((table: any) => table.table.dontBreakRows === true)).toBe(true);
     expect(tabellen[0].table.body[2][1].text).toBe("08:00\n17:00");
+    expect(tabellen[0].table.body[2][1].margin).toEqual([2, 0, 2, 0.5]);
     expect(tabellen[1].table.body.at(-2)[0].text).toBe("31");
+  });
+
+  it("richtet einzeilige Uhrzeiten optisch mittig aus", () => {
+    const tage = [{
+      datum: "2026-10-08",
+      wochentag: "donnerstag" as const,
+      beginn: "08:00",
+      ende: "10:00",
+      stunden: 2,
+    }];
+    const doc = stundenzettelDocDef({
+      mitarbeiterName: "Eine Schicht",
+      zettel: { id: "z", mitarbeiterId: "m", jahr: 2026, monat: 10, tage, gesamtStunden: 2, aktualisiertAm: null },
+      logoDataUrl: null,
+    }) as any;
+
+    const ersteZeile = doc.content.find((node: { table?: unknown }) => node.table).table.body[2];
+    expect(ersteZeile[1].margin).toEqual([2, 3.5, 2, 5.5]);
+    expect(ersteZeile[2].margin).toEqual([2, 3.5, 2, 5.5]);
   });
 
   it("erreicht auch ein halbstündiges Monatsziel exakt", () => {
