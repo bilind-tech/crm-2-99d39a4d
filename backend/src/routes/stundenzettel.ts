@@ -49,7 +49,7 @@ import {
 import { getMonatsplan, listMonatsplaene, speichereMonatsplan } from "../stundenzettel/monatsplan.js";
 import { effektivesZiel } from "../stundenzettel/monatsplanLogik.js";
 import { z } from "zod";
-import { pruefeZiel, wendeZielausgleichAn } from "../stundenzettel/zielausgleich.js";
+import { darfTrotzZielabweichungSpeichern, pruefeZiel, wendeZielausgleichAn } from "../stundenzettel/zielausgleich.js";
 import { entferneUrlaubsantragDokumente, legeUrlaubsantragAb, urlaubsantragStatus } from "../stundenzettel/urlaubsantragArchiv.js";
 import {
   AbwesenheitInputSchema,
@@ -356,7 +356,7 @@ export async function stundenzettelRoutes(app: FastifyInstance): Promise<void> {
       getMonatsplan(existing.mitarbeiterId, existing.jahr, existing.monat),
     );
     const zielCheck = pruefeZiel(neueTage, zielMa);
-    if (!zielCheck.erfuellt) {
+    if (!darfTrotzZielabweichungSpeichern(zielCheck, p.data.zielUeberschreitungBestaetigt)) {
       return reply.status(422).send({
         code: "ziel-nicht-erreicht",
         error: `Zielstunden nicht erreicht: Ist ${zielCheck.ist.toLocaleString("de-DE")} h, Ziel ${zielCheck.ziel?.toLocaleString("de-DE")} h`,

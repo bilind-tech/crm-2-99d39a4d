@@ -67,6 +67,7 @@ export const TagPatchSchema = z.object({
 });
 
 export const ZettelPatchSchema = z.object({
+  zielUeberschreitungBestaetigt: z.boolean().optional(),
   tage: z.array(
     z.object({
       datum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),

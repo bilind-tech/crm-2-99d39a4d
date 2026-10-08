@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { berechneNormalenTag } from "../src/stundenzettel/berechnung.js";
 import { generiereStundenzettel } from "../src/stundenzettel/generieren.js";
-import { pruefeZiel, summeStunden } from "../src/stundenzettel/zielausgleich.js";
+import { darfTrotzZielabweichungSpeichern, pruefeZiel, summeStunden } from "../src/stundenzettel/zielausgleich.js";
 import { DEFAULT_ARBEITSZEIT, type Mitarbeiter } from "../src/stundenzettel/types.js";
 import { ArbeitsZeitConfigSchema } from "../src/stundenzettel/validation.js";
 import { stundenzettelZeitzeilen } from "../src/pdf/stundenzettelZeitzeilen.js";
@@ -46,6 +46,19 @@ describe("Zielstunden-Ausgleich", () => {
   it("ohne Ziel bleibt die Summe unverändert", () => {
     const z = generiereStundenzettel(ma(null), 2026, 7, []);
     expect(pruefeZiel(z.tage, null).erfuellt).toBe(true);
+  });
+
+  it("erlaubt reguläres Speichern nur bei exakt erreichtem Ziel", () => {
+    expect(darfTrotzZielabweichungSpeichern({ ziel: 160, ist: 160, abweichung: 0, erfuellt: true }, undefined)).toBe(true);
+    expect(darfTrotzZielabweichungSpeichern({ ziel: 160, ist: 161, abweichung: 1, erfuellt: false }, undefined)).toBe(false);
+  });
+
+  it("erlaubt bestätigtes Speichern oberhalb des Ziels", () => {
+    expect(darfTrotzZielabweichungSpeichern({ ziel: 160, ist: 161, abweichung: 1, erfuellt: false }, true)).toBe(true);
+  });
+
+  it("lehnt bestätigtes Speichern unterhalb des Ziels weiterhin ab", () => {
+    expect(darfTrotzZielabweichungSpeichern({ ziel: 160, ist: 159, abweichung: -1, erfuellt: false }, true)).toBe(false);
   });
 
   it("rechnet 90 Minuten als 1,5 Stunden", () => {
@@ -107,6 +120,8 @@ describe("Zielstunden-Ausgleich", () => {
     expect(tabellen[0].table.body[2][1].margin).toEqual([2, -2, 2, 2.5]);
     expect(tabellen[0].table.body[2][0].margin).toEqual([2, 4.75, 2, 5.25]);
     expect(tabellen[1].table.body.at(-2)[0].text).toBe("31");
+    const unterschriften = doc.content.at(-1);
+    expect(unterschriften.margin).toEqual([0, 36, 0, 0]);
   });
 
   it("richtet einzeilige Uhrzeiten optisch mittig aus", () => {

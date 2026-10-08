@@ -129,8 +129,9 @@ export function useGenerieren() {
 export function usePatchZettel(jahr: number, monat: number) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, tage }: { id: string; tage: GenerierterTag[] }) =>
+    mutationFn: ({ id, tage, zielUeberschreitungBestaetigt }: { id: string; tage: GenerierterTag[]; zielUeberschreitungBestaetigt?: boolean }) =>
       api.put<Stundenzettel>(`/stundenzettel/${id}`, {
+        zielUeberschreitungBestaetigt,
         tage: tage.map((t) => ({
           datum: t.datum,
           beginn: t.beginn ?? null,
@@ -140,6 +141,8 @@ export function usePatchZettel(jahr: number, monat: number) {
           pause: t.pause ?? null,
           stunden: t.stunden,
           bemerkung: t.bemerkung ?? null,
+          quelle: t.quelle ?? null,
+          ausgeschlossen: t.ausgeschlossen ?? null,
         })),
       }),
     onSuccess: () => {
