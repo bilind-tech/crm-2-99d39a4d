@@ -145,7 +145,9 @@ function tabelle(zeilen: Zelle[], summe: number | null) {
     fontSize: 10,
     alignment: "center" as const,
     lineHeight: zweizeilig ? 0.8 : 1.05,
-    margin: [2, zweizeilig ? 0.25 : 4.5, 2, zweizeilig ? 0.25 : 4.5] as [number, number, number, number],
+    // Fontmetriken lassen Text bei symmetrischem Abstand optisch zu tief wirken.
+    // Gleiche Gesamthöhe beibehalten, den Inhalt aber um 1 pt nach oben setzen.
+    margin: [2, zweizeilig ? 0 : 3.5, 2, zweizeilig ? 0.5 : 5.5] as [number, number, number, number],
   });
 
   const body: unknown[][] = [
