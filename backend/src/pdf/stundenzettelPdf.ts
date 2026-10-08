@@ -9,8 +9,6 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { STUNDENZETTEL_FONT } from "./printer.js";
 import { renderPdf } from "./render.js";
-import { loadFirmaForPdf, loadLogoDataUrl } from "./firma.js";
-import { getMitarbeiter, getZettel } from "../stundenzettel/repo.js";
 import type { GenerierterStundenzettel, GenerierterTag } from "../stundenzettel/types.js";
 import { stundenzettelZeitzeilen } from "./stundenzettelZeitzeilen.js";
 
@@ -130,7 +128,7 @@ function zeile(t: GenerierterTag): Zelle {
 
 const LEER: Zelle = { tag: "", beginn: "", ende: "", pauseVon: "", pauseBis: "", stunden: "" };
 
-function tabelle(zeilen: Zelle[], summe: number | null, rowPad: number) {
+function tabelle(zeilen: Zelle[], summe: number | null) {
   const th = (
     text: string,
     extra: Record<string, unknown> = {},
@@ -142,12 +140,12 @@ function tabelle(zeilen: Zelle[], summe: number | null, rowPad: number) {
     margin: [0, 3, 0, 3] as [number, number, number, number],
     ...extra,
   });
-  const td = (text: string) => ({
+  const td = (text: string, zweizeilig: boolean) => ({
     text,
     fontSize: 10,
     alignment: "center" as const,
-    lineHeight: 1.05,
-    margin: [2, rowPad, 2, rowPad] as [number, number, number, number],
+    lineHeight: zweizeilig ? 0.8 : 1.05,
+    margin: [2, zweizeilig ? 0.25 : 4.5, 2, zweizeilig ? 0.25 : 4.5] as [number, number, number, number],
   });
 
   const body: unknown[][] = [
@@ -160,32 +158,35 @@ function tabelle(zeilen: Zelle[], summe: number | null, rowPad: number) {
       th("Arbeitszeit\nin Stunden", { rowSpan: 2, margin: [0, 8, 0, 3], lineHeight: 1.15 }),
     ],
     [{}, {}, {}, th("von"), th("bis"), {}],
-    ...zeilen.map((z) => [
-      td(z.tag),
-      td(z.beginn),
-      td(z.ende),
-      td(z.pauseVon),
-      td(z.pauseBis),
-      td(z.stunden),
-    ]),
+    ...zeilen.map((z) => {
+      const zweizeilig = z.beginn.includes("\n") || z.ende.includes("\n");
+      return [
+        td(z.tag, zweizeilig),
+        td(z.beginn, zweizeilig),
+        td(z.ende, zweizeilig),
+        td(z.pauseVon, zweizeilig),
+        td(z.pauseBis, zweizeilig),
+        td(z.stunden, zweizeilig),
+      ];
+    }),
   ];
 
   if (summe != null) {
     body.push([
-      { text: "", margin: [0, rowPad, 0, rowPad] },
+      { text: "", margin: [0, 4.5, 0, 4.5] },
       {
         text: "Summe Arbeitsstunden:",
         colSpan: 4,
         fontSize: 10,
         alignment: "left",
-        margin: [4, rowPad, 6, rowPad],
+        margin: [4, 4.5, 6, 4.5],
       },
       {}, {}, {},
       {
         text: stundenText(summe) || "0",
         fontSize: 10,
         alignment: "center",
-        margin: [2, rowPad, 2, rowPad],
+        margin: [2, 4.5, 2, 4.5],
       },
     ]);
   }
@@ -193,6 +194,8 @@ function tabelle(zeilen: Zelle[], summe: number | null, rowPad: number) {
   return {
     table: {
       headerRows: 2,
+      dontBreakRows: true,
+      keepWithHeaderRows: 1,
       widths: [42, 108, 94, 75, 77, 85],
       body,
     },
@@ -218,7 +221,7 @@ function unterschriften() {
     ],
   });
   return {
-    margin: [0, 26, 0, 0] as [number, number, number, number],
+    margin: [0, 18, 0, 0] as [number, number, number, number],
     columns: [feld("Unterschrift Arbeitsnehmer"), { width: 60, text: "" }, feld("Unterschrift Arbeitsgeber")],
   };
 }
@@ -243,7 +246,7 @@ export function stundenzettelDocDef(args: {
 
   return {
     pageSize: "A4",
-    pageMargins: [57, 142, 57, 45] as [number, number, number, number],
+    pageMargins: [57, 126, 57, 45] as [number, number, number, number],
     defaultStyle: { font: STUNDENZETTEL_FONT, fontSize: 10, color: COLOR_TEXT },
     info: { title: `Stundenzettel ${mitarbeiterName} ${MONATE[zettel.monat - 1]} ${zettel.jahr}` },
     header: () =>
@@ -257,9 +260,9 @@ export function stundenzettelDocDef(args: {
         : { text: "" },
     content: [
       ...kopf,
-      tabelle(seite1, null, 6.8),
+      tabelle(seite1, null),
       { text: "", pageBreak: "before" as const },
-      tabelle(seite2, zettel.gesamtStunden, 5.5),
+      tabelle(seite2, zettel.gesamtStunden),
       unterschriften(),
     ],
     footer: (current: number, total: number) => ({
@@ -284,6 +287,10 @@ function safe(s: string): string {
 
 /** Rendert den Stundenzettel mit der übergebenen ID. `null` = nicht gefunden. */
 export async function renderStundenzettelPdf(zettelId: string): Promise<StundenzettelPdfResult | null> {
+  const [{ getMitarbeiter, getZettel }, { loadFirmaForPdf, loadLogoDataUrl }] = await Promise.all([
+    import("../stundenzettel/repo.js"),
+    import("./firma.js"),
+  ]);
   const z = getZettel(zettelId);
   if (!z) return null;
   const m = getMitarbeiter(z.mitarbeiterId);

@@ -5,6 +5,7 @@ import { pruefeZiel, summeStunden } from "../src/stundenzettel/zielausgleich.js"
 import { DEFAULT_ARBEITSZEIT, type Mitarbeiter } from "../src/stundenzettel/types.js";
 import { ArbeitsZeitConfigSchema } from "../src/stundenzettel/validation.js";
 import { stundenzettelZeitzeilen } from "../src/pdf/stundenzettelZeitzeilen.js";
+import { stundenzettelDocDef } from "../src/pdf/stundenzettelPdf.js";
 
 function ma(ziel: number | null): Mitarbeiter {
   return {
@@ -79,6 +80,31 @@ describe("Zielstunden-Ausgleich", () => {
 
     expect(zeiten.beginn).toBe("08:00\n17:00");
     expect(zeiten.ende).toBe("12:00\n20:00");
+  });
+
+  it("hält 31 Zwei-Block-Tage in zwei untrennbaren PDF-Tabellen", () => {
+    const tage = Array.from({ length: 31 }, (_, index) => ({
+      datum: `2026-10-${String(index + 1).padStart(2, "0")}`,
+      wochentag: "mittwoch" as const,
+      beginn: "08:00",
+      ende: "10:00",
+      beginn2: "17:00",
+      ende2: "19:00",
+      stunden: 4,
+    }));
+    const doc = stundenzettelDocDef({
+      mitarbeiterName: "Zwei Blöcke",
+      zettel: { id: "z", mitarbeiterId: "m", jahr: 2026, monat: 10, tage, gesamtStunden: 124, aktualisiertAm: null },
+      logoDataUrl: null,
+    }) as any;
+
+    const tabellen = doc.content.filter((node: { table?: unknown }) => node.table);
+    expect(tabellen).toHaveLength(2);
+    expect(tabellen[0].table.body).toHaveLength(17);
+    expect(tabellen[1].table.body).toHaveLength(19);
+    expect(tabellen.every((table: any) => table.table.dontBreakRows === true)).toBe(true);
+    expect(tabellen[0].table.body[2][1].text).toBe("08:00\n17:00");
+    expect(tabellen[1].table.body.at(-2)[0].text).toBe("31");
   });
 
   it("erreicht auch ein halbstündiges Monatsziel exakt", () => {
