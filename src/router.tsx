@@ -4,7 +4,8 @@ import { routeTree } from "./routeTree.gen";
 import { isLikelyChunkError } from "@/lib/chunkErrorReload";
 import { useEffect } from "react";
 
-function DefaultErrorComponent({ error, reset }: ErrorComponentProps) {
+function DefaultErrorComponent({ error: caughtError, reset }: ErrorComponentProps) {
+  const error = caughtError instanceof Error ? caughtError : new Error(String(caughtError));
   const router = useRouter();
   const chunkError = isLikelyChunkError(error);
 

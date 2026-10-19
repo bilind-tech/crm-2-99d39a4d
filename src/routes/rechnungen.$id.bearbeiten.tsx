@@ -58,7 +58,8 @@ function EditorLoading({ label }: { label: string }) {
   );
 }
 
-function ErrorView({ error, reset }: ErrorComponentProps) {
+function ErrorView({ error: caughtError, reset }: ErrorComponentProps) {
+  const error = caughtError instanceof Error ? caughtError : new Error(String(caughtError));
   const router = useRouter();
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
