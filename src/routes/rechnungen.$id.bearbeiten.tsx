@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { Loader2, ArrowLeft, AlertCircle } from "lucide-react";
 import { useRechnung, useKunde, useFirmendaten, useObjekt } from "@/hooks/useApi";
 import { NotFoundState } from "@/components/layout/NotFoundState";
@@ -58,7 +58,7 @@ function EditorLoading({ label }: { label: string }) {
   );
 }
 
-function ErrorView({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorView({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
