@@ -9,86 +9,41 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WerkzeugeRouteImport } from './routes/werkzeuge'
-import { Route as StundenzettelRouteImport } from './routes/stundenzettel'
-import { Route as SteuernRouteImport } from './routes/steuern'
-import { Route as RechnungenRouteImport } from './routes/rechnungen'
-import { Route as ProtokolleRouteImport } from './routes/protokolle'
-import { Route as ObjekteRouteImport } from './routes/objekte'
-import { Route as KundenRouteImport } from './routes/kunden'
-import { Route as EinstellungenRouteImport } from './routes/einstellungen'
-import { Route as DokumenteRouteImport } from './routes/dokumente'
-import { Route as AngeboteRouteImport } from './routes/angebote'
-import { Route as AktivitaetRouteImport } from './routes/aktivitaet'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as WerkzeugeIndexRouteImport } from './routes/werkzeuge.index'
-import { Route as WerkzeugeWhatsappStoryRouteImport } from './routes/werkzeuge.whatsapp-story'
-import { Route as WerkzeugeUrlaubsantragRouteImport } from './routes/werkzeuge.urlaubsantrag'
-import { Route as WerkzeugeUebergabeprotokollRouteImport } from './routes/werkzeuge.uebergabeprotokoll'
-import { Route as WerkzeugeSchluesseluebergabeRouteImport } from './routes/werkzeuge.schluesseluebergabe'
-import { Route as RechnungenNeuRouteImport } from './routes/rechnungen.neu'
-import { Route as RechnungenIdRouteImport } from './routes/rechnungen.$id'
-import { Route as ProtokolleIdRouteImport } from './routes/protokolle.$id'
-import { Route as ObjekteNeuRouteImport } from './routes/objekte.neu'
-import { Route as ObjekteIdRouteImport } from './routes/objekte.$id'
-import { Route as KundenNeuRouteImport } from './routes/kunden.neu'
-import { Route as KundenIdRouteImport } from './routes/kunden.$id'
-import { Route as EinstellungenDatenbankRouteImport } from './routes/einstellungen.datenbank'
-import { Route as AngeboteNeuRouteImport } from './routes/angebote.neu'
+import { Route as AktivitaetRouteImport } from './routes/aktivitaet'
+import { Route as AngeboteRouteImport } from './routes/angebote'
+import { Route as DokumenteRouteImport } from './routes/dokumente'
+import { Route as EinstellungenRouteImport } from './routes/einstellungen'
+import { Route as KundenRouteImport } from './routes/kunden'
+import { Route as ObjekteRouteImport } from './routes/objekte'
+import { Route as ProtokolleRouteImport } from './routes/protokolle'
+import { Route as RechnungenRouteImport } from './routes/rechnungen'
+import { Route as SteuernRouteImport } from './routes/steuern'
+import { Route as StundenzettelRouteImport } from './routes/stundenzettel'
+import { Route as WerkzeugeRouteImport } from './routes/werkzeuge'
 import { Route as AngeboteIdRouteImport } from './routes/angebote.$id'
-import { Route as RechnungenIdBearbeitenRouteImport } from './routes/rechnungen.$id.bearbeiten'
-import { Route as ProtokolleIdBearbeitenRouteImport } from './routes/protokolle.$id.bearbeiten'
-import { Route as MUploadSessionRouteImport } from './routes/m.upload.$session'
+import { Route as AngeboteNeuRouteImport } from './routes/angebote.neu'
+import { Route as EinstellungenDatenbankRouteImport } from './routes/einstellungen.datenbank'
+import { Route as KundenIdRouteImport } from './routes/kunden.$id'
+import { Route as KundenNeuRouteImport } from './routes/kunden.neu'
+import { Route as ObjekteIdRouteImport } from './routes/objekte.$id'
+import { Route as ObjekteNeuRouteImport } from './routes/objekte.neu'
+import { Route as ProtokolleIdRouteImport } from './routes/protokolle.$id'
+import { Route as RechnungenIdRouteImport } from './routes/rechnungen.$id'
+import { Route as RechnungenNeuRouteImport } from './routes/rechnungen.neu'
+import { Route as WerkzeugeIndexRouteImport } from './routes/werkzeuge.index'
+import { Route as WerkzeugeSchluesseluebergabeRouteImport } from './routes/werkzeuge.schluesseluebergabe'
+import { Route as WerkzeugeUebergabeprotokollRouteImport } from './routes/werkzeuge.uebergabeprotokoll'
+import { Route as WerkzeugeUrlaubsantragRouteImport } from './routes/werkzeuge.urlaubsantrag'
+import { Route as WerkzeugeWhatsappStoryRouteImport } from './routes/werkzeuge.whatsapp-story'
 import { Route as AngeboteIdBearbeitenRouteImport } from './routes/angebote.$id.bearbeiten'
+import { Route as MUploadSessionRouteImport } from './routes/m.upload.$session'
+import { Route as ProtokolleIdBearbeitenRouteImport } from './routes/protokolle.$id.bearbeiten'
+import { Route as RechnungenIdBearbeitenRouteImport } from './routes/rechnungen.$id.bearbeiten'
 
-const WerkzeugeRoute = WerkzeugeRouteImport.update({
-  id: '/werkzeuge',
-  path: '/werkzeuge',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const StundenzettelRoute = StundenzettelRouteImport.update({
-  id: '/stundenzettel',
-  path: '/stundenzettel',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SteuernRoute = SteuernRouteImport.update({
-  id: '/steuern',
-  path: '/steuern',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RechnungenRoute = RechnungenRouteImport.update({
-  id: '/rechnungen',
-  path: '/rechnungen',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProtokolleRoute = ProtokolleRouteImport.update({
-  id: '/protokolle',
-  path: '/protokolle',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ObjekteRoute = ObjekteRouteImport.update({
-  id: '/objekte',
-  path: '/objekte',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const KundenRoute = KundenRouteImport.update({
-  id: '/kunden',
-  path: '/kunden',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EinstellungenRoute = EinstellungenRouteImport.update({
-  id: '/einstellungen',
-  path: '/einstellungen',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DokumenteRoute = DokumenteRouteImport.update({
-  id: '/dokumente',
-  path: '/dokumente',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AngeboteRoute = AngeboteRouteImport.update({
-  id: '/angebote',
-  path: '/angebote',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AktivitaetRoute = AktivitaetRouteImport.update({
@@ -96,14 +51,126 @@ const AktivitaetRoute = AktivitaetRouteImport.update({
   path: '/aktivitaet',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AngeboteRoute = AngeboteRouteImport.update({
+  id: '/angebote',
+  path: '/angebote',
   getParentRoute: () => rootRouteImport,
+} as any)
+const DokumenteRoute = DokumenteRouteImport.update({
+  id: '/dokumente',
+  path: '/dokumente',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EinstellungenRoute = EinstellungenRouteImport.update({
+  id: '/einstellungen',
+  path: '/einstellungen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KundenRoute = KundenRouteImport.update({
+  id: '/kunden',
+  path: '/kunden',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ObjekteRoute = ObjekteRouteImport.update({
+  id: '/objekte',
+  path: '/objekte',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProtokolleRoute = ProtokolleRouteImport.update({
+  id: '/protokolle',
+  path: '/protokolle',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RechnungenRoute = RechnungenRouteImport.update({
+  id: '/rechnungen',
+  path: '/rechnungen',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SteuernRoute = SteuernRouteImport.update({
+  id: '/steuern',
+  path: '/steuern',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StundenzettelRoute = StundenzettelRouteImport.update({
+  id: '/stundenzettel',
+  path: '/stundenzettel',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WerkzeugeRoute = WerkzeugeRouteImport.update({
+  id: '/werkzeuge',
+  path: '/werkzeuge',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AngeboteIdRoute = AngeboteIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AngeboteRoute,
+} as any)
+const AngeboteNeuRoute = AngeboteNeuRouteImport.update({
+  id: '/neu',
+  path: '/neu',
+  getParentRoute: () => AngeboteRoute,
+} as any)
+const EinstellungenDatenbankRoute = EinstellungenDatenbankRouteImport.update({
+  id: '/datenbank',
+  path: '/datenbank',
+  getParentRoute: () => EinstellungenRoute,
+} as any)
+const KundenIdRoute = KundenIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => KundenRoute,
+} as any)
+const KundenNeuRoute = KundenNeuRouteImport.update({
+  id: '/neu',
+  path: '/neu',
+  getParentRoute: () => KundenRoute,
+} as any)
+const ObjekteIdRoute = ObjekteIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ObjekteRoute,
+} as any)
+const ObjekteNeuRoute = ObjekteNeuRouteImport.update({
+  id: '/neu',
+  path: '/neu',
+  getParentRoute: () => ObjekteRoute,
+} as any)
+const ProtokolleIdRoute = ProtokolleIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => ProtokolleRoute,
+} as any)
+const RechnungenIdRoute = RechnungenIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => RechnungenRoute,
+} as any)
+const RechnungenNeuRoute = RechnungenNeuRouteImport.update({
+  id: '/neu',
+  path: '/neu',
+  getParentRoute: () => RechnungenRoute,
 } as any)
 const WerkzeugeIndexRoute = WerkzeugeIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => WerkzeugeRoute,
+} as any)
+const WerkzeugeSchluesseluebergabeRoute =
+  WerkzeugeSchluesseluebergabeRouteImport.update({
+    id: '/schluesseluebergabe',
+    path: '/schluesseluebergabe',
+    getParentRoute: () => WerkzeugeRoute,
+  } as any)
+const WerkzeugeUebergabeprotokollRoute =
+  WerkzeugeUebergabeprotokollRouteImport.update({
+    id: '/uebergabeprotokoll',
+    path: '/uebergabeprotokoll',
+    getParentRoute: () => WerkzeugeRoute,
+  } as any)
+const WerkzeugeUrlaubsantragRoute = WerkzeugeUrlaubsantragRouteImport.update({
+  id: '/urlaubsantrag',
+  path: '/urlaubsantrag',
   getParentRoute: () => WerkzeugeRoute,
 } as any)
 const WerkzeugeWhatsappStoryRoute = WerkzeugeWhatsappStoryRouteImport.update({
@@ -111,92 +178,25 @@ const WerkzeugeWhatsappStoryRoute = WerkzeugeWhatsappStoryRouteImport.update({
   path: '/whatsapp-story',
   getParentRoute: () => WerkzeugeRoute,
 } as any)
-const WerkzeugeUrlaubsantragRoute = WerkzeugeUrlaubsantragRouteImport.update({
-  id: '/urlaubsantrag',
-  path: '/urlaubsantrag',
-  getParentRoute: () => WerkzeugeRoute,
-} as any)
-const WerkzeugeUebergabeprotokollRoute =
-  WerkzeugeUebergabeprotokollRouteImport.update({
-    id: '/uebergabeprotokoll',
-    path: '/uebergabeprotokoll',
-    getParentRoute: () => WerkzeugeRoute,
-  } as any)
-const WerkzeugeSchluesseluebergabeRoute =
-  WerkzeugeSchluesseluebergabeRouteImport.update({
-    id: '/schluesseluebergabe',
-    path: '/schluesseluebergabe',
-    getParentRoute: () => WerkzeugeRoute,
-  } as any)
-const RechnungenNeuRoute = RechnungenNeuRouteImport.update({
-  id: '/neu',
-  path: '/neu',
-  getParentRoute: () => RechnungenRoute,
-} as any)
-const RechnungenIdRoute = RechnungenIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => RechnungenRoute,
-} as any)
-const ProtokolleIdRoute = ProtokolleIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ProtokolleRoute,
-} as any)
-const ObjekteNeuRoute = ObjekteNeuRouteImport.update({
-  id: '/neu',
-  path: '/neu',
-  getParentRoute: () => ObjekteRoute,
-} as any)
-const ObjekteIdRoute = ObjekteIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => ObjekteRoute,
-} as any)
-const KundenNeuRoute = KundenNeuRouteImport.update({
-  id: '/neu',
-  path: '/neu',
-  getParentRoute: () => KundenRoute,
-} as any)
-const KundenIdRoute = KundenIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => KundenRoute,
-} as any)
-const EinstellungenDatenbankRoute = EinstellungenDatenbankRouteImport.update({
-  id: '/datenbank',
-  path: '/datenbank',
-  getParentRoute: () => EinstellungenRoute,
-} as any)
-const AngeboteNeuRoute = AngeboteNeuRouteImport.update({
-  id: '/neu',
-  path: '/neu',
-  getParentRoute: () => AngeboteRoute,
-} as any)
-const AngeboteIdRoute = AngeboteIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => AngeboteRoute,
-} as any)
-const RechnungenIdBearbeitenRoute = RechnungenIdBearbeitenRouteImport.update({
+const AngeboteIdBearbeitenRoute = AngeboteIdBearbeitenRouteImport.update({
   id: '/bearbeiten',
   path: '/bearbeiten',
-  getParentRoute: () => RechnungenIdRoute,
-} as any)
-const ProtokolleIdBearbeitenRoute = ProtokolleIdBearbeitenRouteImport.update({
-  id: '/bearbeiten',
-  path: '/bearbeiten',
-  getParentRoute: () => ProtokolleIdRoute,
+  getParentRoute: () => AngeboteIdRoute,
 } as any)
 const MUploadSessionRoute = MUploadSessionRouteImport.update({
   id: '/m/upload/$session',
   path: '/m/upload/$session',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AngeboteIdBearbeitenRoute = AngeboteIdBearbeitenRouteImport.update({
+const ProtokolleIdBearbeitenRoute = ProtokolleIdBearbeitenRouteImport.update({
   id: '/bearbeiten',
   path: '/bearbeiten',
-  getParentRoute: () => AngeboteIdRoute,
+  getParentRoute: () => ProtokolleIdRoute,
+} as any)
+const RechnungenIdBearbeitenRoute = RechnungenIdBearbeitenRouteImport.update({
+  id: '/bearbeiten',
+  path: '/bearbeiten',
+  getParentRoute: () => RechnungenIdRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -417,74 +417,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/werkzeuge': {
-      id: '/werkzeuge'
-      path: '/werkzeuge'
-      fullPath: '/werkzeuge'
-      preLoaderRoute: typeof WerkzeugeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/stundenzettel': {
-      id: '/stundenzettel'
-      path: '/stundenzettel'
-      fullPath: '/stundenzettel'
-      preLoaderRoute: typeof StundenzettelRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/steuern': {
-      id: '/steuern'
-      path: '/steuern'
-      fullPath: '/steuern'
-      preLoaderRoute: typeof SteuernRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/rechnungen': {
-      id: '/rechnungen'
-      path: '/rechnungen'
-      fullPath: '/rechnungen'
-      preLoaderRoute: typeof RechnungenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/protokolle': {
-      id: '/protokolle'
-      path: '/protokolle'
-      fullPath: '/protokolle'
-      preLoaderRoute: typeof ProtokolleRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/objekte': {
-      id: '/objekte'
-      path: '/objekte'
-      fullPath: '/objekte'
-      preLoaderRoute: typeof ObjekteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/kunden': {
-      id: '/kunden'
-      path: '/kunden'
-      fullPath: '/kunden'
-      preLoaderRoute: typeof KundenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/einstellungen': {
-      id: '/einstellungen'
-      path: '/einstellungen'
-      fullPath: '/einstellungen'
-      preLoaderRoute: typeof EinstellungenRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/dokumente': {
-      id: '/dokumente'
-      path: '/dokumente'
-      fullPath: '/dokumente'
-      preLoaderRoute: typeof DokumenteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/angebote': {
-      id: '/angebote'
-      path: '/angebote'
-      fullPath: '/angebote'
-      preLoaderRoute: typeof AngeboteRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/aktivitaet': {
@@ -494,39 +431,151 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AktivitaetRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/angebote': {
+      id: '/angebote'
+      path: '/angebote'
+      fullPath: '/angebote'
+      preLoaderRoute: typeof AngeboteRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/dokumente': {
+      id: '/dokumente'
+      path: '/dokumente'
+      fullPath: '/dokumente'
+      preLoaderRoute: typeof DokumenteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/einstellungen': {
+      id: '/einstellungen'
+      path: '/einstellungen'
+      fullPath: '/einstellungen'
+      preLoaderRoute: typeof EinstellungenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kunden': {
+      id: '/kunden'
+      path: '/kunden'
+      fullPath: '/kunden'
+      preLoaderRoute: typeof KundenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/objekte': {
+      id: '/objekte'
+      path: '/objekte'
+      fullPath: '/objekte'
+      preLoaderRoute: typeof ObjekteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/protokolle': {
+      id: '/protokolle'
+      path: '/protokolle'
+      fullPath: '/protokolle'
+      preLoaderRoute: typeof ProtokolleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rechnungen': {
+      id: '/rechnungen'
+      path: '/rechnungen'
+      fullPath: '/rechnungen'
+      preLoaderRoute: typeof RechnungenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/steuern': {
+      id: '/steuern'
+      path: '/steuern'
+      fullPath: '/steuern'
+      preLoaderRoute: typeof SteuernRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stundenzettel': {
+      id: '/stundenzettel'
+      path: '/stundenzettel'
+      fullPath: '/stundenzettel'
+      preLoaderRoute: typeof StundenzettelRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/werkzeuge': {
+      id: '/werkzeuge'
+      path: '/werkzeuge'
+      fullPath: '/werkzeuge'
+      preLoaderRoute: typeof WerkzeugeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/angebote/$id': {
+      id: '/angebote/$id'
+      path: '/$id'
+      fullPath: '/angebote/$id'
+      preLoaderRoute: typeof AngeboteIdRouteImport
+      parentRoute: typeof AngeboteRoute
+    }
+    '/angebote/neu': {
+      id: '/angebote/neu'
+      path: '/neu'
+      fullPath: '/angebote/neu'
+      preLoaderRoute: typeof AngeboteNeuRouteImport
+      parentRoute: typeof AngeboteRoute
+    }
+    '/einstellungen/datenbank': {
+      id: '/einstellungen/datenbank'
+      path: '/datenbank'
+      fullPath: '/einstellungen/datenbank'
+      preLoaderRoute: typeof EinstellungenDatenbankRouteImport
+      parentRoute: typeof EinstellungenRoute
+    }
+    '/kunden/$id': {
+      id: '/kunden/$id'
+      path: '/$id'
+      fullPath: '/kunden/$id'
+      preLoaderRoute: typeof KundenIdRouteImport
+      parentRoute: typeof KundenRoute
+    }
+    '/kunden/neu': {
+      id: '/kunden/neu'
+      path: '/neu'
+      fullPath: '/kunden/neu'
+      preLoaderRoute: typeof KundenNeuRouteImport
+      parentRoute: typeof KundenRoute
+    }
+    '/objekte/$id': {
+      id: '/objekte/$id'
+      path: '/$id'
+      fullPath: '/objekte/$id'
+      preLoaderRoute: typeof ObjekteIdRouteImport
+      parentRoute: typeof ObjekteRoute
+    }
+    '/objekte/neu': {
+      id: '/objekte/neu'
+      path: '/neu'
+      fullPath: '/objekte/neu'
+      preLoaderRoute: typeof ObjekteNeuRouteImport
+      parentRoute: typeof ObjekteRoute
+    }
+    '/protokolle/$id': {
+      id: '/protokolle/$id'
+      path: '/$id'
+      fullPath: '/protokolle/$id'
+      preLoaderRoute: typeof ProtokolleIdRouteImport
+      parentRoute: typeof ProtokolleRoute
+    }
+    '/rechnungen/$id': {
+      id: '/rechnungen/$id'
+      path: '/$id'
+      fullPath: '/rechnungen/$id'
+      preLoaderRoute: typeof RechnungenIdRouteImport
+      parentRoute: typeof RechnungenRoute
+    }
+    '/rechnungen/neu': {
+      id: '/rechnungen/neu'
+      path: '/neu'
+      fullPath: '/rechnungen/neu'
+      preLoaderRoute: typeof RechnungenNeuRouteImport
+      parentRoute: typeof RechnungenRoute
     }
     '/werkzeuge/': {
       id: '/werkzeuge/'
       path: '/'
       fullPath: '/werkzeuge/'
       preLoaderRoute: typeof WerkzeugeIndexRouteImport
-      parentRoute: typeof WerkzeugeRoute
-    }
-    '/werkzeuge/whatsapp-story': {
-      id: '/werkzeuge/whatsapp-story'
-      path: '/whatsapp-story'
-      fullPath: '/werkzeuge/whatsapp-story'
-      preLoaderRoute: typeof WerkzeugeWhatsappStoryRouteImport
-      parentRoute: typeof WerkzeugeRoute
-    }
-    '/werkzeuge/urlaubsantrag': {
-      id: '/werkzeuge/urlaubsantrag'
-      path: '/urlaubsantrag'
-      fullPath: '/werkzeuge/urlaubsantrag'
-      preLoaderRoute: typeof WerkzeugeUrlaubsantragRouteImport
-      parentRoute: typeof WerkzeugeRoute
-    }
-    '/werkzeuge/uebergabeprotokoll': {
-      id: '/werkzeuge/uebergabeprotokoll'
-      path: '/uebergabeprotokoll'
-      fullPath: '/werkzeuge/uebergabeprotokoll'
-      preLoaderRoute: typeof WerkzeugeUebergabeprotokollRouteImport
       parentRoute: typeof WerkzeugeRoute
     }
     '/werkzeuge/schluesseluebergabe': {
@@ -536,89 +585,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WerkzeugeSchluesseluebergabeRouteImport
       parentRoute: typeof WerkzeugeRoute
     }
-    '/rechnungen/neu': {
-      id: '/rechnungen/neu'
-      path: '/neu'
-      fullPath: '/rechnungen/neu'
-      preLoaderRoute: typeof RechnungenNeuRouteImport
-      parentRoute: typeof RechnungenRoute
+    '/werkzeuge/uebergabeprotokoll': {
+      id: '/werkzeuge/uebergabeprotokoll'
+      path: '/uebergabeprotokoll'
+      fullPath: '/werkzeuge/uebergabeprotokoll'
+      preLoaderRoute: typeof WerkzeugeUebergabeprotokollRouteImport
+      parentRoute: typeof WerkzeugeRoute
     }
-    '/rechnungen/$id': {
-      id: '/rechnungen/$id'
-      path: '/$id'
-      fullPath: '/rechnungen/$id'
-      preLoaderRoute: typeof RechnungenIdRouteImport
-      parentRoute: typeof RechnungenRoute
+    '/werkzeuge/urlaubsantrag': {
+      id: '/werkzeuge/urlaubsantrag'
+      path: '/urlaubsantrag'
+      fullPath: '/werkzeuge/urlaubsantrag'
+      preLoaderRoute: typeof WerkzeugeUrlaubsantragRouteImport
+      parentRoute: typeof WerkzeugeRoute
     }
-    '/protokolle/$id': {
-      id: '/protokolle/$id'
-      path: '/$id'
-      fullPath: '/protokolle/$id'
-      preLoaderRoute: typeof ProtokolleIdRouteImport
-      parentRoute: typeof ProtokolleRoute
+    '/werkzeuge/whatsapp-story': {
+      id: '/werkzeuge/whatsapp-story'
+      path: '/whatsapp-story'
+      fullPath: '/werkzeuge/whatsapp-story'
+      preLoaderRoute: typeof WerkzeugeWhatsappStoryRouteImport
+      parentRoute: typeof WerkzeugeRoute
     }
-    '/objekte/neu': {
-      id: '/objekte/neu'
-      path: '/neu'
-      fullPath: '/objekte/neu'
-      preLoaderRoute: typeof ObjekteNeuRouteImport
-      parentRoute: typeof ObjekteRoute
-    }
-    '/objekte/$id': {
-      id: '/objekte/$id'
-      path: '/$id'
-      fullPath: '/objekte/$id'
-      preLoaderRoute: typeof ObjekteIdRouteImport
-      parentRoute: typeof ObjekteRoute
-    }
-    '/kunden/neu': {
-      id: '/kunden/neu'
-      path: '/neu'
-      fullPath: '/kunden/neu'
-      preLoaderRoute: typeof KundenNeuRouteImport
-      parentRoute: typeof KundenRoute
-    }
-    '/kunden/$id': {
-      id: '/kunden/$id'
-      path: '/$id'
-      fullPath: '/kunden/$id'
-      preLoaderRoute: typeof KundenIdRouteImport
-      parentRoute: typeof KundenRoute
-    }
-    '/einstellungen/datenbank': {
-      id: '/einstellungen/datenbank'
-      path: '/datenbank'
-      fullPath: '/einstellungen/datenbank'
-      preLoaderRoute: typeof EinstellungenDatenbankRouteImport
-      parentRoute: typeof EinstellungenRoute
-    }
-    '/angebote/neu': {
-      id: '/angebote/neu'
-      path: '/neu'
-      fullPath: '/angebote/neu'
-      preLoaderRoute: typeof AngeboteNeuRouteImport
-      parentRoute: typeof AngeboteRoute
-    }
-    '/angebote/$id': {
-      id: '/angebote/$id'
-      path: '/$id'
-      fullPath: '/angebote/$id'
-      preLoaderRoute: typeof AngeboteIdRouteImport
-      parentRoute: typeof AngeboteRoute
-    }
-    '/rechnungen/$id/bearbeiten': {
-      id: '/rechnungen/$id/bearbeiten'
+    '/angebote/$id/bearbeiten': {
+      id: '/angebote/$id/bearbeiten'
       path: '/bearbeiten'
-      fullPath: '/rechnungen/$id/bearbeiten'
-      preLoaderRoute: typeof RechnungenIdBearbeitenRouteImport
-      parentRoute: typeof RechnungenIdRoute
-    }
-    '/protokolle/$id/bearbeiten': {
-      id: '/protokolle/$id/bearbeiten'
-      path: '/bearbeiten'
-      fullPath: '/protokolle/$id/bearbeiten'
-      preLoaderRoute: typeof ProtokolleIdBearbeitenRouteImport
-      parentRoute: typeof ProtokolleIdRoute
+      fullPath: '/angebote/$id/bearbeiten'
+      preLoaderRoute: typeof AngeboteIdBearbeitenRouteImport
+      parentRoute: typeof AngeboteIdRoute
     }
     '/m/upload/$session': {
       id: '/m/upload/$session'
@@ -627,12 +620,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MUploadSessionRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/angebote/$id/bearbeiten': {
-      id: '/angebote/$id/bearbeiten'
+    '/protokolle/$id/bearbeiten': {
+      id: '/protokolle/$id/bearbeiten'
       path: '/bearbeiten'
-      fullPath: '/angebote/$id/bearbeiten'
-      preLoaderRoute: typeof AngeboteIdBearbeitenRouteImport
-      parentRoute: typeof AngeboteIdRoute
+      fullPath: '/protokolle/$id/bearbeiten'
+      preLoaderRoute: typeof ProtokolleIdBearbeitenRouteImport
+      parentRoute: typeof ProtokolleIdRoute
+    }
+    '/rechnungen/$id/bearbeiten': {
+      id: '/rechnungen/$id/bearbeiten'
+      path: '/bearbeiten'
+      fullPath: '/rechnungen/$id/bearbeiten'
+      preLoaderRoute: typeof RechnungenIdBearbeitenRouteImport
+      parentRoute: typeof RechnungenIdRoute
     }
   }
 }

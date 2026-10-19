@@ -1,10 +1,11 @@
-import { createRouter, useRouter } from "@tanstack/react-router";
+import { createRouter, useRouter, type ErrorComponentProps } from "@tanstack/react-router";
 import { Loader2 } from "lucide-react";
 import { routeTree } from "./routeTree.gen";
 import { isLikelyChunkError } from "@/lib/chunkErrorReload";
 import { useEffect } from "react";
 
-function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function DefaultErrorComponent({ error: caughtError, reset }: ErrorComponentProps) {
+  const error = caughtError instanceof Error ? caughtError : new Error(String(caughtError));
   const router = useRouter();
   const chunkError = isLikelyChunkError(error);
 
