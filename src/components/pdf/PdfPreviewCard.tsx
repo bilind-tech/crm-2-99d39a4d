@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { FileText, Loader2, AlertCircle } from "lucide-react";
 import { DriveStatusBadge } from "./DriveStatusBadge";
 import { PdfCanvasViewer } from "./PdfCanvasViewer";
+import { FehlerKopierenButton } from "@/components/diagnose/FehlerKopierenButton";
 import type { DriveSyncInfo } from "@/lib/api/types";
 
 interface Props {
@@ -79,9 +80,18 @@ export function PdfPreviewCard({
                 <Loader2 className="h-4 w-4 animate-spin" /> PDF wird erstellt …
               </span>
             ) : status === "error" ? (
-              <span className="text-destructive">
-                {errorMessage || "PDF konnte nicht erstellt werden"}
-              </span>
+              <div className="flex max-w-md flex-col items-center gap-3 px-4 text-center">
+                <span className="text-destructive">
+                  {errorMessage || "PDF konnte nicht erstellt werden"}
+                </span>
+                <span className="text-xs">
+                  Genaue Prüfung unter Einstellungen → Diagnose.
+                </span>
+                <FehlerKopierenButton
+                  titel={`PDF-Vorschau ${title}`}
+                  details={[`Meldung: ${errorMessage || "PDF konnte nicht erstellt werden"}`]}
+                />
+              </div>
             ) : (
               <span>Noch keine Vorschau</span>
             )}

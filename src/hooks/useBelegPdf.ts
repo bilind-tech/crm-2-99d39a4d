@@ -21,6 +21,16 @@ import type { Angebot, Rechnung, Kunde, Firmendaten, Ansprechpartner, Objekt } f
 
 type Status = "idle" | "loading" | "ready" | "error";
 
+function abhaengigkeitsFehler(liste: [string, unknown][]): string | null {
+  for (const [name, err] of liste) {
+    if (!err) continue;
+    const status = (err as { status?: number }).status;
+    const msg = err instanceof Error ? err.message : String(err);
+    return `${name} konnte nicht geladen werden${typeof status === "number" ? ` (HTTP ${status})` : ""}: ${msg}`;
+  }
+  return null;
+}
+
 const PDF_TIMEOUT_MS = 20_000;
 const PDF_RENDER_VERSION = "2026-07-26-pauschal-single-row-v6";
 
@@ -191,9 +201,18 @@ interface UsePdfResult {
 }
 
 export function useAngebotPdf(angebot?: Angebot): UsePdfResult {
-  const { data: kunde } = useKunde(angebot?.kundeId ?? "");
-  const { data: firma } = useFirmendaten();
-  const { data: pdfVorlage } = usePdfVorlage();
+  const kundeQ = useKunde(angebot?.kundeId ?? "");
+  const firmaQ = useFirmendaten();
+  const pdfVorlageQ = usePdfVorlage();
+  const kunde = kundeQ.data;
+  const firma = firmaQ.data;
+  // Ältere Pi-Versionen kennen die PDF-Vorlage-Einstellung nicht (404) —
+  // dann mit Standard weiterarbeiten, statt die Vorschau ewig zu blockieren.
+  const pdfVorlage = pdfVorlageQ.data ?? (pdfVorlageQ.isError ? { empfaengerOben: false } : undefined);
+  const depFehler = abhaengigkeitsFehler([
+    ["Kunde", kundeQ.error],
+    ["Firmendaten", firmaQ.error],
+  ]);
   const objektQuery = useObjekt(angebot?.objektId ?? "");
   const objekt = objektQuery.data ?? objektAusKunde(kunde, angebot?.objektId) ?? null;
   const ansprechpartner = (kunde as (Kunde & { ansprechpartner?: Ansprechpartner[] }) | undefined)
@@ -216,8 +235,10 @@ export function useAngebotPdf(angebot?: Angebot): UsePdfResult {
   });
 
   const url = useBlobUrl(query.data?.blob, angebot ? `${angebot.id}:${dependencySignature}` : "noop");
-  const status: Status = !enabled
-    ? "idle"
+  const status: Status = depFehler
+    ? "error"
+    : !enabled
+    ? "loading"
     : query.isError
       ? "error"
       : query.data
@@ -228,15 +249,24 @@ export function useAngebotPdf(angebot?: Angebot): UsePdfResult {
     url,
     blob: query.data?.blob ?? null,
     status,
-    error: query.error ? String((query.error as Error)?.message ?? query.error) : null,
+    error: depFehler ?? (query.error ? String((query.error as Error)?.message ?? query.error) : null),
     fileName: query.data?.fileName,
   };
 }
 
 export function useRechnungPdf(rechnung?: Rechnung): UsePdfResult {
-  const { data: kunde } = useKunde(rechnung?.kundeId ?? "");
-  const { data: firma } = useFirmendaten();
-  const { data: pdfVorlage } = usePdfVorlage();
+  const kundeQ = useKunde(rechnung?.kundeId ?? "");
+  const firmaQ = useFirmendaten();
+  const pdfVorlageQ = usePdfVorlage();
+  const kunde = kundeQ.data;
+  const firma = firmaQ.data;
+  // Ältere Pi-Versionen kennen die PDF-Vorlage-Einstellung nicht (404) —
+  // dann mit Standard weiterarbeiten, statt die Vorschau ewig zu blockieren.
+  const pdfVorlage = pdfVorlageQ.data ?? (pdfVorlageQ.isError ? { empfaengerOben: false } : undefined);
+  const depFehler = abhaengigkeitsFehler([
+    ["Kunde", kundeQ.error],
+    ["Firmendaten", firmaQ.error],
+  ]);
   const objektQuery = useObjekt(rechnung?.objektId ?? "");
   const objekt = objektQuery.data ?? objektAusKunde(kunde, rechnung?.objektId) ?? null;
   const ansprechpartner = (kunde as (Kunde & { ansprechpartner?: Ansprechpartner[] }) | undefined)
@@ -259,8 +289,10 @@ export function useRechnungPdf(rechnung?: Rechnung): UsePdfResult {
   });
 
   const url = useBlobUrl(query.data?.blob, rechnung ? `${rechnung.id}:${dependencySignature}` : "noop");
-  const status: Status = !enabled
-    ? "idle"
+  const status: Status = depFehler
+    ? "error"
+    : !enabled
+    ? "loading"
     : query.isError
       ? "error"
       : query.data
@@ -271,7 +303,7 @@ export function useRechnungPdf(rechnung?: Rechnung): UsePdfResult {
     url,
     blob: query.data?.blob ?? null,
     status,
-    error: query.error ? String((query.error as Error)?.message ?? query.error) : null,
+    error: depFehler ?? (query.error ? String((query.error as Error)?.message ?? query.error) : null),
     fileName: query.data?.fileName,
   };
 }

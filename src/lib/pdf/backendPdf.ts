@@ -3,6 +3,7 @@
 // oder das Backend offline/nicht antwortet — Caller fällt dann auf Browser-Generator zurück.
 
 import { getBackendUrl, isBackendUrlExplicit } from "@/lib/api/backendUrl";
+import { protokolliereFehler } from "@/lib/diagnose/fehlerProtokoll";
 
 export type BelegArt = "angebot" | "rechnung";
 
@@ -56,6 +57,9 @@ export async function fetchBackendPdf(
     // Den eigentlichen Fehler nur loggen.
     // eslint-disable-next-line no-console
     console.warn(`[backendPdf] ${art}/${id} → HTTP ${res.status}, Fallback aktiv.`);
+    let antwort = "";
+    try { antwort = await res.text(); } catch { /* noop */ }
+    protokolliereFehler({ methode: "GET", pfad: `/${route}/${id}/pdf`, status: res.status, meldung: "PDF vom Pi fehlgeschlagen (Browser-Ersatz aktiv)", antwort });
     return null;
   }
   const blob = await res.blob();

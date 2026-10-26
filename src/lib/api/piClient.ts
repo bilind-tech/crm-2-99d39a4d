@@ -3,6 +3,7 @@
 
 import { getBackendUrl, isLocalPreviewFallbackAllowed } from "./backendUrl";
 import { localPreviewGet, localPreviewMutate } from "./localPreviewData";
+import { protokolliereFehler } from "@/lib/diagnose/fehlerProtokoll";
 
 const API_TIMEOUT_MS = 8_000;
 
@@ -78,6 +79,7 @@ async function request<T>(method: string, path: string, init: FetchInit = {}): P
       : err instanceof Error
         ? err.message
         : "Backend nicht erreichbar";
+    protokolliereFehler({ methode: method, pfad: path, status: 0, meldung: message });
     throw new PiApiError(message, 0);
   } finally {
     window.clearTimeout(timeout);
@@ -101,6 +103,7 @@ async function request<T>(method: string, path: string, init: FetchInit = {}): P
     if (res.status === 401 && !path.startsWith("/auth/")) {
       notifyUnauth();
     }
+    protokolliereFehler({ methode: method, pfad: path, status: res.status, meldung: String(msg), antwort: data });
     throw new PiApiError(msg, res.status, data);
   }
   return data as T;

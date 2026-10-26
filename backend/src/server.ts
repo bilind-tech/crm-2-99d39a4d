@@ -11,6 +11,7 @@ import { openDatabase, closeDatabase, getSchemaVersion } from "./db/index.js";
 import { registerSpaPageFallback } from "./spa-fallback.js";
 import { ensureMasterKey } from "./crypto/masterkey.js";
 import { healthRoutes } from "./routes/health.js";
+import { diagnoseRoutes } from "./routes/diagnose.js";
 import { authRoutes } from "./routes/auth.js";
 import { einstellungenRoutes } from "./routes/einstellungen.js";
 import { backupRoutes } from "./routes/backup.js";
@@ -240,6 +241,7 @@ async function main(): Promise<void> {
   }
 
   await app.register(healthRoutes);
+  await app.register(diagnoseRoutes);
   await app.register(authRoutes);
   await app.register(einstellungenRoutes);
   await app.register(backupRoutes);
@@ -298,6 +300,7 @@ async function main(): Promise<void> {
     const isBackendApi = (url: string): boolean =>
       url.startsWith("/auth") ||
       url.startsWith("/health") ||
+      url.startsWith("/diagnose") ||
       url.startsWith("/einstellungen") ||
       url.startsWith("/backup") ||
       url.startsWith("/stammdaten") ||
@@ -326,13 +329,13 @@ async function main(): Promise<void> {
         String(req.headers["sec-fetch-mode"] ?? "").toLowerCase() === "navigate" ||
         String(req.headers["sec-fetch-dest"] ?? "").toLowerCase() === "document";
       if (isBackendApi(url) && !wantsDocument) {
-        return reply.status(404).send({ error: "Not found", statusCode: 404 });
+        return reply.status(404).send({ error: "Not found", statusCode: 404, method: req.method, url: url.split("?")[0], version: config.version });
       }
       if (req.method !== "GET" && req.method !== "HEAD") {
-        return reply.status(404).send({ error: "Not found", statusCode: 404 });
+        return reply.status(404).send({ error: "Not found", statusCode: 404, method: req.method, url: url.split("?")[0], version: config.version });
       }
       if (!wantsDocument) {
-        return reply.status(404).send({ error: "Not found", statusCode: 404 });
+        return reply.status(404).send({ error: "Not found", statusCode: 404, method: req.method, url: url.split("?")[0], version: config.version });
       }
       if (!hasSpaIndex) {
         return reply.status(503).send({ error: "Frontend nicht verfügbar", statusCode: 503 });
