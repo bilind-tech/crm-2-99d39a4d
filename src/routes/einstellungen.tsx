@@ -68,6 +68,7 @@ import { SicherheitTab } from "@/components/einstellungen/SicherheitTab";
 import { VerlaufTab } from "@/components/einstellungen/VerlaufTab";
 import { SteuerTab } from "@/components/einstellungen/SteuerTab";
 import { BackendVerbindungTab } from "@/components/einstellungen/BackendVerbindungTab";
+import { DiagnoseTab } from "@/components/einstellungen/DiagnoseTab";
 import { ExportTab } from "@/components/einstellungen/ExportTab";
 import { ImportTab } from "@/components/einstellungen/ImportTab";
 import type { Firmendaten } from "@/lib/api/types";
@@ -91,6 +92,7 @@ type TabId =
   | "system-update"
   | "sicherheit"
   | "backend"
+  | "diagnose"
   | "verlauf";
 
 const tabs: { id: TabId; label: string; icon: typeof Building2; gruppe: string }[] = [
@@ -109,6 +111,7 @@ const tabs: { id: TabId; label: string; icon: typeof Building2; gruppe: string }
 
   { id: "drive", label: "Google Drive", icon: Cloud, gruppe: "System" },
   { id: "backend", label: "Backend-Verbindung", icon: Server, gruppe: "System" },
+  { id: "diagnose", label: "Diagnose", icon: Activity, gruppe: "System" },
   { id: "backup", label: "Backup & Wiederherstellen", icon: Save, gruppe: "System" },
   { id: "system-update", label: "System & Updates", icon: Package, gruppe: "System" },
   { id: "sicherheit", label: "Sicherheit", icon: Shield, gruppe: "System" },
@@ -280,6 +283,7 @@ function Page() {
           {tab === "import" && <ImportTab />}
           {tab === "drive" && <GoogleDriveTab />}
           {tab === "backend" && <BackendVerbindungTab />}
+          {tab === "diagnose" && <DiagnoseTab />}
           {tab === "backup" && <BackupTab />}
           {tab === "system-update" && <SystemUpdateTab />}
           {tab === "sicherheit" && <SicherheitTab />}

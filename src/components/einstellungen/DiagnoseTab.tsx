@@ -105,9 +105,8 @@ export function DiagnoseTab() {
       "Prüfungen:",
       ...ergebnis.map((p) => `[${p.status.toUpperCase()}] ${p.name}: ${p.detail}`),
     ]);
-    toast[(await kopiereText(text)) ? "success" : "error"](
-      (await Promise.resolve(true)) ? "Bericht kopiert — einfach im Chat einfügen." : "Kopieren nicht möglich.",
-    );
+    if (await kopiereText(text)) toast.success("Bericht kopiert — einfach im Chat einfügen.");
+    else toast.error("Kopieren nicht möglich.");
   };
 
   const fehler = ergebnis.filter((p) => p.status !== "ok").length;
