@@ -70,6 +70,7 @@ export async function sammelDiagnose(): Promise<{ version: string; zeit: string;
 
   // Schreibtest
   try {
+    if (!existsSync(config.dataDir)) throw new Error("Daten-Ordner fehlt — Test übersprungen");
     const dir = path.join(config.dataDir, "tmp");
     mkdirSync(dir, { recursive: true });
     const f = path.join(dir, `diagnose-${randomUUID()}.txt`);
@@ -106,7 +107,8 @@ export async function sammelDiagnose(): Promise<{ version: string; zeit: string;
   // PDF-Testerstellung
   try {
     const { renderPdf } = await import("../pdf/render.js");
-    const buf = await renderPdf({ content: ["Diagnose"] });
+    const { DEFAULT_FONT } = await import("../pdf/printer.js");
+    const buf = await renderPdf({ content: ["Diagnose"], defaultStyle: { font: DEFAULT_FONT } });
     add({
       id: "pdf",
       name: "PDF-Erstellung",
